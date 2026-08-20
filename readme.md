@@ -6,12 +6,16 @@
 Este proyecto es una página web de acceso a internet sobre un sistema de gestión de una cadena de cines que requiere una administración de su cartelera y salas junto con métricas de cada cine, además de la venta de boletos para películas y de productos de la dulcería.
 
 
-## Integrantes
+## Integrantes del grupo NID
 
 - Nathalie Alfaro, B90221.
 - Isaías Alberto Alfaro Ugalde, C20261.
 - Rair Darío Gómez Bernal, C33243.
 
+
+## Pila del producto en Jira
+
+https://pinid.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog?atlOrigin=eyJpIjoiYjYzZmIxMjhhOWY3NDBmMjhlZjEzZjEyZjVlNTI4YTYiLCJwIjoiaiJ9
 
 
 Universidad de Costa Rica
