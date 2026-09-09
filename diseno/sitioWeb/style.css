@@ -1,0 +1,178 @@
+/* Estilos del carrusel. */
+.slider-box {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+    /* La altura máxima será la altura de la ventana menos el encabezado. */
+    max-height: calc(100vh - 80px);
+}
+
+.slider-box ul {
+    display: flex;
+    padding: 0;
+    /* 5 imágenes entonces 500. */
+    width: 500%; 
+    /* Tiempo para cada imagen. */
+    animation: slide 25s infinite alternate; 
+    list-style: none;
+    margin: 0;
+}
+
+.slider-box li {
+    width: 100%;
+    list-style: none;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #070707;
+}
+
+.slider-box img {
+    width: 100%;
+    height: auto;
+    max-height: calc(100vh - 80px);
+    object-fit: contain;
+    display: block;
+}
+
+/* Animación del carrusel para 5 imágenes - cada 5 segundos (20% por cada imagen) */
+@keyframes slide {
+    0% { margin-left: 0; }
+    16% { margin-left: 0; }      /* Pausa de 4 segundos para la imagen 1 */
+    
+    20% { margin-left: -100%; }   /* Cambia a imagen 2 */
+    36% { margin-left: -100%; }   /* Pausa de 4 segundos para la imagen 2 */
+    
+    40% { margin-left: -200%; }   /* Cambia a imagen 3 */
+    56% { margin-left: -200%; }   /* Pausa de 4 segundos para la imagen 3 */
+    
+    60% { margin-left: -300%; }   /* Cambia a imagen 4 */
+    76% { margin-left: -300%; }   /* Pausa de 4 segundos para la imagen 4 */
+    
+    80% { margin-left: -400%; }   /* Cambia a imagen 5 */
+    96% { margin-left: -400%; }   /* Pausa de 4 segundos para la imagen 5 */
+    
+    100% { margin-left: 0; }      /* Vuelve al inicio */
+}
+
+/* Hacer que el carrusel sea responsive. */
+@media (max-width: 768px) {
+    .texto h2 {
+        font-size: 30px;
+    }
+    
+    .texto {
+        white-space: normal;
+        width: 80%;
+    }
+    
+    .slider-box img {
+        max-height: calc(100vh - 70px);
+    }
+}
+
+@media (max-width: 480px) {
+    .texto h2 {
+        font-size: 20px;
+    }
+}
+
+header {
+    display: flex;
+    align-items: center;
+    height: 140px;
+    background-color: #55bbc4;
+}
+
+.logo {
+    width: 100px;
+    height: auto;
+    /* Para mover el logo a la izquierda. */
+    margin-left: 90px;
+    padding: 10px;
+}
+
+nav {
+    display: flex;
+    gap: 40px;
+    margin-left: 50px;
+}
+
+nav a {
+    color: rgb(9, 9, 9);
+    font-size: 24px;
+    text-decoration: none;
+}
+
+.barra-busqueda {
+    width: 180px;
+    height: 30px;
+    margin-left: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+}
+
+/* Aqui edito el bloque de body, para quitar borde. */
+body {
+    margin: 0px;
+    font-size: 24px;
+}
+
+footer nav a {
+    font-size: 20px;
+    color: rgb(9, 9, 9);
+    text-decoration: none;
+    margin-left: 45px;
+}
+
+.footer-container{
+    color: rgb(9, 9, 9);
+    text-decoration: none;
+    font-size: 20px;
+    margin-left: 90px;
+}
+
+footer {
+    background-color: #55bbc4;
+    padding: 4px;
+    font-size: 20px;
+}
+
+.close-button:active {
+    transform: scale(0.95);
+}
+
+/* Para que texto no se pegue a los bordes de arriba. */
+.about-section {
+    margin-left: 80px;
+    background-color: rgb(255, 255, 255);
+}
+
+.pelicula {
+    width: 250px;
+    text-align: center;
+    margin-left: 90px;
+}
+
+.pelicula h2 {
+    font-size: 20px;
+    margin-bottom: 10px;
+}
+
+.pelicula img {
+    width: 100%;
+    height: 350px;
+    object-fit: cover;
+}
+
+.informacion {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 10px;
+    font-size: 16px;
+}
