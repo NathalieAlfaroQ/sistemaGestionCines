@@ -1,2 +1,27 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Builds de producción
+dist/
+dist-ssr/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Vite
+*.local
+
 *.zone.identifier
 *Zone.Identifier*
+sistema-web/servidor/.env
