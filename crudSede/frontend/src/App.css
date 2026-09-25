@@ -1,0 +1,6 @@
+.navbar {
+  background-color: black;
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+}
