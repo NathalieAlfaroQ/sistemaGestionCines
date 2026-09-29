@@ -22,6 +22,10 @@ npm-debug.log*
 # Vite
 *.local
 
+# Wallet
+sistema-web/servidor/wallet/
+.env
+Wallet_*.zip
+
 *.zone.identifier
 *Zone.Identifier*
-sistema-web/servidor/.env
