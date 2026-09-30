@@ -16,7 +16,7 @@ const enlaces = [
 function Navbar() {
   return (
     <nav className="w-full fixed top-0 start-0 z-20 bg-black">
-      <div className="max-w-screen-2xl mx-auto px-8 py-6 flex items-center justify-between">
+      <div className="max-w-screen-2xl mx-auto px-8 py-6 flex items-center gap-12">
         <Link to="/" className="flex items-center gap-3">
           <img src={logo} className="h-15 w-15 rounded object-cover" alt="Logo de Cine Aurora" />
           <span className="text-2xl font-semibold whitespace-nowrap text-white">

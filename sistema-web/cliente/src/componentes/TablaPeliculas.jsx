@@ -37,3 +37,5 @@ function TablaPeliculas({ peliculas }) {
     </div>
   );
 }
+
+export default TablaPeliculas;

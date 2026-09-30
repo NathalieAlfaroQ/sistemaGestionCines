@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Button, TextInput } from 'flowbite-react';
 import { usePeliculas } from '../ganchos/usePeliculas.js';
 import { useDebounce } from '../ganchos/useDebounce.js';
 import TablaPeliculas from '../componentes/TablaPeliculas.jsx';
@@ -32,7 +31,7 @@ function Peliculas() {
 
         <input
           type="search"
-          className="mb-12 w-72 px-4 py-2 rounded-lg bg-white text-black placeholder:text-gray-500"
+          className="mb-12 w-85 px-4 py-2 rounded-lg bg-white text-black placeholder:text-gray-500"
           placeholder="Buscar películas"
           value={busqueda}
           onChange={(evento) => setBusqueda(evento.target.value)}
