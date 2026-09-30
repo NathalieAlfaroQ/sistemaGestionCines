@@ -1,5 +1,5 @@
 import { obtenerGeneros, obtenerIdiomas } from '../servicios/servicioCatalogo.js';
-import { CLASIFICACIONES } from '../utilidades/constantes.js';
+import { CLASIFICACIONES } from '../constantes/clasificaciones.js';
 
 export async function catalogo(req, res) {
   try {

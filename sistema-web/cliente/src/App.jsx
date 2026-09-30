@@ -3,6 +3,7 @@ import BarraNavegacion from './componentes/BarraNavegacion'
 import Hero from './componentes/Hero'
 import DisenoGestion from './common/DisenoGestion.jsx'
 import Peliculas from './paginas/Peliculas.jsx'
+import FormularioPelicula from './paginas/FormularioPelicula.jsx'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
       />
 
       <Route element={<DisenoGestion />}>
+        <Route path="/peliculas/nueva" element={<FormularioPelicula />} />
         <Route path="/peliculas" element={<Peliculas />} />
         <Route path="/dulceria" element={<div>Dulcería</div>} />
         <Route path="/perfil" element={<div>Perfil</div>} />
