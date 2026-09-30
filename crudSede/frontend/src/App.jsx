@@ -5,7 +5,7 @@ import Salas from "./pages/Sedes";
 function App() {
   return (
 
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col pb-40 bg-background">
 
       <Navbar />
 

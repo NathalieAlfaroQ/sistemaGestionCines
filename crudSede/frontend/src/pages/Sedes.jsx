@@ -1,4 +1,26 @@
 import SearchBar from "../components/SearchBar";
+import Table from "../components/Table";
+
+const sedes = [
+  {
+    id: 1,
+    nombre: "Cine Aurora San Pedro",
+    ciudad: "San Pedro",
+    provincia: "San José",
+  },
+  {
+    id: 2,
+    nombre: "Cine Aurora Escazú",
+    ciudad: "Escazú",
+    provincia: "San José",
+  },
+  {
+    id: 3,
+    nombre: "Cine Aurora Heredia",
+    ciudad: "Heredia",
+    provincia: "Heredia",
+  },
+];
 
 const Sedes = () => {
   return (
@@ -22,6 +44,7 @@ const Sedes = () => {
       <div className="mb-6 w-80">
 
         <SearchBar placeholder="Buscar sedes"/>
+        <Table sedes={sedes}/>
 
       </div>
     </div>
