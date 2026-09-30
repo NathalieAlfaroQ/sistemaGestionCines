@@ -1,4 +1,18 @@
-import { obtenerPeliculas } from '../servicios/servicioPelicula.js';
+import { obtenerPeliculas, registrarPelicula } from '../servicios/servicioPelicula.js';
+import { ErrorValidacion } from '../errores/ErrorValidacion.js';
+
+export async function crearPelicula(req, res) {
+  try {
+    const idPelicula = await registrarPelicula(req.body);
+    res.status(200).json({ idPelicula });
+  } catch (error) {
+    if (error instanceof ErrorValidacion) {
+      return res.status(400).json({ mensaje: error.message });
+    }
+    console.error('Error al crear película:', error);
+    res.status(500).json({ mensaje: 'No se pudo crear la película' });
+  }
+}
 
 export async function listarPeliculas(req, res) {
   try {

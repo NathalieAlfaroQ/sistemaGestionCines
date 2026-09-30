@@ -1,4 +1,51 @@
-import { ejecutar } from '../configuracion/baseDatos.js';
+import oracledb from 'oracledb';
+import { ejecutar, ejecutarTransaccion } from '../configuracion/baseDatos.js';
+
+const sqlCrearPelicula = `
+  INSERT INTO PELICULAS (TITULO, CLASIFICACION, DURACION, SINOPSIS)
+  VALUES (:titulo, :clasificacion, :duracion, :sinopsis)
+  RETURNING ID_PELICULA INTO :idPelicula
+`;
+
+const sqlAsignarGenero = `
+  INSERT INTO GENEROS_PELICULA (ID_PELICULA, ID_GENERO)
+  VALUES (:idPelicula, :idGenero)
+`;
+
+const sqlAsignarIdioma = `
+  INSERT INTO IDIOMAS_PELICULA (ID_PELICULA, ID_IDIOMA)
+  VALUES (:idPelicula, :idIdioma)
+`;
+
+export async function crearPelicula({ titulo, clasificacion, duracion, sinopsis, generos, idiomas }) {
+  return await ejecutarTransaccion(async (conexion) => {
+    const resultado = await conexion.execute(sqlCrearPelicula, {
+      titulo,
+      clasificacion,
+      duracion,
+      sinopsis,
+      idPelicula: { type: oracledb.NUMBER, dir: oracledb.BIND_OUT },
+    });
+
+    const idPelicula = resultado.outBinds.idPelicula[0];
+
+    if (generos.length > 0) {
+      await conexion.executeMany(
+        sqlAsignarGenero,
+        generos.map((idGenero) => ({ idPelicula, idGenero }))
+      );
+    }
+
+    if (idiomas.length > 0) {
+      await conexion.executeMany(
+        sqlAsignarIdioma,
+        idiomas.map((idIdioma) => ({ idPelicula, idIdioma }))
+      );
+    }
+
+    return idPelicula;
+  });
+}
 
 // Orden de las columnas que recibe el frontend:
 // 0: ID_PELICULA, 1: TITULO, 2: GENEROS, 3: DURACION, 4: CLASIFICACION
