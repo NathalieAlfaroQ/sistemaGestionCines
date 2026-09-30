@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const carpetaServidor = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const carpetaServidor = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 dotenv.config({ path: path.join(carpetaServidor, '.env') });
 
 const carpetaWallet = path.resolve(carpetaServidor, process.env.DB_WALLET_RUTA ?? './wallet');
