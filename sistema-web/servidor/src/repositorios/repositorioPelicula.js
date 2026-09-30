@@ -11,11 +11,13 @@ const sqlListarPeliculas = `
   FROM PELICULAS p
   LEFT JOIN GENEROS_PELICULA gp ON gp.ID_PELICULA = p.ID_PELICULA
   LEFT JOIN GENEROS g           ON g.ID_GENERO = gp.ID_GENERO
+  WHERE :busqueda IS NULL
+    OR UPPER(p.TITULO) LIKE '%' || UPPER(:busqueda) || '%'
   GROUP BY p.ID_PELICULA, p.TITULO, p.DURACION, p.CLASIFICACION
   ORDER BY p.TITULO
 `;
 
-export async function listarPeliculas() {
-  const resultado = await ejecutar(sqlListarPeliculas);
+export async function listarPeliculas(busqueda = null) {
+  const resultado = await ejecutar(sqlListarPeliculas, { busqueda });
   return resultado.rows;
 }

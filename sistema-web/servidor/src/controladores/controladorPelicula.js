@@ -2,7 +2,8 @@ import { obtenerPeliculas } from '../servicios/servicioPelicula.js';
 
 export async function listarPeliculas(req, res) {
   try {
-    const peliculas = await obtenerPeliculas();
+    const busqueda = req.query.busqueda || null;
+    const peliculas = await obtenerPeliculas(busqueda);
     res.json(peliculas);
   } catch (error) {
     console.error('Error al listar películas:', error);

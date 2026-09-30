@@ -1,6 +1,10 @@
-export async function obtenerPeliculas() {
-  const respuesta = await fetch('/api/peliculas');
+export async function obtenerPeliculas(busqueda = '') {
+  const url = busqueda
+    ? `/api/peliculas?busqueda=${encodeURIComponent(busqueda)}`
+    : '/api/peliculas';
 
+  const respuesta = await fetch(url);
+  
   if (!respuesta.ok) {
     throw new Error('No se pudieron obtener las películas');
   }
