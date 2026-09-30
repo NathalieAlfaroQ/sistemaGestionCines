@@ -36,6 +36,20 @@ export async function ejecutar(sql, parametros = {}, opciones = {}) {
   }
 }
 
+export async function ejecutarTransaccion(operaciones) {
+  const conexion = await (await iniciarPool()).getConnection();
+  try {
+    const resultado = await operaciones(conexion);
+    await conexion.commit();
+    return resultado;
+  } catch (error) {
+    await conexion.rollback();
+    throw error;
+  } finally {
+    await conexion.close();
+  }
+}
+
 export async function cerrarPool() {
   if (!pool) return;
   await pool.close(10);
