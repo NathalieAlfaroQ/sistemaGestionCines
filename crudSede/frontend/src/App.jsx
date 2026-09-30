@@ -1,20 +1,22 @@
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import Salas from "./pages/Sedes";
 
 function App() {
   return (
-    <div className="flex min-h-screen flex-col bg-[#1f1f22]">
+
+    <div className="flex min-h-screen flex-col bg-background">
 
       <Navbar />
 
-      <main className="flex-1">
-        {/* Aquí construiremos posteriormente el contenido */}
+      <main className="mx-auto w-[85%] pt-28 flex-1">
+        <Salas />
       </main>
 
       <Footer />
-
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
+
