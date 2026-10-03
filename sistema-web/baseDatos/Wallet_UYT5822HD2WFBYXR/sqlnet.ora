@@ -1,0 +1,3 @@
+WALLET_LOCATION = (SOURCE = (METHOD = file) (METHOD_DATA = (DIRECTORY="\sistemaGestionCines\sistema-web\baseDatos\Wallet_UYT5822HD2WFBYYXR")))
+SSL_SERVER_DN_MATCH=yes
+
