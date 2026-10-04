@@ -1,10 +1,11 @@
 import { Routes, Route } from 'react-router-dom'
-import BarraNavegacion from './componentes/BarraNavegacion'
+import BarraNavegacion from './common/BarraNavegacion'
 import Hero from './componentes/Hero'
+import PiePagina from './common/PiePagina'
+
 import DisenoGestion from './common/DisenoGestion.jsx'
 import Peliculas from './paginas/Peliculas.jsx'
 import FormularioPelicula from './paginas/FormularioPelicula.jsx'
-
 import Sedes from './paginas/Sedes.jsx'
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
           <>
             <BarraNavegacion />
             <Hero />
+            <PiePagina />
           </>
         }
       />

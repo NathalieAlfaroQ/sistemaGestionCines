@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { useSedes } from '../ganchos/useSedes.js';
 import { useDebounce } from '../ganchos/useDebounce.js';
-import TablaSedes from '../componentes/TablaSedes.jsx';
+import { POS_SEDE } from '../constantes/posicionesSede.js';
+import Tabla from '../common/Tabla.jsx';
+
+const columnas = [
+  { titulo: 'Sede', posicion: POS_SEDE.nombre },
+  { titulo: 'Cantón', posicion: POS_SEDE.canton },
+  { titulo: 'Provincia', posicion: POS_SEDE.provincia },
+];
 
 function Sedes() {
   const [busqueda, setBusqueda] = useState('');
@@ -23,7 +30,14 @@ function Sedes() {
 
         {cargando && <p className="text-white">Cargando sedes...</p>}
         {error && <p className="text-red-400">{error}</p>}
-        {!cargando && !error && <TablaSedes sedes={sedes} />}
+        {!cargando && !error && (
+          <Tabla
+            columnas={columnas}
+            filas={sedes}
+            posicionId={POS_SEDE.id}
+            textoVacio="No hay sedes para mostrar en este momento"
+          />
+        )}
       </div>
     </main>
   );
