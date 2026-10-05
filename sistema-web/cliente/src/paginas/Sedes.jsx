@@ -29,7 +29,7 @@ function Sedes() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5 flex items-center gap-5">
+        <div className="mb-5 flex items-center gap-27">
           <h1 className="text-4xl font-bold">Sedes</h1>
 
           <Link
