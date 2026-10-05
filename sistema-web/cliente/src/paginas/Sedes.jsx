@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useSedes } from '../ganchos/useSedes.js';
 import { useDebounce } from '../ganchos/useDebounce.js';
 import { POS_SEDE } from '../constantes/posicionesSede.js';
@@ -28,7 +29,23 @@ function Sedes() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <h1 className="mb-5 text-4xl font-bold">Sedes</h1>
+        <div className="mb-5 flex items-center gap-5">
+          <h1 className="text-4xl font-bold">Sedes</h1>
+
+          <Link
+            to="/sedes/nueva"
+            className="flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover"
+          >
+            Crear sede
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </Link>
+        </div>
 
         <input
           type="search"
@@ -36,7 +53,7 @@ function Sedes() {
           placeholder="Buscar sedes"
           value={busqueda}
           onChange={(evento) => setBusqueda(evento.target.value)}
-        /> 
+        />
 
         {cargando && <p className="text-text-muted">Cargando sedes...</p>}
         {error && <p className="text-danger">{error}</p>}
