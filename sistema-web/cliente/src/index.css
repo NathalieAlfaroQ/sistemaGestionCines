@@ -2,8 +2,31 @@
 @import "flowbite-react/plugin/tailwindcss";
 @source "../.flowbite-react/class-list.json";
 
+@plugin "flowbite/plugin";
+
+@source "../node_modules/flowbite";
+
 @theme {
-  --color-fondo: #1F1F24;
-  --color-boton: #3D1D53;
-  --color-linea: #B188CE;
+  --color-brand: #3D1D53;
+  --color-brand-soft: #B188CE;
+  --color-brand-hover: #B188CE;
+
+
+  --color-background: #1F1F24;
+  --color-surface: #141418;
+  --color-surface-clear: #FFFFFF;
+  --color-navbar: #000000;
+  --color-footer: #000000;
+
+
+  --color-text-color: #FFFFFF;
+  --color-text-muted: #565669;
+
+
+  --color-border: #565669;
+
+
+  --color-success: #34B35B;
+  --color-danger: #FF383C;
+  --color-warning: #F38E30;
 }

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import logo from '../assets/logo.jpg';
 
-const claseEnlace = 'px-3 py-2 md:p-0 block rounded text-white hover:text-linea';
+const claseEnlace = 'px-3 py-2 md:p-0 block rounded text-text-color hover:text-brand-soft';
 
 const enlaces = [
   { texto: 'Dulcería', ruta: '/dulceria' },
@@ -16,11 +16,11 @@ const enlaces = [
 
 function BarraNavegacion() {
   return (
-    <nav className="w-full fixed top-0 start-0 z-20 bg-black">
+    <nav className="w-full fixed top-0 start-0 z-20 bg-navbar">
       <div className="max-w-screen-2xl mx-auto px-8 py-6 flex items-center gap-12">
         <Link to="/" className="flex items-center gap-3">
           <img src={logo} className="h-15 w-15 rounded object-cover" alt="Logo de Cine Aurora" />
-          <span className="text-2xl font-semibold whitespace-nowrap text-white">
+          <span className="text-2xl font-semibold whitespace-nowrap text-text-color">
             Cine Aurora
           </span>
         </Link>

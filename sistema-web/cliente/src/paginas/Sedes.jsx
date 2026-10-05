@@ -16,20 +16,20 @@ function Sedes() {
   const { sedes, cargando, error } = useSedes(busquedaRetrasada);
 
   return (
-    <main className="min-h-screen bg-fondo text-white">
+    <main className="min-h-screen bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
         <h1 className="mb-5 text-4xl font-bold">Sedes</h1>
 
         <input
           type="search"
-          className="mb-12 w-85 px-4 py-2 rounded-lg bg-white text-black placeholder:text-gray-500"
+          className="mb-12 w-85 rounded-lg border border-border bg-surface px-4 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft"
           placeholder="Buscar sedes"
           value={busqueda}
           onChange={(evento) => setBusqueda(evento.target.value)}
         />
 
-        {cargando && <p className="text-white">Cargando sedes...</p>}
-        {error && <p className="text-red-400">{error}</p>}
+        {cargando && <p className="text-text-muted">Cargando sedes...</p>}
+        {error && <p className="text-danger">{error}</p>}
         {!cargando && !error && (
           <Tabla
             columnas={columnas}

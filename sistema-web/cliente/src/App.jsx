@@ -25,9 +25,8 @@ function App() {
       <Route element={<DisenoGestion />}>
         <Route path="/peliculas/nueva" element={<FormularioPelicula />} />
         <Route path="/peliculas" element={<Peliculas />} />
-        <Route path="/dulceria" element={<div>Dulcería</div>} />
-        <Route path="/perfil" element={<div>Perfil</div>} />
-        
+        <Route path="/dulceria" element={<div></div>} />
+        <Route path="/perfil" element={<div></div>} />
         <Route path="/sedes" element={<Sedes />} />
       </Route>
     </Routes>
