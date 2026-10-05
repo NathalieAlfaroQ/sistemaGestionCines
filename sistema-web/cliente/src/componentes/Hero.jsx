@@ -1,6 +1,6 @@
 function Hero() {
   return (
-    <div className="relative h-screen bg-background">
+    <div className="relative flex-1 min-h-96 bg-background">
       <div className="absolute left-15 top-1/2 -translate-y-1/2 font-bold text-brand-soft">
         Flecha
       </div>

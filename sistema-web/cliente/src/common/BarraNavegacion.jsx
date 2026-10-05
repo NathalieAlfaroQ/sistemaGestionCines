@@ -7,16 +7,15 @@ const enlaces = [
   { texto: 'Dulcería', ruta: '/dulceria' },
   { texto: 'Películas', ruta: '/peliculas' },
   { texto: 'Salas', ruta: '/salas' },
-  { texto: 'Proyecciones', ruta: '/proyecciones' },
   { texto: 'Empleados', ruta: '/empleados' },
+  { texto: 'Sedes', ruta: '/sedes' },
   { texto: 'Comprar', ruta: '/comprar' },
   { texto: 'Perfil', ruta: '/perfil' },
-  { texto: 'Sedes', ruta: '/sedes' },
 ];
 
-function BarraNavegacion() {
+function Navbar() {
   return (
-    <nav className="w-full fixed top-0 start-0 z-20 bg-navbar">
+    <nav className="w-full sticky top-0 z-20 bg-navbar">
       <div className="max-w-screen-2xl mx-auto px-8 py-6 flex items-center gap-12">
         <Link to="/" className="flex items-center gap-3">
           <img src={logo} className="h-15 w-15 rounded object-cover" alt="Logo de Cine Aurora" />
@@ -39,4 +38,4 @@ function BarraNavegacion() {
   );
 }
 
-export default BarraNavegacion;
+export default Navbar;

@@ -15,18 +15,28 @@ function Sedes() {
   const busquedaRetrasada = useDebounce(busqueda, 400);
   const { sedes, cargando, error } = useSedes(busquedaRetrasada);
 
+  function editarSede(sede) {
+    console.log('Editar sede', sede[POS_SEDE.id]);
+  }
+
+  function eliminarSede(sede) {
+    if (window.confirm(`¿Eliminar la sede "${sede[POS_SEDE.nombre]}"?`)) {
+      console.log('Eliminar sede', sede[POS_SEDE.id]);
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-background text-text-color">
+    <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
         <h1 className="mb-5 text-4xl font-bold">Sedes</h1>
 
         <input
           type="search"
-          className="mb-12 w-85 rounded-lg border border-border bg-surface px-4 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft"
+          className="mb-12 w-85 rounded-lg border border-border bg-surface-clear px-4 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft"
           placeholder="Buscar sedes"
           value={busqueda}
           onChange={(evento) => setBusqueda(evento.target.value)}
-        />
+        /> 
 
         {cargando && <p className="text-text-muted">Cargando sedes...</p>}
         {error && <p className="text-danger">{error}</p>}
@@ -36,6 +46,8 @@ function Sedes() {
             filas={sedes}
             posicionId={POS_SEDE.id}
             textoVacio="No hay sedes para mostrar en este momento"
+            onEditar={editarSede}
+            onEliminar={eliminarSede}
           />
         )}
       </div>

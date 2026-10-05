@@ -1,7 +1,6 @@
 *.zone.identifier
 *Zone.Identifier*
 
-common
 
 sistema-web/node_modules
 sistema-web/servidor/node_modules
@@ -9,3 +8,5 @@ sistema-web/cliente/node_modules
 sistema-web/cliente/node_modules/.bin/esbuild
 
 scraps
+common/components/
+sistema-web/servidor/.env.example
