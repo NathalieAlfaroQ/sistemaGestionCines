@@ -1,6 +1,50 @@
-import { crearPelicula, listarPeliculas } from '../repositorios/repositorioPelicula.js';
-import { ErrorValidacion } from '../errores/ErrorValidacion.js';
+import { crearPelicula, listarPeliculas, obtenerClavesImagenes, actualizarClaveImagen } from '../repositorios/repositorioPelicula.js';
 import { CLASIFICACIONES_VALIDAS } from '../constantes/clasificaciones.js';
+import { randomUUID } from 'node:crypto';
+import { ErrorValidacion } from '../errores/ErrorValidacion.js';
+import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
+import { procesarImagen } from './procesadorImagenes.js';
+import { subirImagen, eliminarImagen, obtenerUrlImagen } from './almacenamientoImagenes.js';
+
+const PREFIJOS_IMAGEN = new Map([
+  ['poster', 'peliculas/posters'],
+  ['banner', 'peliculas/banners'],
+]);
+
+export async function asignarImagenPelicula(idPelicula, tipo, buffer) {
+  if (!Number.isInteger(idPelicula) || idPelicula <= 0) {
+    throw new ErrorValidacion('El id de la película no es válido');
+  }
+  if (!PREFIJOS_IMAGEN.has(tipo)) {
+    throw new ErrorValidacion('El tipo de imagen debe ser poster o banner');
+  }
+
+  const clavesActuales = await obtenerClavesImagenes(idPelicula);
+  if (!clavesActuales) {
+    throw new ErrorNoEncontrado('La película no existe');
+  }
+  const [clavePoster, claveBanner] = clavesActuales;
+  const claveAnterior = tipo === 'poster' ? clavePoster : claveBanner;
+
+  const imagen = await procesarImagen(buffer, tipo);
+  const claveNueva = `${PREFIJOS_IMAGEN.get(tipo)}/${randomUUID()}.${imagen.extension}`;
+  await subirImagen(imagen.buffer, claveNueva, imagen.tipoContenido);
+
+  try {
+    await actualizarClaveImagen(idPelicula, tipo, claveNueva);
+  } catch (error) {
+    await eliminarImagen(claveNueva).catch((errorLimpieza) =>
+      console.error('No se pudo limpiar la imagen recién subida:', errorLimpieza)
+    );
+    throw error;
+  }
+
+  await eliminarImagen(claveAnterior).catch((errorLimpieza) =>
+    console.error('No se pudo borrar la imagen anterior:', errorLimpieza)
+  );
+
+  return obtenerUrlImagen(claveNueva);
+}
 
 export async function registrarPelicula(datos) {
   const titulo = (datos.titulo ?? '').trim();

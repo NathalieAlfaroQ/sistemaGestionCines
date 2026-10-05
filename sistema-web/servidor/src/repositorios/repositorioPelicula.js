@@ -17,6 +17,29 @@ const sqlAsignarIdioma = `
   VALUES (:idPelicula, :idIdioma)
 `;
 
+// Orden de las columnas: 0: CLAVE_POSTER, 1: CLAVE_BANNER
+const sqlClavesImagenes = `
+  SELECT CLAVE_POSTER, CLAVE_BANNER
+  FROM PELICULAS
+  WHERE ID_PELICULA = :idPelicula
+`;
+
+const sqlActualizarImagen = {
+  poster: `UPDATE PELICULAS SET CLAVE_POSTER = :clave WHERE ID_PELICULA = :idPelicula`,
+  banner: `UPDATE PELICULAS SET CLAVE_BANNER = :clave WHERE ID_PELICULA = :idPelicula`,
+};
+
+export async function obtenerClavesImagenes(idPelicula) {
+  const resultado = await ejecutar(sqlClavesImagenes, { idPelicula });
+  return resultado.rows[0] ?? null;
+}
+
+export async function actualizarClaveImagen(idPelicula, tipo, clave) {
+  await ejecutarTransaccion(async (conexion) => {
+    await conexion.execute(sqlActualizarImagen[tipo], { clave, idPelicula });
+  });
+}
+
 export async function crearPelicula({ titulo, clasificacion, duracion, sinopsis, generos, idiomas }) {
   return await ejecutarTransaccion(async (conexion) => {
     const resultado = await conexion.execute(sqlCrearPelicula, {
