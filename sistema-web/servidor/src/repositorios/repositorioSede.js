@@ -1,8 +1,30 @@
 import oracledb from 'oracledb';
-import { ejecutar, ejecutarTransaccion } from '../configuracion/baseDatos.js';
+import { ejecutar } from '../configuracion/baseDatos.js';
 
-// Orden de las columnas que recibe el frontend:
-// 0: ID_SEDE, 1: NOMBRE_SEDE, 2: NOMBRE_CANTON, 3: NOMBRE_PROVINCIA
+const sqlCrearSede = `
+  INSERT INTO SEDES (NOMBRE_SEDE, ID_CANTON)
+  VALUES (:nombre, :idCanton)
+  RETURNING ID_SEDE INTO :idSede
+`;
+
+const sqlExisteCanton = `SELECT 1 FROM CANTONES WHERE ID_CANTON = :idCanton`;
+
+
+export async function crearSede({ nombre, idCanton }) {
+  const resultado = await ejecutar(sqlCrearSede, {
+    nombre,
+    idCanton,
+    idSede: { type: oracledb.NUMBER, dir: oracledb.BIND_OUT },
+  });
+
+  return resultado.outBinds.idSede[0];
+}
+
+export async function existeCanton(idCanton) {
+  const resultado = await ejecutar(sqlExisteCanton, { idCanton });
+  return resultado.rows.length > 0;
+}
+
 const sqlListarSedes = `
   SELECT s.ID_SEDE,
     s.NOMBRE_SEDE,
@@ -22,3 +44,4 @@ export async function listarSedes(busqueda = null) {
   const resultado = await ejecutar(sqlListarSedes, { busqueda });
   return resultado.rows;
 }
+

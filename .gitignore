@@ -10,3 +10,5 @@ sistema-web/cliente/node_modules/.bin/esbuild
 scraps
 common/components/
 sistema-web/servidor/.env.example
+wallet
+sistema-web/servidor/.env

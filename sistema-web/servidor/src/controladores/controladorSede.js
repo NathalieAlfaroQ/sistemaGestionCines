@@ -1,4 +1,5 @@
-import { obtenerSedes } from '../servicios/servicioSede.js';
+import { obtenerSedes, registrarSede } from '../servicios/servicioSede.js';
+import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 
 export async function listarSedes(req, res) {
   try {
@@ -8,5 +9,18 @@ export async function listarSedes(req, res) {
   } catch (error) {
     console.error('Error al listar sedes:', error);
     res.status(500).json({ mensaje: 'No se pudieron obtener las sedes' });
+  }
+}
+
+export async function crearSede(req, res) {
+  try {
+    const idSede = await registrarSede(req.body);
+    res.status(201).json({ idSede });
+  } catch (error) {
+    if (error instanceof ErrorValidacion) {
+      return res.status(400).json({ mensaje: error.message });
+    }
+    console.error('Error al crear sede:', error);
+    res.status(500).json({ mensaje: 'No se pudo crear la sede' });
   }
 }
