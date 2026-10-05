@@ -31,5 +31,8 @@ Wallet_*.zip
 class-list.json
 pid
 
+# Scripts de prueba
+servidor/scripts/probar*.js
+
 *.zone.identifier
 *Zone.Identifier*
