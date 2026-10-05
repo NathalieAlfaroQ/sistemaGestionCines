@@ -83,6 +83,62 @@ El wallet y el archivo `.env` contienen credenciales: **nunca deben subirse al r
 
 
 
+## Imágenes de películas (OCI Object Storage)
+
+Los pósters y banners no se guardan en la base de datos ni en el repositorio. Las imágenes viven en un bucket de OCI Object Storage, y la base de datos solo guarda la **clave** del objeto (columnas `CLAVE_POSTER` y `CLAVE_BANNER` de `PELICULAS`). La URL pública se arma con la URL base del bucket más esa clave.
+
+El bucket es público para lectura, pero **no permite listar su contenido**: una imagen solo se puede ver si se conoce su URL exacta. Subir y borrar requiere credenciales, y solo las tiene el servidor.
+
+### Configuración local (cada integrante)
+
+Cada integrante usa su **propia** llave de API. Las llaves no se comparten.
+
+1. **Acceso.** Pedile al administrador de la tenancy un usuario y permisos sobre el bucket de desarrollo.
+
+2. **Generar tu llave de API.** En la consola de OCI: ícono de perfil → *My profile* → *API keys* → *Add API key* → *Generate API key pair*. Descargá la llave privada (solo se puede descargar en ese momento) y copiá el *Configuration file preview* antes de cerrar la ventana.
+
+3. **Guardar la llave fuera del proyecto:**
+```bash
+   mkdir -p ~/.oci
+   mv ~/Descargas/<archivo>.pem ~/.oci/nid_api_key.pem
+   chmod 600 ~/.oci/nid_api_key.pem
+```
+
+4. **Crear `~/.oci/config`** con lo que copiaste, ajustando `key_file`:
+```ini
+   [DEFAULT]
+   user=ocid1.user.oc1..<...>
+   fingerprint=<...>
+   tenancy=ocid1.tenancy.oc1..<...>
+   region=us-ashburn-1
+   key_file=~/.oci/nid_api_key.pem
+```
+   Después: `chmod 600 ~/.oci/config`. En Windows la carpeta es `C:\Users\<usuario>\.oci\` y conviene escribir la ruta completa en `key_file`.
+
+5. **Variables en `servidor/.env`** (el modelo está en `servidor/.env.example`):
+```env
+   OCI_CONFIG_PROFILE=DEFAULT
+   OCI_REGION=us-ashburn-1
+   OCI_NAMESPACE=<pedirlo al equipo>
+   OCI_BUCKET=<pedirlo al equipo>
+```
+
+6. **Probar.** Al arrancar el servidor, si falta alguna variable `OCI_*`, se detiene con un mensaje que dice cuáles son.
+
+| Código | Cuándo |
+|---|---|
+| `200` | Devuelve `{ "url": "..." }` con la URL pública |
+| `400` | Id o tipo inválido, no se envió archivo, o el archivo no es una imagen JPEG/PNG/WebP válida |
+| `404` | La película no existe |
+| `413` | La imagen supera los 5 MB |
+
+### Nunca subir al repositorio
+
+- La llave privada (`.pem`) y `~/.oci/config`
+- Imágenes de prueba
+
+
+
 ## Cómo ejecutar el proyecto
  
 Desde la carpeta `sistema-web/`:
