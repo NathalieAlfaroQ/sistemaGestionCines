@@ -8,6 +8,7 @@ export async function subirImagen(buffer, clave, tipoContenido) {
     putObjectBody: buffer,
     contentLength: buffer.length,
     contentType: tipoContenido,
+    cacheControl: "public, max-age=31536000, immutable",
   });
   return clave;
 }

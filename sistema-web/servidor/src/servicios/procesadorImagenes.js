@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { ErrorValidacion } from "../errores/ErrorValidacion.js";
 
 const FORMATOS = {
   poster: { ancho: 600, alto: 900 },
@@ -8,13 +9,6 @@ const FORMATOS = {
 const FORMATOS_PERMITIDOS = new Set(["jpeg", "png", "webp"]);
 const MAX_PIXELES = 25_000_000;
 const CALIDAD_WEBP = 80;
-
-export class ImagenInvalidaError extends Error {
-  constructor(mensaje) {
-    super(mensaje);
-    this.name = "ImagenInvalidaError";
-  }
-}
 
 export async function procesarImagen(buffer, tipo) {
   const formato = FORMATOS[tipo];
@@ -27,7 +21,7 @@ export async function procesarImagen(buffer, tipo) {
 
     const metadatos = await imagen.metadata();
     if (!FORMATOS_PERMITIDOS.has(metadatos.format)) {
-      throw new ImagenInvalidaError("Formato no permitido. Use JPEG, PNG o WebP");
+      throw new ErrorValidacion("Formato no permitido. Use JPEG, PNG o WebP");
     }
 
     const resultado = await imagen
@@ -38,7 +32,7 @@ export async function procesarImagen(buffer, tipo) {
 
     return { buffer: resultado, tipoContenido: "image/webp", extension: "webp" };
   } catch (error) {
-    if (error instanceof ImagenInvalidaError) throw error;
-    throw new ImagenInvalidaError("El archivo no es una imagen válida");
+    if (error instanceof ErrorValidacion) throw error;
+    throw new ErrorValidacion("El archivo no es una imagen válida");
   }
 }
