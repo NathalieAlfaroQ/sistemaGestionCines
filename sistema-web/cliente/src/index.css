@@ -37,3 +37,13 @@
   --color-warning: #F38E30;
   --color-warning-hover: #e9b07c;
 }
+
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--color-surface) inset !important;
+  -webkit-text-fill-color: var(--color-text-color) !important;
+  caret-color: var(--color-text-muted);
+}
