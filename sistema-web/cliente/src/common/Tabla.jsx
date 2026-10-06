@@ -58,7 +58,7 @@ function Tabla({
   numerada = true,
   onEditar,
   onEliminar,
-  opcionesPorPagina = [10, 20, 30, 40],
+  opcionesPorPagina = [8, 16, 24, 40],
   porPaginaInicial = 8,
 }) {
   const [pagina, setPagina] = useState(1);

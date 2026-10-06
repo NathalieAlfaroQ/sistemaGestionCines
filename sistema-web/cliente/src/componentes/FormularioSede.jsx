@@ -6,10 +6,10 @@ const claseEtiqueta = 'mb-2 block text-sm text-text-color';
 const claseCampo = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
 const claseDesplegable = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-brand-soft placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
 const claseBotonConfirmar = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover disabled:opacity-50';
-const claseBotonCancelar = 'flex items-center gap-2 rounded-lg bg-danger px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-danger-hover disabled:opacity-50';
+const claseBotonCancelar = 'flex items-center gap-2 rounded-lg bg-brand-soft px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-soft-hover disabled:opacity-50';
 
 const NOMBRE_MINIMO = 10;
-const NOMBRE_MAXIMO = 20;
+const NOMBRE_MAXIMO = 50;
 const PATRON_NOMBRE = /^\p{L}+(?: \p{L}+)*$/u;
 
 function normalizarNombre(nombre) {
