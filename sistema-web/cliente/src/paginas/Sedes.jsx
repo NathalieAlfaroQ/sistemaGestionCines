@@ -10,8 +10,8 @@ import { eliminarSede } from '../servicios/servicioSedes.js';
 
 const columnas = [
   { titulo: 'Sede', posicion: POS_SEDE.nombre },
-  { titulo: 'Cantón', posicion: POS_SEDE.canton },
   { titulo: 'Provincia', posicion: POS_SEDE.provincia },
+  { titulo: 'Cantón', posicion: POS_SEDE.canton },
 ];
 
 const claseBarraBusqueda = 'mb-12 w-85 rounded-lg border border-border bg-surface-clear px-4 py-2 text-black placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft';
