@@ -175,7 +175,7 @@ function FormularioPelicula() {
                   <TextInput id="titulo" sizing="lg" maxLength={100} {...enlazar('titulo')} />
                 </Campo>
 
-                <Campo id="sinopsis" etiqueta="Sinopsis">
+                <Campo id="sinopsis" etiqueta="Sinopsis" obligatorio error={errorVisible('sinopsis')}>
                   <Textarea id="sinopsis" rows={6} maxLength={500} {...enlazar('sinopsis')} />
                 </Campo>
 
@@ -213,13 +213,19 @@ function FormularioPelicula() {
                   </Campo>
                 </div>
 
-                <SeleccionMultiple
-                  etiqueta="Idioma"
-                  textoVacio="Seleccione uno o más idiomas"
-                  opciones={catalogo.idiomas}
-                  seleccionados={formulario.idiomas}
-                  alCambiar={(valor) => actualizar('idiomas', valor)}
-                />
+                <div>
+                  <SeleccionMultiple
+                    etiqueta="Idioma"
+                    textoVacio="Seleccione uno o más idiomas"
+                    opciones={catalogo.idiomas}
+                    seleccionados={formulario.idiomas}
+                    alCambiar={(valor) => {
+                      actualizar('idiomas', valor);
+                      marcarTocado('idiomas');
+                    }}
+                  />
+                  <MensajeError mensaje={errorVisible('idiomas')} />
+                </div>
 
                 <div>
                   <SeleccionMultiple
@@ -256,7 +262,7 @@ function FormularioPelicula() {
 
             <div className="lg:col-span-2">
               {error && <p role="alert" className={`mb-4 ${clasesFormulario.error}`}>{error}</p>}
-              {exito && <p role="status" className={`mb-4 ${clasesFormulario.exito}`}>{MENSAJE_EXITO}</p>}
+              {exito && <output className={`mb-4 block ${clasesFormulario.exito}`}>{MENSAJE_EXITO}</output>}
               {bloqueado && !exito && (
                 <p className={`mb-4 ${clasesFormulario.aviso}`}>
                   La película ya se creó, pero alguna imagen no se pudo subir. Elija otra imagen

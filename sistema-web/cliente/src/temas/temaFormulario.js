@@ -11,6 +11,7 @@ export const clasesFormulario = {
   exito: 'text-[#34B35B] dark:text-[#34B35B]',
   aviso: 'text-[#F38E30]',
   zonaImagen: 'border-2 border-dashed border-[#565669] bg-[#141418] text-white/70 hover:border-[#B188CE]',
+  textarea: { colors: { gray: campoOscuro, failure: campoConError } },
 };
 
 // Estilo común de los campos. La segunda mitad repite los colores con "dark:" para que

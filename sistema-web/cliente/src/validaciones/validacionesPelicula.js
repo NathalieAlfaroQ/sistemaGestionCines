@@ -25,8 +25,10 @@ function validarDuracion(duracion) {
 // Una regla por campo. Cada una recibe todos los datos y devuelve un mensaje o null
 const reglasFormulario = {
   titulo: ({ formulario }) => validarTitulo(formulario.titulo),
+  sinopsis: ({ formulario }) => (formulario.sinopsis.trim() === '' ? MENSAJE_OBLIGATORIO : null),
   duracion: ({ formulario }) => validarDuracion(formulario.duracion),
   clasificacion: ({ formulario }) => (formulario.clasificacion === '' ? MENSAJE_OBLIGATORIO : null),
+  idiomas: ({ formulario }) => (formulario.idiomas.length === 0 ? MENSAJE_OBLIGATORIO : null),
   generos: ({ formulario }) => (formulario.generos.length === 0 ? MENSAJE_OBLIGATORIO : null),
 };
 
