@@ -1,4 +1,10 @@
-import { crearSede, existeCanton, listarSedes } from '../repositorios/repositorioSede.js';
+import {
+  crearSede,
+  desactivarSede as desactivarSedeEnRepositorio,
+  existeCanton,
+  listarSedes,
+} from '../repositorios/repositorioSede.js';
+
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 
 const NOMBRE_MAXIMO = 50;
@@ -41,5 +47,5 @@ export async function desactivarSede(idSede) {
     throw new ErrorValidacion('El identificador de la sede no es válido');
   }
 
-  return await desactivarSede(id);
+  return await desactivarSedeEnRepositorio(id);
 }
