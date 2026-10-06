@@ -1,3 +1,39 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Builds de producción
+dist/
+dist-ssr/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Vite
+*.local
+
+# Wallet
+sistema-web/servidor/wallet/
+.env
+Wallet_*.zip
+
+# flowbite-react
+class-list.json
+pid
+
+# Scripts de prueba
+servidor/scripts/probar*.js
+
 *.zone.identifier
 *Zone.Identifier*
 

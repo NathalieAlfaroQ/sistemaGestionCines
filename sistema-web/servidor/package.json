@@ -11,7 +11,11 @@
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.19.2",
-    "oracledb": "^7.0.1"
+    "multer": "^2.4.0",
+    "oci-common": "^2.142.1",
+    "oci-objectstorage": "^2.142.1",
+    "oracledb": "^7.0.1",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

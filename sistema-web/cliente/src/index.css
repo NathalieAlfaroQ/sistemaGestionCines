@@ -47,3 +47,8 @@ input:-webkit-autofill:active {
   -webkit-text-fill-color: var(--color-text-color) !important;
   caret-color: var(--color-text-muted);
 }
+@theme {
+  --color-fondo: #1F1F24;
+  --color-boton: #3D1D53;
+  --color-linea: #B188CE;
+}
