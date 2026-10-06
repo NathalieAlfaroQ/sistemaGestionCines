@@ -13,7 +13,7 @@ function validar(archivo) {
   return null;
 }
 
-function SelectorImagen({ id, etiqueta, ayuda, claseAncho, claseProporcion, alCambiar, error, subida }) {
+function SelectorImagen({ id, etiqueta, ayuda, obligatoria, claseAncho, claseProporcion, alCambiar, error, subida }) {
   const [errorLocal, setErrorLocal] = useState(null);
   const [vistaPrevia, setVistaPrevia] = useState(null);
 
@@ -46,7 +46,9 @@ function SelectorImagen({ id, etiqueta, ayuda, claseAncho, claseProporcion, alCa
 
   return (
     <div className={`max-w-full ${claseAncho}`}>
-      <Label htmlFor={id}>{etiqueta}</Label>
+      <Label htmlFor={id}>
+        {etiqueta} {obligatoria && <span className={clasesFormulario.acento}>*</span>}
+      </Label>
 
       <Label
         htmlFor={id}
