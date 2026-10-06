@@ -1,19 +1,23 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ThemeProvider } from 'flowbite-react';
 import { usePeliculas } from '../ganchos/usePeliculas.js';
 import { useDebounce } from '../ganchos/useDebounce.js';
-import { useNavigate } from 'react-router-dom';
 import { usePaginacion } from '../ganchos/usePaginacion.js';
-import Paginacion from '../componentes/Paginacion.jsx';
+import { POS_PELICULA } from '../constantes/posicionesPelicula.js';
+import { borrarPelicula } from '../servicios/servicioPeliculas.js';
+import { temaListado } from '../temas/temaListado.js';
 import TablaPeliculas from '../componentes/TablaPeliculas.jsx';
-
-
+import Paginacion from '../componentes/Paginacion.jsx';
+import ModalConfirmarBorrado from '../componentes/ModalConfirmarBorrado.jsx';
 
 function Peliculas() {
   const [busqueda, setBusqueda] = useState('');
+  const [peliculaABorrar, setPeliculaABorrar] = useState(null);
   const busquedaRetrasada = useDebounce(busqueda, 400);
-  const { peliculas, cargando, error } = usePeliculas(busquedaRetrasada);
-  const navegar = useNavigate();
+  const { peliculas, cargando, error, recargar } = usePeliculas(busquedaRetrasada);
   const paginacion = usePaginacion(peliculas, busquedaRetrasada);
+  const navegar = useNavigate();
 
   return (
     <main className="min-h-screen bg-fondo text-white">
@@ -47,21 +51,40 @@ function Peliculas() {
 
         {cargando && <p className="text-white">Cargando películas...</p>}
         {error && <p className="text-red-400">{error}</p>}
-        {!cargando && !error && (
-          <>
-            <TablaPeliculas peliculas={paginacion.visibles} numeroInicial={paginacion.desde} />
-            <Paginacion
-              paginaActual={paginacion.paginaActual}
-              totalPaginas={paginacion.totalPaginas}
-              desde={paginacion.desde}
-              hasta={paginacion.hasta}
-              total={paginacion.total}
-              tamano={paginacion.tamano}
-              alCambiarPagina={paginacion.cambiarPagina}
-              alCambiarTamano={paginacion.cambiarTamano}
+
+        <ThemeProvider theme={temaListado}>
+          {!cargando && !error && (
+            <>
+              <TablaPeliculas
+                peliculas={paginacion.visibles}
+                numeroInicial={paginacion.desde}
+                alBorrar={setPeliculaABorrar}
+              />
+              <Paginacion
+                paginaActual={paginacion.paginaActual}
+                totalPaginas={paginacion.totalPaginas}
+                desde={paginacion.desde}
+                hasta={paginacion.hasta}
+                total={paginacion.total}
+                tamano={paginacion.tamano}
+                alCambiarPagina={paginacion.cambiarPagina}
+                alCambiarTamano={paginacion.cambiarTamano}
+              />
+            </>
+          )}
+
+          {peliculaABorrar && (
+            <ModalConfirmarBorrado
+              elemento={`la película «${peliculaABorrar[POS_PELICULA.titulo]}»`}
+              alConfirmar={() => borrarPelicula(peliculaABorrar[POS_PELICULA.id])}
+              alCerrar={() => setPeliculaABorrar(null)}
+              alBorrado={() => {
+                setPeliculaABorrar(null);
+                recargar();
+              }}
             />
-          </>
-        )}
+          )}
+        </ThemeProvider>
       </div>
     </main>
   );

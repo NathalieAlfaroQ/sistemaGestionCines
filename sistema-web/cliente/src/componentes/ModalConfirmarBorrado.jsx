@@ -47,11 +47,11 @@ function ModalConfirmarBorrado({ elemento, alConfirmar, alCerrar, alBorrado }) {
           <MensajeError mensaje={mensajeError} />
 
           <div className="mt-5 flex justify-center gap-4">
-            <Button color="peligro" disabled={borrando} onClick={confirmar}>
-              {borrando ? 'Borrando...' : 'Sí, borrar'}
-            </Button>
             <Button color="brand" disabled={borrando} onClick={cerrar}>
               Cancelar
+            </Button>
+            <Button color="peligro" disabled={borrando} onClick={confirmar}>
+              {borrando ? 'Borrando...' : 'Borrar'}
             </Button>
           </div>
         </div>
