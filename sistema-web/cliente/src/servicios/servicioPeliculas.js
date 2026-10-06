@@ -4,7 +4,7 @@ export async function obtenerPeliculas(busqueda = '') {
     : '/api/peliculas';
 
   const respuesta = await fetch(url);
-  
+
   if (!respuesta.ok) {
     throw new Error('No se pudieron obtener las películas');
   }
@@ -74,4 +74,13 @@ export async function subirImagenesPelicula(idPelicula, archivos) {
   });
 
   return { subidas, fallos };
+}
+
+export async function borrarPelicula(idPelicula) {
+  const respuesta = await fetch(`/api/peliculas/${idPelicula}`, { method: 'DELETE' });
+
+  if (!respuesta.ok) {
+    const cuerpo = await respuesta.json().catch(() => ({}));
+    throw new Error(cuerpo.mensaje ?? 'Error al borrar la película, intente después');
+  }
 }

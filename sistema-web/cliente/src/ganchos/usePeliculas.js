@@ -5,6 +5,7 @@ export function usePeliculas(busqueda) {
   const [peliculas, setPeliculas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let cancelado = false;
@@ -16,8 +17,8 @@ export function usePeliculas(busqueda) {
       try {
         const datos = await obtenerPeliculas(busqueda);
         if (!cancelado) setPeliculas(datos);
-      } catch (error) {
-        if (!cancelado) setError(error.message);
+      } catch (error_) {
+        if (!cancelado) setError(error_.message);
       } finally {
         if (!cancelado) setCargando(false);
       }
@@ -28,7 +29,12 @@ export function usePeliculas(busqueda) {
     return () => {
       cancelado = true;
     };
-  }, [busqueda]);
+  }, [busqueda, version]);
 
-  return { peliculas, cargando, error };
+  // Vuelve a pedir la lista (por ejemplo, después de borrar una película)
+  function recargar() {
+    setVersion((anterior) => anterior + 1);
+  }
+
+  return { peliculas, cargando, error, recargar };
 }
