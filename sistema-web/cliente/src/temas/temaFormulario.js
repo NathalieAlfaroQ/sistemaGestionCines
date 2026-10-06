@@ -19,11 +19,16 @@ const campoOscuro =
   'border-[#565669] bg-[#141418] text-white placeholder-[#565669] focus:border-[#B188CE] focus:ring-[#B188CE] ' +
   'dark:border-[#565669] dark:bg-[#141418] dark:text-white dark:placeholder-[#565669] dark:focus:border-[#B188CE] dark:focus:ring-[#B188CE]';
 
+// Igual que el anterior, pero con el borde en rojo cuando el campo tiene un error
+const campoConError =
+  'border-[#FF383C] bg-[#141418] text-white placeholder-[#565669] focus:border-[#FF383C] focus:ring-[#FF383C] ' +
+  'dark:border-[#FF383C] dark:bg-[#141418] dark:text-white dark:placeholder-[#565669] dark:focus:border-[#FF383C] dark:focus:ring-[#FF383C]';
+
 export const temaFormulario = createTheme({
   label: { root: { base: 'mb-2 block text-sm font-normal', colors: { default: 'text-white' } } },
-  textInput: { field: { input: { colors: { gray: campoOscuro } } } },
+  textInput: { field: { input: { colors: { gray: campoOscuro, failure: campoConError } } } },
   textarea: { colors: { gray: campoOscuro } },
-  select: { field: { select: { colors: { gray: campoOscuro } } } },
+  select: { field: { select: { colors: { gray: campoOscuro, failure: campoConError } } } },
   fileInput: { colors: { gray: campoOscuro } },
   button: { color: { brand: 'bg-[#3D1D53] text-white hover:bg-[#7B48A0]' } },
 });
