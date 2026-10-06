@@ -5,10 +5,9 @@ import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
 const WALLET_DIR = path.resolve(__dirname, process.env.DB_WALLET_RUTA)
 
-console.log('📁 WALLET_DIR:', WALLET_DIR)
+console.log(' DIRECCION WALLET FUNCIONA :) ', WALLET_DIR)
 
 export async function getConnection() {
   return await oracledb.getConnection({
