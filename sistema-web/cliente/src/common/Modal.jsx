@@ -30,9 +30,9 @@ function Modal({ titulo, mensaje, children, botones, alCerrar }) {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
       onClick={alPulsarFondo}
+      role="none"
     >
-      <div
-        role="dialog"
+      <dialog
         aria-modal="true"
         aria-labelledby={titulo ? idTitulo : idMensaje}
         aria-describedby={titulo ? idMensaje : undefined}
@@ -63,7 +63,7 @@ function Modal({ titulo, mensaje, children, botones, alCerrar }) {
             </button>
           ))}
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

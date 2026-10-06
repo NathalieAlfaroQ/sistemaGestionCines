@@ -152,7 +152,7 @@ function Tabla({
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-text-color">
         <label className="flex items-center gap-2">
-          Filas por página
+          Filas por página {' '}
           <select
             value={porPagina}
             onChange={cambiarPorPagina}
