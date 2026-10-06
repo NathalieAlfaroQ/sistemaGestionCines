@@ -1,19 +1,22 @@
 import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow } from 'flowbite-react';
 import { POS_PELICULA } from '../constantes/posicionesPelicula.js';
 
-const claseEncabezado = 'px-4 py-3 bg-transparent text-base font-normal normal-case text-white';
-const claseCelda = 'px-4 py-3 text-white';
+const claseEncabezado =
+  'bg-transparent px-4 py-3 text-center text-base font-normal normal-case text-white dark:bg-transparent';
+const claseCelda = 'px-4 py-3 text-center text-white';
+// Color de las líneas entre filas (acento #B188CE a media opacidad)
+const claseLinea = 'border-b border-[#B188CE]/50';
 
-function TablaPeliculas({ peliculas }) {
+function TablaPeliculas({ peliculas, numeroInicial = 1 }) {
   if (peliculas.length === 0) {
     return <p className="text-white">No hay películas para mostrar en este momento</p>;
   }
 
   return (
     <div className="overflow-x-auto">
-      <Table hoverable className="bg-transparent">
+      <Table className="bg-transparent">
         <TableHead>
-          <TableRow className="border-b border-linea">
+          <TableRow className={claseLinea}>
             <TableHeadCell className={claseEncabezado}>##</TableHeadCell>
             <TableHeadCell className={claseEncabezado}>Título</TableHeadCell>
             <TableHeadCell className={claseEncabezado}>Género</TableHeadCell>
@@ -26,9 +29,9 @@ function TablaPeliculas({ peliculas }) {
           {peliculas.map((pelicula, indice) => (
             <TableRow
               key={pelicula[POS_PELICULA.id]}
-              className="border-b border-white/10 bg-transparent hover:bg-white/5"
+              className={`${claseLinea} bg-transparent hover:bg-white/5`}
             >
-              <TableCell className={claseCelda}>{indice + 1}</TableCell>
+              <TableCell className={claseCelda}>{numeroInicial + indice}</TableCell>
               <TableCell className={claseCelda}>{pelicula[POS_PELICULA.titulo]}</TableCell>
               <TableCell className={claseCelda}>{pelicula[POS_PELICULA.generos] ?? '—'}</TableCell>
               <TableCell className={claseCelda}>{pelicula[POS_PELICULA.duracion]} min</TableCell>

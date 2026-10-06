@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { usePeliculas } from '../ganchos/usePeliculas.js';
 import { useDebounce } from '../ganchos/useDebounce.js';
 import { useNavigate } from 'react-router-dom';
+import { usePaginacion } from '../ganchos/usePaginacion.js';
+import Paginacion from '../componentes/Paginacion.jsx';
 import TablaPeliculas from '../componentes/TablaPeliculas.jsx';
 
 
@@ -11,6 +13,7 @@ function Peliculas() {
   const busquedaRetrasada = useDebounce(busqueda, 400);
   const { peliculas, cargando, error } = usePeliculas(busquedaRetrasada);
   const navegar = useNavigate();
+  const paginacion = usePaginacion(peliculas, busquedaRetrasada);
 
   return (
     <main className="min-h-screen bg-fondo text-white">
@@ -44,7 +47,21 @@ function Peliculas() {
 
         {cargando && <p className="text-white">Cargando películas...</p>}
         {error && <p className="text-red-400">{error}</p>}
-        {!cargando && !error && <TablaPeliculas peliculas={peliculas} />}
+        {!cargando && !error && (
+          <>
+            <TablaPeliculas peliculas={paginacion.visibles} numeroInicial={paginacion.desde} />
+            <Paginacion
+              paginaActual={paginacion.paginaActual}
+              totalPaginas={paginacion.totalPaginas}
+              desde={paginacion.desde}
+              hasta={paginacion.hasta}
+              total={paginacion.total}
+              tamano={paginacion.tamano}
+              alCambiarPagina={paginacion.cambiarPagina}
+              alCambiarTamano={paginacion.cambiarTamano}
+            />
+          </>
+        )}
       </div>
     </main>
   );
