@@ -1,3 +1,6 @@
+import { Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow } from 'flowbite-react';
+import { POS_PELICULA } from '../constantes/posicionesPelicula.js';
+
 const claseEncabezado = 'px-4 py-3 bg-transparent text-base font-normal normal-case text-white';
 const claseCelda = 'px-4 py-3 text-white';
 

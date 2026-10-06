@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { usePeliculas } from '../ganchos/usePeliculas.js';
 import { useDebounce } from '../ganchos/useDebounce.js';
+import { useNavigate } from 'react-router-dom';
 import TablaPeliculas from '../componentes/TablaPeliculas.jsx';
+
+
 
 function Peliculas() {
   const [busqueda, setBusqueda] = useState('');
   const busquedaRetrasada = useDebounce(busqueda, 400);
   const { peliculas, cargando, error } = usePeliculas(busquedaRetrasada);
+  const navegar = useNavigate();
 
   return (
     <main className="min-h-screen bg-fondo text-white">
@@ -16,6 +20,7 @@ function Peliculas() {
 
           <button
             type="button"
+            onClick={() => navegar('/peliculas/nueva')}
             className="px-5 py-2.5 flex items-center gap-2 rounded-lg bg-boton text-sm font-medium text-white hover:brightness-125"
           >
             Crear película
