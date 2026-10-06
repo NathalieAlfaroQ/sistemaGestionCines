@@ -16,7 +16,7 @@ export const clasesFormulario = {
 
 // Estilo común de los campos. La segunda mitad repite los colores con "dark:" para que
 // no cambien si el sistema operativo está en modo oscuro.
-const campoOscuro =
+export const campoOscuro =
   'border-[#565669] bg-[#141418] text-white placeholder-[#565669] focus:border-[#B188CE] focus:ring-[#B188CE] ' +
   'dark:border-[#565669] dark:bg-[#141418] dark:text-white dark:placeholder-[#565669] dark:focus:border-[#B188CE] dark:focus:ring-[#B188CE]';
 
