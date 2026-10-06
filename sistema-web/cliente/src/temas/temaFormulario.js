@@ -7,8 +7,8 @@ import { createTheme } from 'flowbite-react';
 export const clasesFormulario = {
   pagina: 'bg-[#1F1F24] text-white',
   acento: 'text-[#B188CE]',
-  error: 'text-[#FF383C]',
-  exito: 'text-[#34B35B]',
+  error: 'text-[#FF383C] dark:text-[#FF383C]',
+  exito: 'text-[#34B35B] dark:text-[#34B35B]',
   aviso: 'text-[#F38E30]',
   zonaImagen: 'border-2 border-dashed border-[#565669] bg-[#141418] text-white/70 hover:border-[#B188CE]',
 };
