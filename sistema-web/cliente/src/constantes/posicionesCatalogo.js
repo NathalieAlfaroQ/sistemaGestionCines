@@ -1,0 +1,1 @@
+export const POS_CATALOGO = { id: 0, nombre: 1 };

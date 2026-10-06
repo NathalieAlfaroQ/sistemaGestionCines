@@ -1,0 +1,152 @@
+import { randomUUID } from 'node:crypto';
+import { CLASIFICACIONES_VALIDAS } from '../constantes/clasificaciones.js';
+import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
+import { ErrorValidacion } from '../errores/ErrorValidacion.js';
+import {
+  actualizarClaveImagen,
+  actualizarPelicula,
+  crearPelicula,
+  desactivarPelicula,
+  listarPeliculas,
+  obtenerClavesImagenes,
+  obtenerDetallePelicula,
+} from '../repositorios/repositorioPelicula.js';
+import { eliminarImagen, obtenerUrlImagen, subirImagen } from './almacenamientoImagenes.js';
+import { procesarImagen } from './procesadorImagenes.js';
+
+// Deben coincidir con las reglas del formulario (cliente/src/validaciones/validacionesPelicula.js)
+const PATRON_TITULO = /^[\p{L}\p{N}\p{P}\p{Sm}\p{Sc} ]+$/u;
+const PATRON_DURACION = /^\d{1,3}$/;
+
+const PREFIJOS_IMAGEN = new Map([
+  ['poster', 'peliculas/posters'],
+  ['banner', 'peliculas/banners'],
+]);
+
+function validarIdPelicula(idPelicula) {
+  if (!Number.isInteger(idPelicula) || idPelicula <= 0) {
+    throw new ErrorValidacion('El id de la película no es válido');
+  }
+}
+
+// Convierte los ids a números y quita los repetidos. Devuelve null si alguno no es un entero positivo.
+function normalizarIds(valores) {
+  if (!Array.isArray(valores)) return [];
+
+  const ids = [...new Set(valores.map(Number))];
+  return ids.every((id) => Number.isInteger(id) && id > 0) ? ids : null;
+}
+
+// Valida y normaliza los datos de una película. Lo usan crear y editar.
+function validarDatosPelicula(datos) {
+  const titulo = (datos.titulo ?? '').trim();
+  const sinopsis = (datos.sinopsis ?? '').trim();
+  const clasificacion = (datos.clasificacion ?? '').trim();
+  const duracionTexto = String(datos.duracion ?? '').trim();
+  const generos = normalizarIds(datos.generos);
+  const idiomas = normalizarIds(datos.idiomas);
+
+  if (titulo === '') throw new ErrorValidacion('El título es obligatorio');
+  if (titulo.length > 100) throw new ErrorValidacion('El título no puede superar los 100 caracteres');
+  if (!PATRON_TITULO.test(titulo)) {
+    throw new ErrorValidacion('El título solo admite letras, números, espacios y signos');
+  }
+  if (!CLASIFICACIONES_VALIDAS.has(clasificacion)) throw new ErrorValidacion('La clasificación no es válida');
+  if (!PATRON_DURACION.test(duracionTexto) || Number(duracionTexto) < 1) {
+    throw new ErrorValidacion('La duración debe ser un número entero entre 1 y 999');
+  }
+  if (sinopsis === '') throw new ErrorValidacion('La sinopsis es obligatoria');
+  if (sinopsis.length > 500) throw new ErrorValidacion('La sinopsis no puede superar los 500 caracteres');
+  if (generos === null) throw new ErrorValidacion('Los géneros no son válidos');
+  if (generos.length === 0) throw new ErrorValidacion('Al menos un género es obligatorio');
+  if (idiomas === null) throw new ErrorValidacion('Los idiomas no son válidos');
+  if (idiomas.length === 0) throw new ErrorValidacion('Al menos un idioma es obligatorio');
+
+  return { titulo, clasificacion, duracion: Number(duracionTexto), sinopsis, generos, idiomas };
+}
+
+export async function registrarPelicula(datos) {
+  return await crearPelicula(validarDatosPelicula(datos));
+}
+
+export async function modificarPelicula(idPelicula, datos) {
+  validarIdPelicula(idPelicula);
+  const pelicula = validarDatosPelicula(datos);
+
+  const filasAfectadas = await actualizarPelicula(idPelicula, pelicula);
+  if (filasAfectadas === 0) {
+    throw new ErrorNoEncontrado('La película no existe');
+  }
+}
+
+export async function obtenerPeliculas(busqueda) {
+  return await listarPeliculas(busqueda);
+}
+
+export async function consultarPelicula(idPelicula) {
+  validarIdPelicula(idPelicula);
+
+  const detalle = await obtenerDetallePelicula(idPelicula);
+  if (!detalle) {
+    throw new ErrorNoEncontrado('La película no existe');
+  }
+
+  const [id, titulo, sinopsis, duracion, clasificacion, clavePoster, claveBanner] = detalle.fila;
+
+  return {
+    pelicula: [
+      id,
+      titulo,
+      sinopsis,
+      duracion,
+      clasificacion,
+      obtenerUrlImagen(clavePoster),
+      obtenerUrlImagen(claveBanner),
+    ],
+    generos: detalle.generos,
+    idiomas: detalle.idiomas,
+  };
+}
+
+export async function asignarImagenPelicula(idPelicula, tipo, buffer) {
+  validarIdPelicula(idPelicula);
+  if (!PREFIJOS_IMAGEN.has(tipo)) {
+    throw new ErrorValidacion('El tipo de imagen debe ser poster o banner');
+  }
+
+  const clavesActuales = await obtenerClavesImagenes(idPelicula);
+  if (!clavesActuales) {
+    throw new ErrorNoEncontrado('La película no existe');
+  }
+  const [clavePoster, claveBanner] = clavesActuales;
+  const claveAnterior = tipo === 'poster' ? clavePoster : claveBanner;
+
+  const imagen = await procesarImagen(buffer, tipo);
+  const claveNueva = `${PREFIJOS_IMAGEN.get(tipo)}/${randomUUID()}.${imagen.extension}`;
+  await subirImagen(imagen.buffer, claveNueva, imagen.tipoContenido);
+
+  try {
+    await actualizarClaveImagen(idPelicula, tipo, claveNueva);
+  } catch (error) {
+    await eliminarImagen(claveNueva).catch((error_) =>
+      console.error('No se pudo limpiar la imagen recién subida:', error_)
+    );
+    throw error;
+  }
+
+  await eliminarImagen(claveAnterior).catch((error) =>
+    console.error('No se pudo borrar la imagen anterior:', error)
+  );
+
+  return obtenerUrlImagen(claveNueva);
+}
+
+// Borrado lógico: la película y sus imágenes se conservan, solo cambia su estado
+export async function borrarPelicula(idPelicula) {
+  validarIdPelicula(idPelicula);
+
+  const filasAfectadas = await desactivarPelicula(idPelicula);
+  if (filasAfectadas === 0) {
+    throw new ErrorNoEncontrado('La película no existe');
+  }
+}

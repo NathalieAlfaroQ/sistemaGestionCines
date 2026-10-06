@@ -1,6 +1,8 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import rutasPelicula from './rutas/rutasPelicula.js'
+import rutasCatalogo from './rutas/rutasCatalogo.js'
 
 dotenv.config()
 
@@ -26,6 +28,9 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toLocaleTimeString(),
   })
 })
+
+app.use('/api/peliculas', rutasPelicula);
+app.use('/api/catalogo', rutasCatalogo);
 
 app.listen(PORT, () => {
   console.log(`Servidor Express listo en http://localhost:${PORT}`)

@@ -27,5 +27,12 @@ sistema-web/servidor/wallet/
 .env
 Wallet_*.zip
 
+# flowbite-react
+class-list.json
+pid
+
+# Scripts de prueba
+servidor/scripts/probar*.js
+
 *.zone.identifier
 *Zone.Identifier*
