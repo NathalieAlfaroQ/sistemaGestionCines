@@ -5,6 +5,7 @@ import {
   TAMANO_MAXIMO_MB,
   TIPOS_PERMITIDOS,
 } from '../constantes/imagenesPelicula.js';
+import { clasesFormulario } from '../temas/temaFormulario.js';
 
 function validar(archivo) {
   if (!TIPOS_PERMITIDOS.includes(archivo.type)) return 'Use una imagen JPEG, PNG o WebP';
@@ -40,8 +41,8 @@ function SelectorImagen({ id, etiqueta, ayuda, alCambiar, error, subida }) {
       <HelperText>
         {ayuda}. JPEG, PNG o WebP, máximo {TAMANO_MAXIMO_MB} MB. Se recorta al centro si no coincide la proporción.
       </HelperText>
-      {mensajeError && <HelperText className="text-danger">{mensajeError}</HelperText>}
-      {subida && <HelperText className="text-success">Imagen subida correctamente</HelperText>}
+      {mensajeError && <HelperText className={clasesFormulario.error}>{mensajeError}</HelperText>}
+      {subida && <HelperText className={clasesFormulario.exito}>Imagen subida correctamente</HelperText>}
     </div>
   );
 }

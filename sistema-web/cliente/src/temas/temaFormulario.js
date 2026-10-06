@@ -1,16 +1,28 @@
 import { createTheme } from 'flowbite-react';
 
-// Estilo común de los campos sobre fondo oscuro. La segunda mitad repite los
-// colores con "dark:" para que no cambien si el sistema operativo está en modo oscuro.
+// Colores en hexadecimal, solo para este formulario: no dependen de los tokens de index.css.
+// Al unir las ramas, basta con reemplazar estas clases por las de la paleta.
+// Equivalencias: fondo #1F1F24 · campos #141418 · borde #565669 · marca #3D1D53 ·
+// marca hover #7B48A0 · acento #B188CE · error #FF383C · éxito #34B35B · aviso #F38E30
+export const clasesFormulario = {
+  pagina: 'bg-[#1F1F24] text-white',
+  acento: 'text-[#B188CE]',
+  error: 'text-[#FF383C]',
+  exito: 'text-[#34B35B]',
+  aviso: 'text-[#F38E30]',
+};
+
+// Estilo común de los campos. La segunda mitad repite los colores con "dark:" para que
+// no cambien si el sistema operativo está en modo oscuro.
 const campoOscuro =
-  'border-border bg-surface text-text-color placeholder-text-muted focus:border-brand-soft focus:ring-brand-soft ' +
-  'dark:border-border dark:bg-surface dark:text-text-color dark:placeholder-text-muted dark:focus:border-brand-soft dark:focus:ring-brand-soft';
+  'border-[#565669] bg-[#141418] text-white placeholder-[#565669] focus:border-[#B188CE] focus:ring-[#B188CE] ' +
+  'dark:border-[#565669] dark:bg-[#141418] dark:text-white dark:placeholder-[#565669] dark:focus:border-[#B188CE] dark:focus:ring-[#B188CE]';
 
 export const temaFormulario = createTheme({
-  label: { root: { base: 'mb-2 block text-sm font-normal', colors: { default: 'text-text-color' } } },
+  label: { root: { base: 'mb-2 block text-sm font-normal', colors: { default: 'text-white' } } },
   textInput: { field: { input: { colors: { gray: campoOscuro } } } },
   textarea: { colors: { gray: campoOscuro } },
   select: { field: { select: { colors: { gray: campoOscuro } } } },
   fileInput: { colors: { gray: campoOscuro } },
-  button: { color: { brand: 'bg-brand text-text-color hover:bg-brand-hover' } },
+  button: { color: { brand: 'bg-[#3D1D53] text-white hover:bg-[#7B48A0]' } },
 });

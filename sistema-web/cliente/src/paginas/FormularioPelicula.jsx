@@ -4,7 +4,7 @@ import { Button, Select, Textarea, TextInput, ThemeProvider } from 'flowbite-rea
 import { useCatalogo } from '../ganchos/useCatalogo.js';
 import { crearPelicula, subirImagenesPelicula } from '../servicios/servicioPeliculas.js';
 import { TIPOS_IMAGEN } from '../constantes/imagenesPelicula.js';
-import { temaFormulario } from '../temas/temaFormulario.js';
+import { clasesFormulario, temaFormulario } from '../temas/temaFormulario.js';
 import Campo from '../componentes/Campo.jsx';
 import SeleccionMultiple from '../componentes/SeleccionMultiple.jsx';
 import SelectorImagen from '../componentes/SelectorImagen.jsx';
@@ -87,11 +87,11 @@ function FormularioPelicula() {
   }
 
   if (cargandoCatalogo) {
-    return <p className="p-8 text-text-color">Cargando formulario...</p>;
+    return <p className="p-8 text-white">Cargando formulario...</p>;
   }
 
   if (errorCatalogo) {
-    return <p className="p-8 text-danger">{errorCatalogo}</p>;
+    return <p className={`p-8 ${clasesFormulario.error}`}>{errorCatalogo}</p>;
   }
 
   let textoBoton = 'Guardar';
@@ -100,7 +100,7 @@ function FormularioPelicula() {
 
   return (
     <ThemeProvider theme={temaFormulario}>
-      <main className="min-h-screen bg-background text-text-color">
+      <main className={`min-h-screen ${clasesFormulario.pagina}`}>
         <div className="max-w-screen-2xl mx-auto px-8 py-8">
           <h1 className="mb-8 text-3xl font-bold">Crear película</h1>
 
@@ -166,14 +166,14 @@ function FormularioPelicula() {
             </div>
 
             <div className="lg:col-span-2">
-              {error && <p className="mb-4 text-danger">{error}</p>}
+              {error && <p className={`mb-4 ${clasesFormulario.error}`}>{error}</p>}
               {bloqueado && (
-                <p className="mb-4 text-warning">
+                <p className={`mb-4 ${clasesFormulario.aviso}`}>
                   La película ya se creó, pero alguna imagen no se pudo subir. Elija otra imagen
                   y presione &quot;Reintentar subida&quot;, o vuelva a la lista para dejarla sin ella.
                 </p>
               )}
-              <p className="mb-4 text-sm text-brand-soft">* Espacio obligatorio</p>
+              <p className={`mb-4 text-sm ${clasesFormulario.acento}`}>* Espacio obligatorio</p>
 
               <div className="flex gap-4">
                 <Button type="submit" color="brand" disabled={guardando}>
