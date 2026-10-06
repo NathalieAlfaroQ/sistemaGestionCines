@@ -23,23 +23,6 @@ function errorDeNombre(nombre) {
   return null;
 }
 
-function IconoFlecha() {
-  return (
-    <svg
-      className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-color peer-disabled:opacity-50"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path
-        fillRule="evenodd"
-        d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-
 function Asterisco() {
   return <span className="text-danger">*</span>;
 }
@@ -135,7 +118,6 @@ function FormularioSede({
               </option>
             ))}
           </select>
-          <IconoFlecha />
         </div>
       </div>
 
@@ -158,7 +140,6 @@ function FormularioSede({
               </option>
             ))}
           </select>
-          <IconoFlecha />
         </div>
       </div>
 

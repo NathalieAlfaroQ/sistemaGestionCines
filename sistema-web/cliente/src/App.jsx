@@ -4,7 +4,6 @@ import Hero from './componentes/Hero'
 import DisenoGestion from './common/DisenoGestion.jsx'
 import Sedes from './paginas/Sedes.jsx'
 import CrearSede from './paginas/CrearSede.jsx'
-import BarraNavegacion from './componentes/BarraNavegacion'
 import Peliculas from './paginas/Peliculas.jsx'
 import FormularioPelicula from './paginas/FormularioPelicula.jsx'
 import VerPelicula from './paginas/VerPelicula.jsx'
@@ -19,7 +18,7 @@ function App() {
         <Route path="/peliculas/:id" element={<VerPelicula />} />
         <Route path="/peliculas/:id/editar" element={<EditarPelicula />} />
         <Route path="/dulceria" element={<div>Dulcería</div>} />
-        <Route path="/perfil" element={<div>Perfil</div>} /
+        <Route path="/perfil" element={<div>Perfil</div>} />
         <Route path="/" element={<Hero />} />
         <Route path="/sedes/nueva" element={<CrearSede />} />
         <Route path="/sedes" element={<Sedes />} />
