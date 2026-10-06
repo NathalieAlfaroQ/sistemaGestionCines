@@ -8,6 +8,7 @@ import {
   desactivarPelicula,
   listarPeliculas,
   obtenerClavesImagenes,
+  obtenerDetallePelicula,
 } from '../repositorios/repositorioPelicula.js';
 import { eliminarImagen, obtenerUrlImagen, subirImagen } from './almacenamientoImagenes.js';
 import { procesarImagen } from './procesadorImagenes.js';
@@ -101,4 +102,31 @@ export async function borrarPelicula(idPelicula) {
   if (filasAfectadas === 0) {
     throw new ErrorNoEncontrado('La película no existe');
   }
+}
+
+export async function consultarPelicula(idPelicula) {
+  if (!Number.isInteger(idPelicula) || idPelicula <= 0) {
+    throw new ErrorValidacion('El id de la película no es válido');
+  }
+
+  const detalle = await obtenerDetallePelicula(idPelicula);
+  if (!detalle) {
+    throw new ErrorNoEncontrado('La película no existe');
+  }
+
+  const [id, titulo, sinopsis, duracion, clasificacion, clavePoster, claveBanner] = detalle.fila;
+
+  return {
+    pelicula: [
+      id,
+      titulo,
+      sinopsis,
+      duracion,
+      clasificacion,
+      obtenerUrlImagen(clavePoster),
+      obtenerUrlImagen(claveBanner),
+    ],
+    generos: detalle.generos,
+    idiomas: detalle.idiomas,
+  };
 }

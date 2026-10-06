@@ -104,3 +104,34 @@ export async function desactivarPelicula(idPelicula) {
     return resultado.rowsAffected;
   });
 }
+
+const sqlDetallePelicula = `
+  SELECT ID_PELICULA, TITULO, SINOPSIS, DURACION, CLASIFICACION, CLAVE_POSTER, CLAVE_BANNER
+  FROM PELICULAS
+  WHERE ID_PELICULA = :idPelicula AND ESTADO_PELICULA = 1
+`;
+
+const sqlGenerosDePelicula = `
+  SELECT ID_GENERO FROM GENEROS_PELICULA WHERE ID_PELICULA = :idPelicula ORDER BY ID_GENERO
+`;
+
+const sqlIdiomasDePelicula = `
+  SELECT ID_IDIOMA FROM IDIOMAS_PELICULA WHERE ID_PELICULA = :idPelicula ORDER BY ID_IDIOMA
+`;
+
+export async function obtenerDetallePelicula(idPelicula) {
+  const resultado = await ejecutar(sqlDetallePelicula, { idPelicula });
+  const fila = resultado.rows[0];
+  if (!fila) return null;
+
+  const [generos, idiomas] = await Promise.all([
+    ejecutar(sqlGenerosDePelicula, { idPelicula }),
+    ejecutar(sqlIdiomasDePelicula, { idPelicula }),
+  ]);
+
+  return {
+    fila,
+    generos: generos.rows.map(([idGenero]) => idGenero),
+    idiomas: idiomas.rows.map(([idIdioma]) => idIdioma),
+  };
+}
