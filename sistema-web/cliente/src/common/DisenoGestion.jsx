@@ -1,14 +1,16 @@
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar.jsx';
+import Footer from './Footer.jsx';
 
 function DisenoGestion() {
   return (
-    <>
+    <div className="flex min-h-screen flex-col">
       <Navbar />
-        <div className="pt-24">
-          <Outlet />
-        </div>
-    </>
+      <div className="flex-1 pt-24">
+        <Outlet />
+      </div>
+      <Footer />
+    </div>
   );
 }
 

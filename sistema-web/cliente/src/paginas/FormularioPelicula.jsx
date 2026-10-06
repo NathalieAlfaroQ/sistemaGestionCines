@@ -9,7 +9,7 @@ import Campo from '../componentes/Campo.jsx';
 import SeleccionMultiple from '../componentes/SeleccionMultiple.jsx';
 import SelectorImagen from '../componentes/SelectorImagen.jsx';
 
-const claseImagenes = 'grid max-w-xs gap-5';
+const claseImagenes = 'flex flex-wrap items-start gap-5';
 
 function FormularioPelicula() {
   const navegar = useNavigate();
@@ -106,16 +106,16 @@ function FormularioPelicula() {
 
           <form
             onSubmit={alEnviar}
-            className="grid gap-x-12 gap-y-8 lg:grid-cols-[28rem_1fr] lg:items-start"
+            className="grid gap-x-12 gap-y-8 lg:grid-cols-2 lg:items-start"
           >
             <fieldset disabled={bloqueado} className="contents">
               <div className="flex flex-col gap-5">
                 <Campo id="titulo" etiqueta="Título" obligatorio>
-                  <TextInput id="titulo" maxLength={100} {...enlazar('titulo')} />
+                  <TextInput id="titulo" sizing="lg" maxLength={100} {...enlazar('titulo')} />
                 </Campo>
 
                 <Campo id="sinopsis" etiqueta="Sinopsis">
-                  <Textarea id="sinopsis" rows={4} maxLength={500} {...enlazar('sinopsis')} />
+                  <Textarea id="sinopsis" rows={6} maxLength={500} {...enlazar('sinopsis')} />
                 </Campo>
 
                 <div className="flex flex-wrap gap-4">
@@ -152,12 +152,14 @@ function FormularioPelicula() {
             </fieldset>
 
             <div className={claseImagenes}>
-              {TIPOS_IMAGEN.map(({ tipo, etiqueta, ayuda }) => (
+              {TIPOS_IMAGEN.map(({ tipo, etiqueta, ayuda, claseAncho, claseProporcion }) => (
                 <SelectorImagen
                   key={tipo}
                   id={`imagen-${tipo}`}
                   etiqueta={etiqueta}
                   ayuda={ayuda}
+                  claseAncho={claseAncho}
+                  claseProporcion={claseProporcion}
                   alCambiar={(archivo) => actualizarImagen(tipo, archivo)}
                   error={erroresImagen[tipo]}
                   subida={subidas.includes(tipo)}
