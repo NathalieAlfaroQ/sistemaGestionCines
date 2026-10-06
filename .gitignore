@@ -36,3 +36,17 @@ servidor/scripts/probar*.js
 
 *.zone.identifier
 *Zone.Identifier*
+
+
+sistema-web/node_modules
+sistema-web/servidor/node_modules
+sistema-web/cliente/node_modules
+sistema-web/cliente/node_modules/.bin/esbuild
+
+scraps
+sistema-web/servidor/.env.example
+wallet
+sistema-web/servidor/.env
+
+Common
+sistema-web/servidor/scripts

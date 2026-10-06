@@ -1,15 +1,15 @@
 import { Outlet } from 'react-router-dom';
-import Navbar from './Navbar.jsx';
-import Footer from './Footer.jsx';
+import BarraNavegacion from './BarraNavegacion.jsx';
+import PiePagina from './PiePagina.jsx';
 
 function DisenoGestion() {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Navbar />
-      <div className="flex-1 pt-24">
+    <div className="flex min-h-screen flex-col bg-background">
+      <BarraNavegacion />
+      <div className="flex flex-1 flex-col">
         <Outlet />
       </div>
-      <Footer />
+      <PiePagina />
     </div>
   );
 }

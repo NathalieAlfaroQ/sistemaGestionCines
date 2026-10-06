@@ -1,0 +1,1 @@
+export const POS_SEDE = { id: 0, nombre: 1, canton: 2, provincia: 3 };
