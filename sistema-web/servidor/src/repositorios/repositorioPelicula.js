@@ -135,15 +135,39 @@ export async function obtenerDetallePelicula(idPelicula) {
     idiomas: idiomas.rows.map(([idIdioma]) => idIdioma),
   };
 }
-
 const sqlActualizarPelicula = `
   UPDATE PELICULAS
   SET TITULO = :titulo, CLASIFICACION = :clasificacion, DURACION = :duracion, SINOPSIS = :sinopsis
   WHERE ID_PELICULA = :idPelicula AND ESTADO_PELICULA = 1
 `;
 
-const sqlQuitarGeneros = `DELETE FROM GENEROS_PELICULA WHERE ID_PELICULA = :idPelicula`;
-const sqlQuitarIdiomas = `DELETE FROM IDIOMAS_PELICULA WHERE ID_PELICULA = :idPelicula`;
+const sqlGenerosActuales = `SELECT ID_GENERO FROM GENEROS_PELICULA WHERE ID_PELICULA = :idPelicula`;
+const sqlIdiomasActuales = `SELECT ID_IDIOMA FROM IDIOMAS_PELICULA WHERE ID_PELICULA = :idPelicula`;
+
+const sqlQuitarGenero = `DELETE FROM GENEROS_PELICULA WHERE ID_PELICULA = :idPelicula AND ID_GENERO = :idGenero`;
+const sqlQuitarIdioma = `DELETE FROM IDIOMAS_PELICULA WHERE ID_PELICULA = :idPelicula AND ID_IDIOMA = :idIdioma`;
+
+async function sincronizar(conexion, { sqlActuales, sqlQuitar, sqlAsignar, idPelicula, ids, campo }) {
+  const resultado = await conexion.execute(sqlActuales, { idPelicula });
+  const actuales = resultado.rows.map(([id]) => id);
+
+  const sobran = actuales.filter((id) => !ids.includes(id));
+  const faltan = ids.filter((id) => !actuales.includes(id));
+
+  if (sobran.length > 0) {
+    await conexion.executeMany(
+      sqlQuitar,
+      sobran.map((id) => ({ idPelicula, [campo]: id }))
+    );
+  }
+
+  if (faltan.length > 0) {
+    await conexion.executeMany(
+      sqlAsignar,
+      faltan.map((id) => ({ idPelicula, [campo]: id }))
+    );
+  }
+}
 
 export async function actualizarPelicula(
   idPelicula,
@@ -159,16 +183,22 @@ export async function actualizarPelicula(
     });
     if (resultado.rowsAffected === 0) return 0;
 
-    await conexion.execute(sqlQuitarGeneros, { idPelicula });
-    await conexion.execute(sqlQuitarIdiomas, { idPelicula });
-    await conexion.executeMany(
-      sqlAsignarGenero,
-      generos.map((idGenero) => ({ idPelicula, idGenero }))
-    );
-    await conexion.executeMany(
-      sqlAsignarIdioma,
-      idiomas.map((idIdioma) => ({ idPelicula, idIdioma }))
-    );
+    await sincronizar(conexion, {
+      sqlActuales: sqlGenerosActuales,
+      sqlQuitar: sqlQuitarGenero,
+      sqlAsignar: sqlAsignarGenero,
+      idPelicula,
+      ids: generos,
+      campo: 'idGenero',
+    });
+    await sincronizar(conexion, {
+      sqlActuales: sqlIdiomasActuales,
+      sqlQuitar: sqlQuitarIdioma,
+      sqlAsignar: sqlAsignarIdioma,
+      idPelicula,
+      ids: idiomas,
+      campo: 'idIdioma',
+    });
 
     return resultado.rowsAffected;
   });

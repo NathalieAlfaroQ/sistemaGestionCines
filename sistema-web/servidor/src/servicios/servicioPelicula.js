@@ -29,14 +29,22 @@ function validarIdPelicula(idPelicula) {
   }
 }
 
+// Convierte los ids a números y quita los repetidos. Devuelve null si alguno no es un entero positivo.
+function normalizarIds(valores) {
+  if (!Array.isArray(valores)) return [];
+
+  const ids = [...new Set(valores.map(Number))];
+  return ids.every((id) => Number.isInteger(id) && id > 0) ? ids : null;
+}
+
 // Valida y normaliza los datos de una película. Lo usan crear y editar.
 function validarDatosPelicula(datos) {
   const titulo = (datos.titulo ?? '').trim();
   const sinopsis = (datos.sinopsis ?? '').trim();
   const clasificacion = (datos.clasificacion ?? '').trim();
   const duracionTexto = String(datos.duracion ?? '').trim();
-  const generos = Array.isArray(datos.generos) ? datos.generos : [];
-  const idiomas = Array.isArray(datos.idiomas) ? datos.idiomas : [];
+  const generos = normalizarIds(datos.generos);
+  const idiomas = normalizarIds(datos.idiomas);
 
   if (titulo === '') throw new ErrorValidacion('El título es obligatorio');
   if (titulo.length > 100) throw new ErrorValidacion('El título no puede superar los 100 caracteres');
@@ -49,7 +57,9 @@ function validarDatosPelicula(datos) {
   }
   if (sinopsis === '') throw new ErrorValidacion('La sinopsis es obligatoria');
   if (sinopsis.length > 500) throw new ErrorValidacion('La sinopsis no puede superar los 500 caracteres');
+  if (generos === null) throw new ErrorValidacion('Los géneros no son válidos');
   if (generos.length === 0) throw new ErrorValidacion('Al menos un género es obligatorio');
+  if (idiomas === null) throw new ErrorValidacion('Los idiomas no son válidos');
   if (idiomas.length === 0) throw new ErrorValidacion('Al menos un idioma es obligatorio');
 
   return { titulo, clasificacion, duracion: Number(duracionTexto), sinopsis, generos, idiomas };

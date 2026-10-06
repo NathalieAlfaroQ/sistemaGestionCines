@@ -59,6 +59,7 @@ function Peliculas() {
                 peliculas={paginacion.visibles}
                 numeroInicial={paginacion.desde}
                 alVer={(pelicula) => void navegar(`/peliculas/${pelicula[POS_PELICULA.id]}`)}
+                alEditar={(pelicula) => void navegar(`/peliculas/${pelicula[POS_PELICULA.id]}/editar`)}
                 alBorrar={setPeliculaABorrar}
               />
               <Paginacion

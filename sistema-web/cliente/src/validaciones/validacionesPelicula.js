@@ -22,7 +22,6 @@ function validarDuracion(duracion) {
   return null;
 }
 
-// Una regla por campo. Cada una recibe todos los datos y devuelve un mensaje o null
 const reglasFormulario = {
   titulo: ({ formulario }) => validarTitulo(formulario.titulo),
   sinopsis: ({ formulario }) => (formulario.sinopsis.trim() === '' ? MENSAJE_OBLIGATORIO : null),
@@ -32,11 +31,10 @@ const reglasFormulario = {
   generos: ({ formulario }) => (formulario.generos.length === 0 ? MENSAJE_OBLIGATORIO : null),
 };
 
-// Una regla por cada tipo de imagen marcado como obligatorio en TIPOS_IMAGEN
 const reglasImagenes = Object.fromEntries(
   TIPOS_IMAGEN.filter(({ obligatoria }) => obligatoria).map(({ tipo }) => [
     tipo,
-    ({ imagenes }) => (imagenes[tipo] ? null : MENSAJE_OBLIGATORIO),
+    ({ imagenes, existentes = {} }) => (imagenes[tipo] || existentes[tipo] ? null : MENSAJE_OBLIGATORIO),
   ])
 );
 

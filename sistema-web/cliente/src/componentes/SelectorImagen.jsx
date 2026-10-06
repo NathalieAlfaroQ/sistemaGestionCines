@@ -13,7 +13,19 @@ function validar(archivo) {
   return null;
 }
 
-function SelectorImagen({ id, etiqueta, ayuda, obligatoria, claseAncho, claseProporcion, alCambiar, error, subida }) {
+// urlExistente: imagen que la película ya tiene (al editar). Se muestra hasta que se elija otra.
+function SelectorImagen({
+  id,
+  etiqueta,
+  ayuda,
+  obligatoria,
+  claseAncho,
+  claseProporcion,
+  urlExistente = null,
+  alCambiar,
+  error,
+  subida,
+}) {
   const [errorLocal, setErrorLocal] = useState(null);
   const [vistaPrevia, setVistaPrevia] = useState(null);
 
@@ -41,6 +53,7 @@ function SelectorImagen({ id, etiqueta, ayuda, obligatoria, claseAncho, clasePro
     alCambiar(archivo);
   }
 
+  const imagenMostrada = vistaPrevia ?? urlExistente;
   const mensajeError = errorLocal ?? error;
   const claseDeshabilitada = subida ? 'pointer-events-none opacity-50' : '';
 
@@ -54,9 +67,9 @@ function SelectorImagen({ id, etiqueta, ayuda, obligatoria, claseAncho, clasePro
         htmlFor={id}
         className={`mb-0 flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg ${claseProporcion} ${clasesFormulario.zonaImagen} ${claseDeshabilitada}`}
       >
-        {vistaPrevia ? (
+        {imagenMostrada ? (
           <img
-            src={vistaPrevia}
+            src={imagenMostrada}
             alt={`Vista previa de ${etiqueta.toLowerCase()}`}
             className="size-full object-cover"
           />
@@ -86,6 +99,7 @@ function SelectorImagen({ id, etiqueta, ayuda, obligatoria, claseAncho, clasePro
 
       <HelperText>
         {ayuda}. JPEG, PNG o WebP, máximo {TAMANO_MAXIMO_MB} MB. Se recorta al centro si no coincide la proporción.
+        {urlExistente && ' Haga clic en la imagen para cambiarla.'}
       </HelperText>
       {mensajeError && <HelperText className={clasesFormulario.error}>{mensajeError}</HelperText>}
       {subida && <HelperText className={clasesFormulario.exito}>Imagen subida correctamente</HelperText>}

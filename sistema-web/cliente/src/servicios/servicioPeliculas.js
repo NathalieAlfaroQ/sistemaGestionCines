@@ -95,3 +95,16 @@ export async function obtenerPelicula(idPelicula) {
 
   return cuerpo;
 }
+
+export async function actualizarPelicula(idPelicula, pelicula) {
+  const respuesta = await fetch(`/api/peliculas/${idPelicula}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(pelicula),
+  });
+
+  if (!respuesta.ok) {
+    const cuerpo = await respuesta.json().catch(() => ({}));
+    throw new Error(cuerpo.mensaje ?? 'No se pudo actualizar la película');
+  }
+}

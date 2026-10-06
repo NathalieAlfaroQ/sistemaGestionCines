@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { Button, Textarea, TextInput, ThemeProvider } from 'flowbite-react';
+import { Textarea, TextInput, ThemeProvider } from 'flowbite-react';
 import { useCatalogo } from '../ganchos/useCatalogo.js';
 import { usePelicula } from '../ganchos/usePelicula.js';
 import { useVolver } from '../ganchos/useVolver.js';
@@ -10,6 +10,7 @@ import { clasesFormulario, temaFormulario } from '../temas/temaFormulario.js';
 import Campo from '../componentes/Campo.jsx';
 import ListaEtiquetas from '../componentes/ListaEtiquetas.jsx';
 import VistaImagen from '../componentes/VistaImagen.jsx';
+import BotonVolver from '../componentes/BotonVolver.jsx';
 
 const POSICION_URL = {
   poster: POS_DETALLE_PELICULA.urlPoster,
@@ -21,26 +22,6 @@ function nombresDe(opciones, ids) {
   return opciones
     .filter((opcion) => ids.includes(opcion[POS_CATALOGO.id]))
     .map((opcion) => opcion[POS_CATALOGO.nombre]);
-}
-
-function BotonVolver({ alVolver }) {
-  return (
-    <Button type="button" color="brand" onClick={alVolver}>
-      Volver
-      <svg
-        className="ml-2 h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-      </svg>
-    </Button>
-  );
 }
 
 function VerPelicula() {
@@ -56,12 +37,10 @@ function VerPelicula() {
   const mensajeError = error ?? errorCatalogo;
   if (mensajeError) {
     return (
-      <div className="p-8">
-        <p className={`mb-4 ${clasesFormulario.error}`}>{mensajeError}</p>
-        <ThemeProvider theme={temaFormulario}>
-          <BotonVolver alVolver={volver} />
-        </ThemeProvider>
-      </div>
+    <div className="p-8">
+      <p className={`mb-4 ${clasesFormulario.error}`}>{mensajeError}</p>
+      <BotonVolver alVolver={volver} />
+    </div>
     );
   }
 
