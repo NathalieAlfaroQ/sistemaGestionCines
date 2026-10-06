@@ -135,3 +135,41 @@ export async function obtenerDetallePelicula(idPelicula) {
     idiomas: idiomas.rows.map(([idIdioma]) => idIdioma),
   };
 }
+
+const sqlActualizarPelicula = `
+  UPDATE PELICULAS
+  SET TITULO = :titulo, CLASIFICACION = :clasificacion, DURACION = :duracion, SINOPSIS = :sinopsis
+  WHERE ID_PELICULA = :idPelicula AND ESTADO_PELICULA = 1
+`;
+
+const sqlQuitarGeneros = `DELETE FROM GENEROS_PELICULA WHERE ID_PELICULA = :idPelicula`;
+const sqlQuitarIdiomas = `DELETE FROM IDIOMAS_PELICULA WHERE ID_PELICULA = :idPelicula`;
+
+export async function actualizarPelicula(
+  idPelicula,
+  { titulo, clasificacion, duracion, sinopsis, generos, idiomas }
+) {
+  return await ejecutarTransaccion(async (conexion) => {
+    const resultado = await conexion.execute(sqlActualizarPelicula, {
+      titulo,
+      clasificacion,
+      duracion,
+      sinopsis,
+      idPelicula,
+    });
+    if (resultado.rowsAffected === 0) return 0;
+
+    await conexion.execute(sqlQuitarGeneros, { idPelicula });
+    await conexion.execute(sqlQuitarIdiomas, { idPelicula });
+    await conexion.executeMany(
+      sqlAsignarGenero,
+      generos.map((idGenero) => ({ idPelicula, idGenero }))
+    );
+    await conexion.executeMany(
+      sqlAsignarIdioma,
+      idiomas.map((idIdioma) => ({ idPelicula, idIdioma }))
+    );
+
+    return resultado.rowsAffected;
+  });
+}

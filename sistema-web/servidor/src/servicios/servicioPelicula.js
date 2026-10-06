@@ -4,6 +4,7 @@ import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 import {
   actualizarClaveImagen,
+  actualizarPelicula,
   crearPelicula,
   desactivarPelicula,
   listarPeliculas,
@@ -22,7 +23,14 @@ const PREFIJOS_IMAGEN = new Map([
   ['banner', 'peliculas/banners'],
 ]);
 
-export async function registrarPelicula(datos) {
+function validarIdPelicula(idPelicula) {
+  if (!Number.isInteger(idPelicula) || idPelicula <= 0) {
+    throw new ErrorValidacion('El id de la película no es válido');
+  }
+}
+
+// Valida y normaliza los datos de una película. Lo usan crear y editar.
+function validarDatosPelicula(datos) {
   const titulo = (datos.titulo ?? '').trim();
   const sinopsis = (datos.sinopsis ?? '').trim();
   const clasificacion = (datos.clasificacion ?? '').trim();
@@ -44,24 +52,54 @@ export async function registrarPelicula(datos) {
   if (generos.length === 0) throw new ErrorValidacion('Al menos un género es obligatorio');
   if (idiomas.length === 0) throw new ErrorValidacion('Al menos un idioma es obligatorio');
 
-  return await crearPelicula({
-    titulo,
-    clasificacion,
-    duracion: Number(duracionTexto),
-    sinopsis,
-    generos,
-    idiomas,
-  });
+  return { titulo, clasificacion, duracion: Number(duracionTexto), sinopsis, generos, idiomas };
+}
+
+export async function registrarPelicula(datos) {
+  return await crearPelicula(validarDatosPelicula(datos));
+}
+
+export async function modificarPelicula(idPelicula, datos) {
+  validarIdPelicula(idPelicula);
+  const pelicula = validarDatosPelicula(datos);
+
+  const filasAfectadas = await actualizarPelicula(idPelicula, pelicula);
+  if (filasAfectadas === 0) {
+    throw new ErrorNoEncontrado('La película no existe');
+  }
 }
 
 export async function obtenerPeliculas(busqueda) {
   return await listarPeliculas(busqueda);
 }
 
-export async function asignarImagenPelicula(idPelicula, tipo, buffer) {
-  if (!Number.isInteger(idPelicula) || idPelicula <= 0) {
-    throw new ErrorValidacion('El id de la película no es válido');
+export async function consultarPelicula(idPelicula) {
+  validarIdPelicula(idPelicula);
+
+  const detalle = await obtenerDetallePelicula(idPelicula);
+  if (!detalle) {
+    throw new ErrorNoEncontrado('La película no existe');
   }
+
+  const [id, titulo, sinopsis, duracion, clasificacion, clavePoster, claveBanner] = detalle.fila;
+
+  return {
+    pelicula: [
+      id,
+      titulo,
+      sinopsis,
+      duracion,
+      clasificacion,
+      obtenerUrlImagen(clavePoster),
+      obtenerUrlImagen(claveBanner),
+    ],
+    generos: detalle.generos,
+    idiomas: detalle.idiomas,
+  };
+}
+
+export async function asignarImagenPelicula(idPelicula, tipo, buffer) {
+  validarIdPelicula(idPelicula);
   if (!PREFIJOS_IMAGEN.has(tipo)) {
     throw new ErrorValidacion('El tipo de imagen debe ser poster o banner');
   }
@@ -93,40 +131,12 @@ export async function asignarImagenPelicula(idPelicula, tipo, buffer) {
   return obtenerUrlImagen(claveNueva);
 }
 
+// Borrado lógico: la película y sus imágenes se conservan, solo cambia su estado
 export async function borrarPelicula(idPelicula) {
-  if (!Number.isInteger(idPelicula) || idPelicula <= 0) {
-    throw new ErrorValidacion('El id de la película no es válido');
-  }
+  validarIdPelicula(idPelicula);
 
   const filasAfectadas = await desactivarPelicula(idPelicula);
   if (filasAfectadas === 0) {
     throw new ErrorNoEncontrado('La película no existe');
   }
-}
-
-export async function consultarPelicula(idPelicula) {
-  if (!Number.isInteger(idPelicula) || idPelicula <= 0) {
-    throw new ErrorValidacion('El id de la película no es válido');
-  }
-
-  const detalle = await obtenerDetallePelicula(idPelicula);
-  if (!detalle) {
-    throw new ErrorNoEncontrado('La película no existe');
-  }
-
-  const [id, titulo, sinopsis, duracion, clasificacion, clavePoster, claveBanner] = detalle.fila;
-
-  return {
-    pelicula: [
-      id,
-      titulo,
-      sinopsis,
-      duracion,
-      clasificacion,
-      obtenerUrlImagen(clavePoster),
-      obtenerUrlImagen(claveBanner),
-    ],
-    generos: detalle.generos,
-    idiomas: detalle.idiomas,
-  };
 }

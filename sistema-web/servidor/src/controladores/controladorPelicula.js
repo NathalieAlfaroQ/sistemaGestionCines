@@ -3,9 +3,10 @@ import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 import {
   asignarImagenPelicula,
   borrarPelicula,
+  consultarPelicula,
+  modificarPelicula,
   obtenerPeliculas,
   registrarPelicula,
-  consultarPelicula,
 } from '../servicios/servicioPelicula.js';
 
 export async function crearPelicula(req, res) {
@@ -29,6 +30,38 @@ export async function listarPeliculas(req, res) {
   } catch (error) {
     console.error('Error al listar películas:', error);
     res.status(500).json({ mensaje: 'No se pudieron obtener las películas' });
+  }
+}
+
+export async function verPelicula(req, res) {
+  try {
+    const detalle = await consultarPelicula(Number(req.params.id));
+    res.json(detalle);
+  } catch (error) {
+    if (error instanceof ErrorValidacion) {
+      return res.status(400).json({ mensaje: error.message });
+    }
+    if (error instanceof ErrorNoEncontrado) {
+      return res.status(404).json({ mensaje: error.message });
+    }
+    console.error('Error al obtener película:', error);
+    res.status(500).json({ mensaje: 'No se pudo obtener la película' });
+  }
+}
+
+export async function editarPelicula(req, res) {
+  try {
+    await modificarPelicula(Number(req.params.id), req.body);
+    res.status(204).end();
+  } catch (error) {
+    if (error instanceof ErrorValidacion) {
+      return res.status(400).json({ mensaje: error.message });
+    }
+    if (error instanceof ErrorNoEncontrado) {
+      return res.status(404).json({ mensaje: error.message });
+    }
+    console.error('Error al actualizar película:', error);
+    res.status(500).json({ mensaje: 'Error al actualizar la película, intente después' });
   }
 }
 
@@ -61,21 +94,5 @@ export async function eliminarPelicula(req, res) {
     }
     console.error('Error al borrar película:', error);
     res.status(500).json({ mensaje: 'Error al borrar la película, intente después' });
-  }
-}
-
-export async function verPelicula(req, res) {
-  try {
-    const detalle = await consultarPelicula(Number(req.params.id));
-    res.json(detalle);
-  } catch (error) {
-    if (error instanceof ErrorValidacion) {
-      return res.status(400).json({ mensaje: error.message });
-    }
-    if (error instanceof ErrorNoEncontrado) {
-      return res.status(404).json({ mensaje: error.message });
-    }
-    console.error('Error al obtener película:', error);
-    res.status(500).json({ mensaje: 'No se pudo obtener la película' });
   }
 }
