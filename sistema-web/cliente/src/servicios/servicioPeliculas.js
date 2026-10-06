@@ -84,3 +84,14 @@ export async function borrarPelicula(idPelicula) {
     throw new Error(cuerpo.mensaje ?? 'Error al borrar la película, intente después');
   }
 }
+
+export async function obtenerPelicula(idPelicula) {
+  const respuesta = await fetch(`/api/peliculas/${idPelicula}`);
+  const cuerpo = await respuesta.json().catch(() => ({}));
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo obtener la película');
+  }
+
+  return cuerpo;
+}

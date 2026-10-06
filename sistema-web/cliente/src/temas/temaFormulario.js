@@ -10,6 +10,8 @@ export const clasesFormulario = {
   exito: 'text-[#34B35B] dark:text-[#34B35B]',
   aviso: 'text-[#F38E30]',
   zonaImagen: 'border-2 border-dashed border-[#565669] bg-[#141418] text-white/70 hover:border-[#B188CE]',
+  etiqueta: 'bg-[#3D1D53] text-white',
+  marcoImagen: 'border border-[#565669] bg-[#141418] text-white/60',
 };
 
 export const campoOscuro =

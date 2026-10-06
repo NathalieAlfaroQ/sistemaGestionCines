@@ -58,6 +58,7 @@ function Peliculas() {
               <TablaPeliculas
                 peliculas={paginacion.visibles}
                 numeroInicial={paginacion.desde}
+                alVer={(pelicula) => void navegar(`/peliculas/${pelicula[POS_PELICULA.id]}`)}
                 alBorrar={setPeliculaABorrar}
               />
               <Paginacion
