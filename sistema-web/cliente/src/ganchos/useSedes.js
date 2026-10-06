@@ -5,6 +5,7 @@ export function useSedes(busqueda) {
   const [sedes, setSedes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let cancelado = false;
@@ -28,7 +29,11 @@ export function useSedes(busqueda) {
     return () => {
       cancelado = true;
     };
-  }, [busqueda]);
+  }, [busqueda, version]);
 
-  return { sedes, cargando, error };
+  function recargar() {
+    setVersion((anterior) => anterior + 1);
+  }
+
+  return { sedes, cargando, error, recargar };
 }

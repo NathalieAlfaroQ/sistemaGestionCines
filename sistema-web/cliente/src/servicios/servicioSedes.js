@@ -1,3 +1,7 @@
+async function leerCuerpo(respuesta) {
+  return await respuesta.json().catch(() => ({}));
+}
+
 export async function obtenerSedes(busqueda = '') {
   const url = busqueda
     ? `/api/sedes?busqueda=${encodeURIComponent(busqueda)}`
@@ -29,10 +33,22 @@ export async function crearSede(sede) {
     body: JSON.stringify(sede),
   });
 
-  const cuerpo = await respuesta.json();
+  const cuerpo = await leerCuerpo(respuesta);
 
   if (!respuesta.ok) {
     throw new Error(cuerpo.mensaje ?? 'No se pudo crear la sede');
+  }
+
+  return cuerpo;
+}
+
+export async function eliminarSede(idSede) {
+  const respuesta = await fetch(`/api/sedes/${idSede}`, { method: 'DELETE' });
+
+  const cuerpo = await leerCuerpo(respuesta);
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo eliminar la sede');
   }
 
   return cuerpo;

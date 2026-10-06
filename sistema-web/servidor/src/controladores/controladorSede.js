@@ -1,4 +1,4 @@
-import { obtenerSedes, registrarSede } from '../servicios/servicioSede.js';
+import { desactivarSede, obtenerSedes, registrarSede } from '../servicios/servicioSede.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 
 export async function listarSedes(req, res) {
@@ -22,5 +22,23 @@ export async function crearSede(req, res) {
     }
     console.error('Error al crear sede:', error);
     res.status(500).json({ mensaje: 'No se pudo crear la sede' });
+  }
+}
+
+export async function eliminarSede(req, res) {
+  try {
+    const desactivada = await desactivarSede(req.params.id);
+
+    if (!desactivada) {
+      return res.status(404).json({ mensaje: 'La sede no existe o ya fue eliminada' });
+    }
+
+    res.json({ idSede: Number(req.params.id) });
+  } catch (error) {
+    if (error instanceof ErrorValidacion) {
+      return res.status(400).json({ mensaje: error.message });
+    }
+    console.error('Error al eliminar sede:', error);
+    res.status(500).json({ mensaje: 'No se pudo eliminar la sede' });
   }
 }

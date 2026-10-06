@@ -1,8 +1,6 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import rutasPelicula from './rutas/rutasPelicula.js'
-import rutasCatalogo from './rutas/rutasCatalogo.js'
 import rutasSede from './rutas/rutasSede.js'
 import rutasUbicacion from './rutas/rutasUbicacion.js'
 
@@ -32,8 +30,6 @@ app.get('/api/health', (req, res) => {
   })
 })
 
-app.use('/api/peliculas', rutasPelicula);
-app.use('/api/catalogo', rutasCatalogo);
 app.use('/api/sedes', rutasSede);
 app.use('/api/ubicaciones', rutasUbicacion);
 

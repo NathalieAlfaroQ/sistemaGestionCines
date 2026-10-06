@@ -1,14 +1,20 @@
 import oracledb from 'oracledb';
 import { ejecutar } from '../configuracion/baseDatos.js';
 
+//ELIMINAR SEDE
+const sqlDesactivarSede = `UPDATE SEDES SET ESTADO_SEDE = 0 WHERE ID_SEDE = :idSede AND ESTADO_SEDE = 1`;
+
+export async function desactivarSede(idSede) {
+  const resultado = await ejecutar(sqlDesactivarSede, { idSede });
+  return resultado.rowsAffected > 0;
+}
+
+//CREAR SEDE
 const sqlCrearSede = `
   INSERT INTO SEDES (NOMBRE_SEDE, ID_CANTON)
   VALUES (:nombre, :idCanton)
   RETURNING ID_SEDE INTO :idSede
 `;
-
-const sqlExisteCanton = `SELECT 1 FROM CANTONES WHERE ID_CANTON = :idCanton`;
-
 
 export async function crearSede({ nombre, idCanton }) {
   const resultado = await ejecutar(sqlCrearSede, {
@@ -16,15 +22,18 @@ export async function crearSede({ nombre, idCanton }) {
     idCanton,
     idSede: { type: oracledb.NUMBER, dir: oracledb.BIND_OUT },
   });
-
+  
   return resultado.outBinds.idSede[0];
 }
+
+const sqlExisteCanton = `SELECT 1 FROM CANTONES WHERE ID_CANTON = :idCanton`;
 
 export async function existeCanton(idCanton) {
   const resultado = await ejecutar(sqlExisteCanton, { idCanton });
   return resultado.rows.length > 0;
 }
 
+//VER SEDES
 const sqlListarSedes = `
   SELECT s.ID_SEDE,
     s.NOMBRE_SEDE,
@@ -44,4 +53,3 @@ export async function listarSedes(busqueda = null) {
   const resultado = await ejecutar(sqlListarSedes, { busqueda });
   return resultado.rows;
 }
-
