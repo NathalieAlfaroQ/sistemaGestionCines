@@ -1,19 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button, Select, Textarea, TextInput, ThemeProvider } from 'flowbite-react';
 import { useCatalogo } from '../ganchos/useCatalogo.js';
 import { crearPelicula, subirImagenesPelicula } from '../servicios/servicioPeliculas.js';
 import { TIPOS_IMAGEN } from '../constantes/imagenesPelicula.js';
+import { temaFormulario } from '../temas/temaFormulario.js';
+import Campo from '../componentes/Campo.jsx';
 import SeleccionMultiple from '../componentes/SeleccionMultiple.jsx';
 import SelectorImagen from '../componentes/SelectorImagen.jsx';
 
-const claseEtiqueta = 'mb-2 block text-sm text-white';
-const claseCampoBase = 'px-3 py-2 rounded-lg bg-black text-white placeholder:text-white/40';
-const claseCampo = `w-full ${claseCampoBase}`;
-
-// Disposición de los selectores de imagen. Dejá solo una de las dos líneas:
-//   uno al lado del otro: 'grid max-w-xl gap-5 sm:grid-cols-2'
-//   uno debajo del otro:  'grid max-w-xs gap-5'
-const claseImagenes = 'grid max-w-xl gap-5 sm:grid-cols-2';
+const claseImagenes = 'grid max-w-xs gap-5';
 
 function FormularioPelicula() {
   const navegar = useNavigate();
@@ -40,6 +36,14 @@ function FormularioPelicula() {
 
   function actualizar(campo, valor) {
     setFormulario((anterior) => ({ ...anterior, [campo]: valor }));
+  }
+
+  // Devuelve value y onChange de un campo de texto, para no repetirlos en cada uno
+  function enlazar(campo) {
+    return {
+      value: formulario[campo],
+      onChange: (evento) => actualizar(campo, evento.target.value),
+    };
   }
 
   function actualizarImagen(tipo, archivo) {
@@ -83,11 +87,11 @@ function FormularioPelicula() {
   }
 
   if (cargandoCatalogo) {
-    return <p className="p-8 text-white">Cargando formulario...</p>;
+    return <p className="p-8 text-text-color">Cargando formulario...</p>;
   }
 
   if (errorCatalogo) {
-    return <p className="p-8 text-red-400">{errorCatalogo}</p>;
+    return <p className="p-8 text-danger">{errorCatalogo}</p>;
   }
 
   let textoBoton = 'Guardar';
@@ -95,137 +99,96 @@ function FormularioPelicula() {
   else if (bloqueado) textoBoton = 'Reintentar subida';
 
   return (
-    <main className="min-h-screen bg-fondo text-white">
-      <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <h1 className="mb-8 text-3xl font-bold">Crear película</h1>
+    <ThemeProvider theme={temaFormulario}>
+      <main className="min-h-screen bg-background text-text-color">
+        <div className="max-w-screen-2xl mx-auto px-8 py-8">
+          <h1 className="mb-8 text-3xl font-bold">Crear película</h1>
 
-        <form
-          onSubmit={alEnviar}
-          className="grid gap-x-12 gap-y-8 lg:grid-cols-[28rem_1fr] lg:items-start"
-        >
-          <fieldset disabled={bloqueado} className="contents">
-            <div className="flex flex-col gap-5">
-              <div>
-                <label htmlFor="titulo" className={claseEtiqueta}>
-                  Título <span className="text-linea">*</span>
-                </label>
-                <input
-                  id="titulo"
-                  className={claseCampo}
-                  maxLength={100}
-                  value={formulario.titulo}
-                  onChange={(evento) => actualizar('titulo', evento.target.value)}
-                />
-              </div>
+          <form
+            onSubmit={alEnviar}
+            className="grid gap-x-12 gap-y-8 lg:grid-cols-[28rem_1fr] lg:items-start"
+          >
+            <fieldset disabled={bloqueado} className="contents">
+              <div className="flex flex-col gap-5">
+                <Campo id="titulo" etiqueta="Título" obligatorio>
+                  <TextInput id="titulo" maxLength={100} {...enlazar('titulo')} />
+                </Campo>
 
-              <div>
-                <label htmlFor="sinopsis" className={claseEtiqueta}>Sinopsis</label>
-                <textarea
-                  id="sinopsis"
-                  rows={4}
-                  className={claseCampo}
-                  maxLength={500}
-                  value={formulario.sinopsis}
-                  onChange={(evento) => actualizar('sinopsis', evento.target.value)}
-                />
-              </div>
+                <Campo id="sinopsis" etiqueta="Sinopsis">
+                  <Textarea id="sinopsis" rows={4} maxLength={500} {...enlazar('sinopsis')} />
+                </Campo>
 
-              <div className="flex flex-wrap gap-4">
-                <div>
-                  <label htmlFor="duracion" className={claseEtiqueta}>
-                    Duración (minutos) <span className="text-linea">*</span>
-                  </label>
-                  <input
-                    id="duracion"
-                    type="number"
-                    min="1"
-                    className={`${claseCampoBase} w-32`}
-                    value={formulario.duracion}
-                    onChange={(evento) => actualizar('duracion', evento.target.value)}
-                  />
+                <div className="flex flex-wrap gap-4">
+                  <Campo id="duracion" etiqueta="Duración (minutos)" obligatorio>
+                    <TextInput id="duracion" type="number" min="1" className="w-32" {...enlazar('duracion')} />
+                  </Campo>
+
+                  <Campo id="clasificacion" etiqueta="Clasificación" obligatorio>
+                    <Select id="clasificacion" className="w-40" {...enlazar('clasificacion')}>
+                      <option value="">Seleccione una</option>
+                      {catalogo.clasificaciones.map((clasificacion) => (
+                        <option key={clasificacion} value={clasificacion}>{clasificacion}</option>
+                      ))}
+                    </Select>
+                  </Campo>
                 </div>
 
-                <div>
-                  <label htmlFor="clasificacion" className={claseEtiqueta}>
-                    Clasificación <span className="text-linea">*</span>
-                  </label>
-                  <select
-                    id="clasificacion"
-                    className={`${claseCampoBase} w-auto`}
-                    value={formulario.clasificacion}
-                    onChange={(evento) => actualizar('clasificacion', evento.target.value)}
-                  >
-                    <option value="">Seleccione una</option>
-                    {catalogo.clasificaciones.map((clasificacion) => (
-                      <option key={clasificacion} value={clasificacion}>{clasificacion}</option>
-                    ))}
-                  </select>
-                </div>
+                <SeleccionMultiple
+                  etiqueta="Idioma"
+                  textoVacio="Seleccione uno o más idiomas"
+                  opciones={catalogo.idiomas}
+                  seleccionados={formulario.idiomas}
+                  alCambiar={(valor) => actualizar('idiomas', valor)}
+                />
+
+                <SeleccionMultiple
+                  etiqueta="Género"
+                  textoVacio="Seleccione uno o más géneros"
+                  opciones={catalogo.generos}
+                  seleccionados={formulario.generos}
+                  alCambiar={(valor) => actualizar('generos', valor)}
+                />
               </div>
+            </fieldset>
 
-              <SeleccionMultiple
-                etiqueta="Idioma"
-                textoVacio="Seleccione uno o más idiomas"
-                opciones={catalogo.idiomas}
-                seleccionados={formulario.idiomas}
-                alCambiar={(valor) => actualizar('idiomas', valor)}
-              />
-
-              <SeleccionMultiple
-                etiqueta="Género"
-                textoVacio="Seleccione uno o más géneros"
-                opciones={catalogo.generos}
-                seleccionados={formulario.generos}
-                alCambiar={(valor) => actualizar('generos', valor)}
-              />
+            <div className={claseImagenes}>
+              {TIPOS_IMAGEN.map(({ tipo, etiqueta, ayuda }) => (
+                <SelectorImagen
+                  key={tipo}
+                  id={`imagen-${tipo}`}
+                  etiqueta={etiqueta}
+                  ayuda={ayuda}
+                  alCambiar={(archivo) => actualizarImagen(tipo, archivo)}
+                  error={erroresImagen[tipo]}
+                  subida={subidas.includes(tipo)}
+                />
+              ))}
             </div>
-          </fieldset>
 
-          <div className={claseImagenes}>
-            {TIPOS_IMAGEN.map(({ tipo, etiqueta, ayuda }) => (
-              <SelectorImagen
-                key={tipo}
-                id={`imagen-${tipo}`}
-                etiqueta={etiqueta}
-                ayuda={ayuda}
-                alCambiar={(archivo) => actualizarImagen(tipo, archivo)}
-                error={erroresImagen[tipo]}
-                subida={subidas.includes(tipo)}
-              />
-            ))}
-          </div>
+            <div className="lg:col-span-2">
+              {error && <p className="mb-4 text-danger">{error}</p>}
+              {bloqueado && (
+                <p className="mb-4 text-warning">
+                  La película ya se creó, pero alguna imagen no se pudo subir. Elija otra imagen
+                  y presione &quot;Reintentar subida&quot;, o vuelva a la lista para dejarla sin ella.
+                </p>
+              )}
+              <p className="mb-4 text-sm text-brand-soft">* Espacio obligatorio</p>
 
-          <div className="lg:col-span-2">
-            {error && <p className="mb-4 text-red-400">{error}</p>}
-            {bloqueado && (
-              <p className="mb-4 text-yellow-300">
-                La película ya se creó, pero alguna imagen no se pudo subir. Elija otra imagen
-                y presione &quot;Reintentar subida&quot;, o vuelva a la lista para dejarla sin ella.
-              </p>
-            )}
-            <p className="mb-4 text-sm text-linea">* Espacio obligatorio</p>
+              <div className="flex gap-4">
+                <Button type="submit" color="brand" disabled={guardando}>
+                  {textoBoton}
+                </Button>
 
-            <div className="flex gap-4">
-              <button
-                type="submit"
-                disabled={guardando}
-                className="px-6 py-2.5 rounded-lg bg-boton text-white hover:brightness-125 disabled:opacity-50"
-              >
-                {textoBoton}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navegar('/peliculas')}
-                className="px-6 py-2.5 rounded-lg bg-boton text-white hover:brightness-125"
-              >
-                {bloqueado ? 'Volver a la lista' : 'Cancelar'}
-              </button>
+                <Button type="button" color="brand" onClick={() => navegar('/peliculas')}>
+                  {bloqueado ? 'Volver a la lista' : 'Cancelar'}
+                </Button>
+              </div>
             </div>
-          </div>
-        </form>
-      </div>
-    </main>
+          </form>
+        </div>
+      </main>
+    </ThemeProvider>
   );
 }
 

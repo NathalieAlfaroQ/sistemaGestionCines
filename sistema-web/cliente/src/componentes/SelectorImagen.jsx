@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FileInput, HelperText, Label } from 'flowbite-react';
 import {
   TAMANO_MAXIMO_BYTES,
   TAMANO_MAXIMO_MB,
@@ -33,23 +34,14 @@ function SelectorImagen({ id, etiqueta, ayuda, alCambiar, error, subida }) {
 
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block text-sm text-white">{etiqueta}</label>
+      <Label htmlFor={id}>{etiqueta}</Label>
+      <FileInput id={id} accept={TIPOS_PERMITIDOS.join(',')} disabled={subida} onChange={alElegir} />
 
-      <input
-        id={id}
-        type="file"
-        accept={TIPOS_PERMITIDOS.join(',')}
-        disabled={subida}
-        onChange={alElegir}
-        className="w-full px-3 py-2 rounded-lg bg-black text-sm text-white file:mr-4 file:px-3 file:py-1 file:rounded file:border-0 file:bg-boton file:text-white disabled:opacity-50"
-      />
-
-      <p className="mt-1 text-xs text-white/60">
+      <HelperText>
         {ayuda}. JPEG, PNG o WebP, máximo {TAMANO_MAXIMO_MB} MB. Se recorta al centro si no coincide la proporción.
-      </p>
-
-      {mensajeError && <p className="mt-1 text-sm text-red-400">{mensajeError}</p>}
-      {subida && <p className="mt-1 text-sm text-green-400">Imagen subida correctamente</p>}
+      </HelperText>
+      {mensajeError && <HelperText className="text-danger">{mensajeError}</HelperText>}
+      {subida && <HelperText className="text-success">Imagen subida correctamente</HelperText>}
     </div>
   );
 }
