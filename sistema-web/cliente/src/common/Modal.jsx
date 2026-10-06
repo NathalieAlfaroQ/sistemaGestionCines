@@ -1,4 +1,4 @@
-import { useEffect, useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 
 const clasesBoton = {
   principal: 'bg-black text-text-color hover:bg-surface',
@@ -9,35 +9,41 @@ const clasesBoton = {
 function Modal({ titulo, mensaje, children, botones, alCerrar }) {
   const idTitulo = useId();
   const idMensaje = useId();
+  const refDialogo = useRef(null);
+  const refBotonEnfocado = useRef(null);
   const indiceEnfocado = Math.max(0, botones.findIndex((boton) => boton.enfocar));
 
   useEffect(() => {
-    if (!alCerrar) return undefined;
+    const dialogo = refDialogo.current;
+    if (!dialogo.open) dialogo.showModal();
+    refBotonEnfocado.current?.focus();
+  }, []);
 
-    function alPulsarTecla(evento) {
-      if (evento.key === 'Escape') alCerrar();
-    }
-
-    document.addEventListener('keydown', alPulsarTecla);
-    return () => document.removeEventListener('keydown', alPulsarTecla);
-  }, [alCerrar]);
-
-  function alPulsarFondo(evento) {
-    if (alCerrar && evento.target === evento.currentTarget) alCerrar();
+  function alCancelar(evento) {
+    evento.preventDefault();
+    alCerrar?.();
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
-      onClick={alPulsarFondo}
+    <dialog
+      ref={refDialogo}
+      aria-labelledby={titulo ? idTitulo : idMensaje}
+      aria-describedby={titulo ? idMensaje : undefined}
+      onCancel={alCancelar}
+      className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none items-center justify-center bg-transparent p-4 text-text-color open:flex backdrop:bg-black/60"
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titulo ? idTitulo : idMensaje}
-        aria-describedby={titulo ? idMensaje : undefined}
-        className="w-full max-w-sm rounded-lg bg-border px-8 py-10 text-center"
-      >
+      {/* */}
+      {alCerrar && (
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label="Cerrar"
+          onClick={alCerrar}
+          className="absolute inset-0 h-full w-full cursor-default"
+        />
+      )}
+
+      <div className="relative w-full max-w-sm rounded-lg bg-border px-8 py-10 text-center">
         {titulo && (
           <h2 id={idTitulo} className="mb-3 text-lg font-bold text-text-color">
             {titulo}
@@ -55,7 +61,7 @@ function Modal({ titulo, mensaje, children, botones, alCerrar }) {
             <button
               key={boton.texto}
               type="button"
-              autoFocus={indice === indiceEnfocado}
+              ref={indice === indiceEnfocado ? refBotonEnfocado : undefined}
               onClick={boton.alPulsar}
               className={`rounded px-4 py-1.5 text-sm transition-colors ${clasesBoton[boton.variante ?? 'principal']}`}
             >
@@ -64,8 +70,9 @@ function Modal({ titulo, mensaje, children, botones, alCerrar }) {
           ))}
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
 
 export default Modal;
+
