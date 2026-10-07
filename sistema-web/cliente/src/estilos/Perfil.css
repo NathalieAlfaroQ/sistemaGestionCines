@@ -1,0 +1,128 @@
+:root {
+  --bg-input: #1c1c1c;
+  --borde-input: #2a2a2a;
+  --texto-principal: #ffffff;
+  --texto-label: #cfcfcf;
+  --boton-morado: #4a2d5e;
+  --boton-morado-hover: #5c3a75;
+}
+
+.perfil-container {
+  min-height: calc(100vh - 200px);
+  padding: 40px 60px;
+  background: #1F1F24;
+}
+
+.perfil-contenido {
+  max-width: 420px;
+}
+
+.perfil-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.perfil-titulo {
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--texto-principal);
+  margin: 0;
+}
+
+.perfil-editar {
+  background: transparent;
+  border: none;
+  color: var(--texto-principal);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.perfil-editar:hover { text-decoration: underline; }
+
+.perfil-acciones {
+  display: flex;
+  gap: 10px;
+}
+
+.perfil-cancelar {
+  background: transparent;
+  border: 1px solid var(--borde-input);
+  color: var(--texto-label);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.perfil-cancelar:hover:not(:disabled) {
+  border-color: var(--texto-label);
+  color: var(--texto-principal);
+}
+
+.perfil-guardar {
+  background: var(--boton-morado);
+  border: none;
+  color: var(--texto-principal);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.perfil-guardar:hover:not(:disabled) { background: var(--boton-morado-hover); }
+.perfil-guardar:disabled,
+.perfil-cancelar:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.campo span {
+  font-size: 14px;
+  color: var(--texto-label);
+}
+
+.campo input {
+  background: var(--bg-input);
+  border: 1px solid var(--borde-input);
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: var(--texto-principal);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.campo input:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.campo input:focus:not(:disabled) { border-color: #6a4a85; }
+
+.boton-cambiar-contrasena {
+  background: var(--boton-morado);
+  color: var(--texto-principal);
+  border: none;
+  border-radius: 6px;
+  padding: 12px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s;
+}
+.boton-cambiar-contrasena:hover { background: var(--boton-morado-hover); }
+
+.mensaje {
+  font-size: 13px;
+  margin-top: 10px;
+}
+.mensaje.ok    { color: #6fcf97; }
+.mensaje.error { color: #eb5757; }
+
+@media (max-width: 900px) {
+  .perfil-container { padding: 40px 30px; }
+}

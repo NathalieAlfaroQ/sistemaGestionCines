@@ -1,0 +1,129 @@
+:root {
+  --bg-input: #1c1c1c;
+  --borde-input: #2a2a2a;
+  --texto-principal: #ffffff;
+  --texto-label: #cfcfcf;
+  --boton-morado: #4a2d5e;
+  --boton-morado-hover: #5c3a75;
+}
+
+* { box-sizing: border-box; }
+
+.registro-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+  background: #000;
+}
+
+.panel-izquierdo {
+  padding: 40px 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+.boton-volver {
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  background: transparent;
+  border: none;
+  color: var(--texto-principal);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.boton-volver:hover { opacity: 0.7; }
+
+.titulo-app {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--texto-principal);
+  margin: 0 0 6px 0;
+}
+
+.titulo-pantalla {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--texto-principal);
+  margin: 0 0 32px 0;
+}
+
+.form-registro {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 340px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo span {
+  font-size: 14px;
+  color: var(--texto-label);
+}
+
+.campo input {
+  background: var(--bg-input);
+  border: 1px solid var(--borde-input);
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: var(--texto-principal);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.campo input:focus {
+  border-color: #6a4a85;
+}
+
+.boton-crear {
+  background: var(--boton-morado);
+  color: var(--texto-principal);
+  border: none;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s;
+}
+
+.boton-crear:hover:not(:disabled) {
+  background: var(--boton-morado-hover);
+}
+
+.boton-crear:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mensaje {
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.mensaje.ok    { color: #6fcf97; }
+.mensaje.error { color: #eb5757; }
+
+.panel-derecho {
+  background-image: url('src/assets/aurora.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* --- Responsive --- */
+@media (max-width: 900px) {
+  .registro-container { grid-template-columns: 1fr; }
+  .panel-derecho { display: none; }
+  .panel-izquierdo { padding: 40px 30px; }
+}

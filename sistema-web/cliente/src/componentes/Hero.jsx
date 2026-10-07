@@ -7,13 +7,13 @@ function Hero() {
       <h1 className="absolute max-w-3xl text-4xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center font-bold text-text-color">
         LA PANTALLA GRANDE TE ESPERA.
         <br />
-        CONSIGUE TUS BOLETOS.
+        CONSIGUE TUS BOLETOS
       </h1>
-      <div className="absolute right-15 top-1/2 -translate-y-1/2 font-bold text-brand-soft">
+
+      <div className="absolute right-15 top-1/2 -translate-y-1/2 font-bold text-white">
         Flecha
       </div>
     </div>
   )
 }
-
 export default Hero

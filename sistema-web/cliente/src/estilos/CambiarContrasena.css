@@ -1,0 +1,99 @@
+:root {
+  --bg-input: #1c1c1c;
+  --borde-input: #2a2a2a;
+  --texto-principal: #ffffff;
+  --texto-label: #cfcfcf;
+  --boton-morado: #4a2d5e;
+  --boton-morado-hover: #5c3a75;
+}
+
+* { box-sizing: border-box; }
+
+.cambiar-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+  background: #000;
+}
+
+.cambiar-container .panel-izquierdo {
+  padding: 40px 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+.cambiar-container .titulo-app {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--texto-principal);
+  margin: 0 0 6px 0;
+}
+
+.cambiar-container .titulo-pantalla {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--texto-principal);
+  margin: 0 0 32px 0;
+}
+
+.form-cambiar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 340px;
+}
+
+.cambiar-container .campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cambiar-container .campo span {
+  font-size: 14px;
+  color: var(--texto-label);
+}
+
+.cambiar-container .campo input {
+  background: var(--bg-input);
+  border: 1px solid var(--borde-input);
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: var(--texto-principal);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.cambiar-container .campo input:focus { border-color: #6a4a85; }
+
+.boton-guardar {
+  background: var(--boton-morado);
+  color: var(--texto-principal);
+  border: none;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.2s;
+}
+.boton-guardar:hover:not(:disabled) { background: var(--boton-morado-hover); }
+.boton-guardar:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.mensaje { font-size: 13px; margin-top: 4px; }
+.mensaje.ok    { color: #6fcf97; }
+.mensaje.error { color: #eb5757; }
+
+.cambiar-container .panel-derecho {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+@media (max-width: 900px) {
+  .cambiar-container { grid-template-columns: 1fr; }
+  .cambiar-container .panel-derecho { display: none; }
+  .cambiar-container .panel-izquierdo { padding: 40px 30px; }
+}
