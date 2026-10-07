@@ -1,11 +1,11 @@
 function PiePagina() {
   return (
-    <footer className="w-full px-20 py-6 text-text-color" style={{ backgroundColor: '#000000' }}>
+    <footer className="w-full px-20 py-4 text-text-color" style={{ backgroundColor: '#000000' }}>
      <div className="max-w-screen-2xl mx-auto">
 
-        <h3 className="mb-3 text-base ">Historia</h3>
+        <h3 className="mb-2 text-base ">Historia</h3>
 
-        <div className="mb-4 flex gap-3">
+        <div className="mb-4 flex gap-">
           <a href="#" aria-label="Facebook" className="text-text-muted hover:text-text-color">
             <svg className="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
               <path fillRule="evenodd" d="M13.135 6H15V3h-1.865a4.147 4.147 0 0 0-4.142 4.142V9H7v3h2v9.938h3V12h2.021l.592-3H12V6.591A.6.6 0 0 1 12.592 6h.543Z" clipRule="evenodd"/>
