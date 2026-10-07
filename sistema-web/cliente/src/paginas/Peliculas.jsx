@@ -28,7 +28,7 @@ function Peliculas() {
           <button
             type="button"
             onClick={() => navegar('/peliculas/nueva')}
-            className="px-5 py-2.5 flex items-center gap-2 rounded-lg bg-boton text-sm font-medium text-white hover:brightness-125"
+            className="px-5 py-2.5 flex items-center gap-2 rounded-lg bg-[#3D1D53] text-sm font-medium text-white hover:brightness-125"
           >
             Crear película
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">

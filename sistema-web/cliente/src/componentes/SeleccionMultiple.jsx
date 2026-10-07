@@ -34,7 +34,7 @@ function SeleccionMultiple({ etiqueta, opciones, seleccionados, alCambiar, texto
         {etiqueta} <span className="text-linea">*</span>
       </label>
 
-      <div className="w-full min-h-11 px-3 py-2 flex flex-wrap items-center gap-2 rounded-lg bg-boton">
+      <div className="w-full min-h-11 px-3 py-2 flex flex-wrap items-center gap-2 rounded-lg bg-[#141418]">
         {elegidas.length === 0 && <span className="text-sm text-white/60">{textoVacio}</span>}
 
         {elegidas.map((opcion) => (
