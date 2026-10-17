@@ -41,12 +41,12 @@ router.post('/', async (req, res) => {
     const salt = await bcrypt.genSalt(10)
     const hashNuevo = await bcrypt.hash(contrasenaNueva, salt)
 
-    await connection.execute(
+    const resultUpdate = await connection.execute(
       `UPDATE CREDENCIALES
-       SET HASH = :hash,
-           SALT = :salt,
-           FECHA_VENCIMIENTO = NULL
-       WHERE ID_CREDENCIAL = :idCredencial`,
+      SET HASH = :hash,
+          SALT = :salt,
+          FECHA_VENCIMIENTO = SYSDATE + 90
+      WHERE ID_CREDENCIAL = :idCredencial`,
       { hash: hashNuevo, salt, idCredencial },
       { autoCommit: true }
     )
