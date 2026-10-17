@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useSedes } from '../ganchos/useSedes.js';
 import { useDebounce } from '../ganchos/useDebounce.js';
 import { POS_SEDE } from '../constantes/posicionesSede.js';
 import Tabla from '../common/Tabla.jsx';
 import Modal from '../common/Modal.jsx';
+import CrearSede from '../componentes/CrearSede.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import { eliminarSede } from '../servicios/servicioSedes.js';
 
@@ -23,6 +23,7 @@ function Sedes() {
   const busquedaRetrasada = useDebounce(busqueda, 400);
   const { sedes, cargando, error, recargar } = useSedes(busquedaRetrasada);
 
+  const [mostrarCrear, setMostrarCrear] = useState(false);
   const [sedeAEliminar, setSedeAEliminar] = useState(null);
   const [resultado, setResultado] = useState(null);
 
@@ -42,6 +43,11 @@ function Sedes() {
     }
   }
 
+  function sedeCreada() {
+    setMostrarCrear(false);
+    setResultado({ mensaje: 'Sede creada con éxito', textoBoton: 'Continuar' });
+  }
+
   function cerrarResultado() {
     setResultado(null);
     recargar();
@@ -53,10 +59,7 @@ function Sedes() {
         <div className="mb-5 flex items-center gap-27">
           <h1 className="text-4xl font-bold">Sedes</h1>
 
-          <Link
-            to="/sedes/nueva"
-            className={claseBoton}
-          >
+          <button type="button" onClick={() => setMostrarCrear(true)} className={claseBoton}>
             Crear sede
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path
@@ -65,7 +68,7 @@ function Sedes() {
                 clipRule="evenodd"
               />
             </svg>
-          </Link>
+          </button>
         </div>
 
         <input
@@ -89,6 +92,10 @@ function Sedes() {
           />
         )}
       </div>
+
+      {mostrarCrear && (
+        <CrearSede alCancelar={() => setMostrarCrear(false)} alCrear={sedeCreada} />
+      )}
 
       {sedeAEliminar && (
         <ModalConfirmacion
