@@ -11,6 +11,8 @@ import iniciarSesion from './iniciarSesion.js'
 import recuperarContrasena from './recuperarContrasena.js'
 import cambiarContrasena from './cambiarContrasena.js'
 import perfil from './perfil.js'
+import { manejadorErrores } from './middlewares/manejadorErrores.js'
+import { verificarAutenticacion } from './middlewares/autenticacion.js'
 
 dotenv.config()
 const app = express()
@@ -33,6 +35,8 @@ app.use('/api/iniciar-sesion', iniciarSesion)
 app.use('/api/recuperar-contrasena', recuperarContrasena)
 app.use('/api/cambiar-contrasena', cambiarContrasena)
 app.use('/api/perfil', perfil)
+
+app.use(manejadorErrores)
 
 app.listen(PORT, () => {
   console.log(`Servidor Express listo en http://localhost:${PORT}`)
