@@ -9,7 +9,8 @@ const claseBotonConfirmar = 'flex items-center gap-2 rounded-lg bg-brand px-5 py
 const claseBotonCancelar = 'flex items-center gap-2 rounded-lg bg-brand-soft px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-soft-hover disabled:opacity-50';
 
 const NOMBRE_MINIMO = 10;
-const NOMBRE_MAXIMO = 50;
+const NOMBRE_MAXIMO = 30;
+const MENSAJE_MAXIMO = `El nombre no puede superar los ${NOMBRE_MAXIMO} caracteres`;
 const PATRON_NOMBRE = /^\p{L}+(?: \p{L}+)*$/u;
 
 function normalizarNombre(nombre) {
@@ -43,6 +44,7 @@ function FormularioSede({
     idCanton: String(valorInicial?.idCanton ?? ''),
   });
   const [intentoEnvio, setIntentoEnvio] = useState(false);
+  const [excedioMaximo, setExcedioMaximo] = useState(false); // se intentó pasar del límite
 
   const cantonesDisponibles = ubicaciones.cantones.filter(
     (canton) => String(canton[POS_CANTON.idProvincia]) === formulario.idProvincia
@@ -54,10 +56,19 @@ function FormularioSede({
   const mostrarObligatorio = intentoEnvio && hayCamposVacios;
 
   const errorNombre = errorDeNombre(nombreNormalizado);
-  const mostrarErrorNombre = intentoEnvio && errorNombre !== null;
+  const mensajeNombre = excedioMaximo ? MENSAJE_MAXIMO : errorNombre;
+  const mostrarErrorNombre = excedioMaximo || (intentoEnvio && errorNombre !== null);
 
   function actualizar(campo, valor) {
     setFormulario((anterior) => ({ ...anterior, [campo]: valor }));
+  }
+
+  function cambiarNombre(evento) {
+    const texto = evento.target.value;
+    const excede = texto.length > NOMBRE_MAXIMO;
+
+    setExcedioMaximo(excede);
+    actualizar('nombre', excede ? texto.slice(0, NOMBRE_MAXIMO) : texto);
   }
 
   function cambiarProvincia(evento) {
@@ -88,15 +99,14 @@ function FormularioSede({
         <input
           id="nombre"
           className={claseCampo}
-          maxLength={NOMBRE_MAXIMO}
           aria-invalid={mostrarErrorNombre}
           aria-describedby={mostrarErrorNombre ? 'error-nombre' : undefined}
           value={formulario.nombre}
-          onChange={(evento) => actualizar('nombre', evento.target.value)}
+          onChange={cambiarNombre}
         />
         {mostrarErrorNombre && (
           <p id="error-nombre" role="alert" className="mt-2 text-sm text-danger">
-            {errorNombre}
+            {mensajeNombre}
           </p>
         )}
       </div>
