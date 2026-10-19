@@ -1,37 +1,14 @@
 import { useId, useRef } from 'react';
 import Dialogo from './Dialogo.jsx';
+import Boton from './Boton.jsx';
 
-const clasesBoton = {
-  principal: 'bg-black text-text-color hover:bg-surface',
-  secundario: 'border border-black text-text-color hover:bg-black/40',
-  peligro: 'bg-danger text-text-color hover:brightness-110',
+const variantesBoton = {
+  principal: 'oscuro',
+  secundario: 'contornoOscuro',
+  peligro: 'peligro',
 };
 
-/**
- * Cuadro de diálogo para mensajes y confirmaciones.
- *
- * Props:
- * - titulo:    (opcional) encabezado del cuadro
- * - mensaje:   texto principal
- * - children:  (opcional) contenido adicional debajo del mensaje
- * - botones:   [{ texto, alPulsar, variante?, enfocar? }]
- *     variante → 'principal' (por defecto), 'secundario' o 'peligro'
- *     enfocar  → el botón que recibe el foco al abrir (por defecto, el primero;
- *                en acciones destructivas conviene enfocar "Cancelar")
- * - alCerrar:  (opcional) si se indica, el cuadro también se cierra con Escape
- *              y al hacer clic fuera de él
- *
- * Ejemplos:
- *   <Modal mensaje="Elemento creado con éxito"
- *          botones={[{ texto: 'Continuar', alPulsar: continuar }]} />
- *
- *   <Modal mensaje="¿Eliminar el elemento?" alCerrar={cerrar}
- *          botones={[
- *            { texto: 'Cancelar', variante: 'secundario', enfocar: true, alPulsar: cerrar },
- *            { texto: 'Eliminar', variante: 'peligro', alPulsar: eliminar },
- *          ]} />
- */
-function Modal({ titulo, mensaje, children, botones, alCerrar }) {
+function Modal({ titulo, mensaje, icono, children, botones, alCerrar }) {
   const idTitulo = useId();
   const idMensaje = useId();
   const refBotonEnfocado = useRef(null);
@@ -45,6 +22,8 @@ function Modal({ titulo, mensaje, children, botones, alCerrar }) {
       refEnfoque={refBotonEnfocado}
       claseCaja="w-full max-w-sm rounded-lg bg-border px-8 py-10 text-center"
     >
+      {icono && <div className="mx-auto mb-4 w-fit text-brand-soft">{icono}</div>}
+
       {titulo && (
         <h2 id={idTitulo} className="mb-3 text-lg font-bold text-text-color">
           {titulo}
@@ -59,15 +38,16 @@ function Modal({ titulo, mensaje, children, botones, alCerrar }) {
 
       <div className="flex flex-wrap justify-center gap-3">
         {botones.map((boton, indice) => (
-          <button
-            key={boton.texto}
-            type="button"
+          <Boton
+            key={indice}
             ref={indice === indiceEnfocado ? refBotonEnfocado : undefined}
+            tamano="sm"
+            variante={variantesBoton[boton.variante ?? 'principal']}
+            disabled={boton.deshabilitado}
             onClick={boton.alPulsar}
-            className={`rounded px-4 py-1.5 text-sm transition-colors ${clasesBoton[boton.variante ?? 'principal']}`}
           >
             {boton.texto}
-          </button>
+          </Boton>
         ))}
       </div>
     </Dialogo>
