@@ -8,6 +8,7 @@ import Peliculas from './paginas/Peliculas.jsx'
 import FormularioPelicula from './paginas/FormularioPelicula.jsx'
 import VerPelicula from './paginas/VerPelicula.jsx'
 import EditarPelicula from './paginas/EditarPelicula.jsx'
+import RutaProtegida from './rutas/RutaProtegida.jsx'
 
 // Componentes y pantallas tuyas
 import BarraNavegacion from './componentes/BarraNavegacion'
@@ -46,22 +47,30 @@ function App() {
         <Route path="/iniciar-sesion" element={<IniciarSesion />} />
         <Route path="/crear-cuenta" element={<CrearCuenta />} />
         <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
-        <Route path="/cambiar-contrasena" element={<CambiarContrasena />} />
 
-        {/* --- Rutas de trabajo (con el layout del compañero) --- */}
-        <Route element={<DisenoGestion />}>
-          <Route path="/peliculas" element={<Peliculas />} />
-          <Route path="/peliculas/nueva" element={<FormularioPelicula />} />
-          <Route path="/peliculas/:id" element={<VerPelicula />} />
-          <Route path="/peliculas/:id/editar" element={<EditarPelicula />} />
-          <Route path="/sedes" element={<Sedes />} />
-          <Route path="/sedes/nueva" element={<CrearSede />} />
+
+        {/* Rutas que solo piden sesión */}
+        <Route element={<RutaProtegida />}>
+          <Route path="/perfil" element={<Perfil />} />
+          <Route path="/cambiar-contrasena" element={<CambiarContrasena />} />
         </Route>
+
+        {/* Rutas de trabajo: solo personal */}
+        <Route element={<RutaProtegida rolesPermitidos={['EMPLEADO', 'ADMINISTRADOR']} />}>
+          <Route element={<DisenoGestion />}>
+            <Route path="/peliculas" element={<Peliculas />} />
+            <Route path="/peliculas/nueva" element={<FormularioPelicula />} />
+            <Route path="/peliculas/:id" element={<VerPelicula />} />
+            <Route path="/peliculas/:id/editar" element={<EditarPelicula />} />
+            <Route path="/sedes" element={<Sedes />} />
+            <Route path="/sedes/nueva" element={<CrearSede />} />
+          </Route>
+        </Route>
+
 
         {/* --- Rutas de cliente (con tu navbar y footer) --- */}
         <Route path="/dulceria" element={<div>Dulcería</div>} />
         <Route path="/cartelera" element={<div>Cartelera</div>} />
-        <Route path="/perfil" element={<Perfil />} />
 
         {/* Rutas de trabajo que aún no tienen componente, quedan como placeholder */}
         <Route path="/salas" element={<div>Salas</div>} />
