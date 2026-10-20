@@ -1,6 +1,5 @@
 import { ErrorNoAutorizado } from '../errores/ErrorNoAutorizado.js';
 import { verificarToken } from '../servicios/servicioToken.js';
-import { ErrorProhibido } from '../errores/ErrorProhibido.js';
 
 export function verificarAutenticacion(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -25,19 +24,5 @@ export function verificarAutenticacion(req, res, next) {
 
   req.usuario = usuario;
   next();
-}
-
-export function autorizarRoles(...rolesPermitidos) {
-  return (req, res, next) => {
-    if (!req.usuario) {
-      return next(new ErrorNoAutorizado('Token de autenticación no proporcionado'));
-    }
-
-    if (!rolesPermitidos.includes(req.usuario.tipoUsuario)) {
-      return next(new ErrorProhibido('No tienes permiso para realizar esta acción'));
-    }
-
-    next();
-  };
 }
 

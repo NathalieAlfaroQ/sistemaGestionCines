@@ -12,7 +12,8 @@ import recuperarContrasena from './recuperarContrasena.js'
 import cambiarContrasena from './cambiarContrasena.js'
 import perfil from './perfil.js'
 import { manejadorErrores } from './middlewares/manejadorErrores.js'
-import { verificarAutenticacion, autorizarRoles } from './middlewares/autenticacion.js'
+import { verificarAutenticacion } from './middlewares/autenticacion.js'
+import { autorizarRoles } from './middlewares/autorizacion.js'
 
 dotenv.config()
 const app = express()
