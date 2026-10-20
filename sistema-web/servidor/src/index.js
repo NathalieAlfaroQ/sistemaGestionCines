@@ -1,41 +1,38 @@
+import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import rutasSede from './rutas/rutasSede.js'
 import rutasUbicacion from './rutas/rutasUbicacion.js'
-
 import rutasPelicula from './rutas/rutasPelicula.js'
 import rutasCatalogo from './rutas/rutasCatalogo.js'
+import crearCuenta from './crearCuenta.js'
+import iniciarSesion from './iniciarSesion.js'
+import recuperarContrasena from './recuperarContrasena.js'
+import cambiarContrasena from './cambiarContrasena.js'
+import perfil from './perfil.js'
 
 dotenv.config()
-
 const app = express()
 app.disable('x-powered-by')
-
 const PORT = process.env.PORT || 5000
 const CLIENT_URL = process.env.CLIENT_URL
-
-const corsOptions = {
-  origin: CLIENT_URL,
-}
-
-// Middlewares
-app.use(cors(corsOptions))
+app.use(cors({ origin: CLIENT_URL }))
 app.use(express.json())
 
-// Ruta de prueba (Endpoint de salud de la API)
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    message: 'Servidor Express corriendo correctamente',
-    timestamp: new Date().toLocaleTimeString(),
-  })
+  res.json({ status: 'ok', timestamp: new Date().toLocaleTimeString() })
 })
 
 app.use('/api/sedes', rutasSede);
 app.use('/api/ubicaciones', rutasUbicacion);
 app.use('/api/peliculas', rutasPelicula);
 app.use('/api/catalogo', rutasCatalogo);
+app.use('/api/crear-cuenta', crearCuenta)
+app.use('/api/iniciar-sesion', iniciarSesion)
+app.use('/api/recuperar-contrasena', recuperarContrasena)
+app.use('/api/cambiar-contrasena', cambiarContrasena)
+app.use('/api/perfil', perfil)
 
 app.listen(PORT, () => {
   console.log(`Servidor Express listo en http://localhost:${PORT}`)

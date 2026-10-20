@@ -2,10 +2,6 @@
 @import "flowbite-react/plugin/tailwindcss";
 @source "../.flowbite-react/class-list.json";
 
-@plugin "flowbite/plugin";
-
-@source "../node_modules/flowbite";
-
 @theme {
   --color-brand: #3D1D53;
   --color-brand-hover: #7b48a0;
