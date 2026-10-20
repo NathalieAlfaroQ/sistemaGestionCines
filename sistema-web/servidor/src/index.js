@@ -26,10 +26,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toLocaleTimeString() })
 })
 
-app.use('/api/sedes', rutasSede);
-app.use('/api/ubicaciones', rutasUbicacion);
-app.use('/api/peliculas', rutasPelicula);
-app.use('/api/catalogo', rutasCatalogo);
+app.use('/api/sedes', verificarAutenticacion, rutasSede);
+app.use('/api/ubicaciones', verificarAutenticacion, rutasUbicacion);
+app.use('/api/catalogo', verificarAutenticacion, rutasCatalogo);
+app.use('/api/peliculas',verificarAutenticacion ,rutasPelicula);
 app.use('/api/crear-cuenta', crearCuenta)
 app.use('/api/iniciar-sesion', iniciarSesion)
 app.use('/api/recuperar-contrasena', recuperarContrasena)
