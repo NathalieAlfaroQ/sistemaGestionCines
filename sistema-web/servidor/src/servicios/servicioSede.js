@@ -36,8 +36,30 @@ export async function registrarSede(datos = {}) {
   }
 }
 
-export async function obtenerSedes(busqueda) {
-  return await listarSedes(busqueda);
+const ESTADOS_SEDE = { activas: 1, eliminadas: 0, todas: null };
+
+function idDeFiltro(valor, nombreCampo) {
+  if (valor === undefined || valor === null || valor === '') return null;
+
+  const id = Number(valor);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new ErrorValidacion(`El filtro de ${nombreCampo} no es válido`);
+  }
+  return id;
+}
+
+export async function obtenerSedes({ busqueda, nombre, idProvincia, idCanton, estado = 'activas' } = {}) {
+  if (!Object.hasOwn(ESTADOS_SEDE, estado)) {
+    throw new ErrorValidacion('El filtro de estado no es válido');
+  }
+
+  return await listarSedes({
+    busqueda: busqueda || null,
+    nombre: nombre || null,
+    idProvincia: idDeFiltro(idProvincia, 'provincia'),
+    idCanton: idDeFiltro(idCanton, 'cantón'),
+    estado: ESTADOS_SEDE[estado],
+  });
 }
 
 export async function desactivarSede(idSede) {
