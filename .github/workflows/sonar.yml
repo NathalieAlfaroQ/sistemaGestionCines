@@ -14,12 +14,30 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Desactivar para permitir un análisis relevante de las referencias
-          
+
       - name: Set up JDK 17 (o el que necesite tu proyecto)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: sistema-web/servidor/package-lock.json
+
+      - name: Instalar dependencias del servidor
+        working-directory: sistema-web/servidor
+        run: npm ci
+
+      - name: Ejecutar pruebas con cobertura
+        working-directory: sistema-web/servidor
+        run: npm run test:cobertura
+
+      - name: Ajustar rutas del reporte de cobertura
+        run: sed -i 's#^SF:src/#SF:sistema-web/servidor/src/#' sistema-web/servidor/coverage/lcov.info
 
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@master
