@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import aurora from '../assets/aurora.jpg'
 import '../estilos/IniciarSesion.css'
+import { guardarSesion } from '../servicios/sesion.js'
+
 
 const API_URL = ''
 
@@ -41,7 +43,7 @@ export default function IniciarSesion() {
       }
 
       // sessionStorage es para guardar el usuario
-      sessionStorage.setItem('usuario', JSON.stringify(data.usuario))
+      guardarSesion(data.token, data.usuario)
 
       // Si tene contraseña generada por el sistema, la debe cambiar 
       if (data.usuario.contrasenaTemporal) {
