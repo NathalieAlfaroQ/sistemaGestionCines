@@ -1,6 +1,7 @@
 import express from 'express'
 import bcrypt from 'bcrypt'
 import { getConnection } from './db.js'
+import { generarToken } from './servicios/servicioToken.js'
 
 const router = express.Router()
 
@@ -89,15 +90,18 @@ router.post('/', async (req, res) => {
       if (r.rows.length > 0) [nombre, apellido] = r.rows[0]
     }
 
+    const token = generarToken({ idCredencial, tipoUsuario })
+
     return res.json({
       mensaje: 'Inicio de sesión exitoso',
+      token,
       usuario: {
         idCredencial,
         correo: correoDB,
         tipoUsuario,
         nombre,
         apellido,
-        contrasenaTemporal: esTemporal   
+        contrasenaTemporal: esTemporal
       }
     })
   } catch (error) {
