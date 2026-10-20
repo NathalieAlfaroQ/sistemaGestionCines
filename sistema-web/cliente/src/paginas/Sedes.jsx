@@ -149,7 +149,7 @@ function Sedes() {
 
       {sedeAEliminar && (
         <ModalConfirmacion
-          peligrosa
+          peligro
           titulo="Eliminar sede"
           mensaje={`¿Está seguro de que desea eliminar la sede "${sedeAEliminar[POS_SEDE.nombre]}"? Esta acción es permanente.`}
           textoConfirmar="Eliminar"
