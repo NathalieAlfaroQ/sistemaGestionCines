@@ -12,7 +12,7 @@ import recuperarContrasena from './recuperarContrasena.js'
 import cambiarContrasena from './cambiarContrasena.js'
 import perfil from './perfil.js'
 import { manejadorErrores } from './middlewares/manejadorErrores.js'
-import { verificarAutenticacion } from './middlewares/autenticacion.js'
+import { verificarAutenticacion, autorizarRoles } from './middlewares/autenticacion.js'
 
 dotenv.config()
 const app = express()
@@ -26,10 +26,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toLocaleTimeString() })
 })
 
-app.use('/api/sedes', verificarAutenticacion, rutasSede);
-app.use('/api/ubicaciones', verificarAutenticacion, rutasUbicacion);
-app.use('/api/catalogo', verificarAutenticacion, rutasCatalogo);
-app.use('/api/peliculas',verificarAutenticacion ,rutasPelicula);
+const soloPersonal = autorizarRoles('ADMINISTRADOR', 'EMPLEADO');
+
+app.use('/api/sedes', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasSede);
+app.use('/api/ubicaciones', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasUbicacion);
+app.use('/api/catalogo', verificarAutenticacion, soloPersonal, rutasCatalogo);
+app.use('/api/peliculas',verificarAutenticacion, soloPersonal ,rutasPelicula);
 app.use('/api/crear-cuenta', crearCuenta)
 app.use('/api/iniciar-sesion', iniciarSesion)
 app.use('/api/recuperar-contrasena', recuperarContrasena)
