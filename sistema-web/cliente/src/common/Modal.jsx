@@ -1,14 +1,13 @@
 import { useId, useRef } from 'react';
 import Dialogo from './Dialogo.jsx';
-import Boton from './Boton.jsx';
 
-const variantesBoton = {
-  principal: 'oscuro',
-  secundario: 'contornoOscuro',
-  peligro: 'peligro',
+const clasesBoton = {
+  principal: 'bg-black text-text-color hover:bg-surface',
+  secundario: 'border border-black text-text-color hover:bg-black/40',
+  peligro: 'bg-danger text-text-color hover:brightness-110',
 };
 
-function Modal({ titulo, mensaje, icono, children, botones, alCerrar }) {
+function Modal({ titulo, mensaje, children, botones, alCerrar }) {
   const idTitulo = useId();
   const idMensaje = useId();
   const refBotonEnfocado = useRef(null);
@@ -22,8 +21,6 @@ function Modal({ titulo, mensaje, icono, children, botones, alCerrar }) {
       refEnfoque={refBotonEnfocado}
       claseCaja="w-full max-w-sm rounded-lg bg-border px-8 py-10 text-center"
     >
-      {icono && <div className="mx-auto mb-4 w-fit text-brand-soft">{icono}</div>}
-
       {titulo && (
         <h2 id={idTitulo} className="mb-3 text-lg font-bold text-text-color">
           {titulo}
@@ -38,16 +35,15 @@ function Modal({ titulo, mensaje, icono, children, botones, alCerrar }) {
 
       <div className="flex flex-wrap justify-center gap-3">
         {botones.map((boton, indice) => (
-          <Boton
-            key={indice}
+          <button
+            key={boton.texto}
+            type="button"
             ref={indice === indiceEnfocado ? refBotonEnfocado : undefined}
-            tamano="sm"
-            variante={variantesBoton[boton.variante ?? 'principal']}
-            disabled={boton.deshabilitado}
             onClick={boton.alPulsar}
+            className={`rounded px-4 py-1.5 text-sm transition-colors ${clasesBoton[boton.variante ?? 'principal']}`}
           >
             {boton.texto}
-          </Boton>
+          </button>
         ))}
       </div>
     </Dialogo>
