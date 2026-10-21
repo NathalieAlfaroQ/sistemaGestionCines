@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useSedes } from '../ganchos/useSedes.js';
 import { useDebounce } from '../ganchos/useDebounce.js';
 import { POS_SEDE, ESTADO_SEDE } from '../constantes/posicionesSede.js';
@@ -8,6 +7,7 @@ import { POS_PROVINCIA, POS_CANTON } from '../constantes/posicionesUbicacion.js'
 import Tabla from '../common/Tabla.jsx';
 import Modal from '../common/Modal.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
+import CrearSede from '../componentes/CrearSede.jsx';
 import { eliminarSede } from '../servicios/servicioSedes.js';
 
 const OPCIONES_ESTADO = [
@@ -79,6 +79,7 @@ function Sedes() {
   const soloActivas = filtros.estado === 'activas';
 
   const [sedeAEliminar, setSedeAEliminar] = useState(null);
+  const [creando, setCreando] = useState(false);
   const [resultado, setResultado] = useState(null);
 
   function editarSede(sede) {
@@ -97,6 +98,11 @@ function Sedes() {
     }
   }
 
+  function sedeCreada() {
+    setCreando(false);
+    setResultado({ mensaje: 'Sede creada con éxito', textoBoton: 'Continuar' });
+  }
+
   function cerrarResultado() {
     setResultado(null);
     recargar();
@@ -108,10 +114,7 @@ function Sedes() {
         <div className="mb-5 flex items-center gap-27">
           <h1 className="text-4xl font-bold">Sedes</h1>
 
-          <Link
-            to="/sedes/nueva"
-            className={claseBoton}
-          >
+          <button type="button" onClick={() => setCreando(true)} className={claseBoton}>
             Crear sede
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path
@@ -120,7 +123,7 @@ function Sedes() {
                 clipRule="evenodd"
               />
             </svg>
-          </Link>
+          </button>
         </div>
 
         <input
@@ -147,9 +150,13 @@ function Sedes() {
         />
       </div>
 
+      {creando && (
+        <CrearSede alCancelar={() => setCreando(false)} alCrear={sedeCreada} />
+      )}
+
       {sedeAEliminar && (
         <ModalConfirmacion
-          peligro
+          peligrosa
           titulo="Eliminar sede"
           mensaje={`¿Está seguro de que desea eliminar la sede "${sedeAEliminar[POS_SEDE.nombre]}"? Esta acción es permanente.`}
           textoConfirmar="Eliminar"
