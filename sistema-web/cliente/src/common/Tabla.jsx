@@ -120,6 +120,7 @@ function Tabla({
   numerada = true,
   onEditar,
   onEliminar,
+  accionesDeshabilitadas,
   filtros = {},
   alCambiarFiltros,
   opcionesPorPagina = [8, 16, 24, 40],
@@ -220,7 +221,8 @@ function Tabla({
                           title="Editar"
                           aria-label="Editar"
                           onClick={() => onEditar(fila)}
-                          className="p-2 rounded-lg border border-brand-soft text-brand-soft transition-colors hover:bg-brand-hover hover:text-text-color"
+                          disabled={accionesDeshabilitadas?.(fila)}
+                          className="p-2 rounded-lg border border-brand-soft text-brand-soft transition-colors hover:bg-brand-hover hover:text-text-color disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-brand-soft"
                         >
                           <IconoEditar />
                         </button>
@@ -231,7 +233,8 @@ function Tabla({
                           title="Eliminar"
                           aria-label="Eliminar"
                           onClick={() => onEliminar(fila)}
-                          className="p-2 rounded-lg border border-danger text-danger transition-colors hover:bg-danger hover:text-text-color"
+                          disabled={accionesDeshabilitadas?.(fila)}
+                          className="p-2 rounded-lg border border-danger text-danger transition-colors hover:bg-danger hover:text-text-color disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-danger"
                         >
                           <IconoEliminar />
                         </button>

@@ -76,7 +76,7 @@ function Sedes() {
     setFiltros(cambioProvincia ? { ...nuevos, idCanton: '' } : nuevos);
   }
 
-  const soloActivas = filtros.estado === 'activas';
+  const sedeEliminada = (sede) => sede[POS_SEDE.estado] !== ESTADO_SEDE.activa;
 
   const [sedeAEliminar, setSedeAEliminar] = useState(null);
   const [creando, setCreando] = useState(false);
@@ -145,8 +145,9 @@ function Sedes() {
           filtros={filtros}
           alCambiarFiltros={cambiarFiltros}
           textoVacio={cargando ? '' : 'No se encontraron sedes'}
-          onEditar={soloActivas ? editarSede : undefined}
-          onEliminar={soloActivas ? setSedeAEliminar : undefined}
+          onEditar={editarSede}
+          onEliminar={setSedeAEliminar}
+          accionesDeshabilitadas={sedeEliminada}
         />
       </div>
 
