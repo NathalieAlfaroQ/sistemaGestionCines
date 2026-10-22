@@ -8,11 +8,14 @@ import Peliculas from './paginas/Peliculas.jsx'
 import FormularioPelicula from './paginas/FormularioPelicula.jsx'
 import VerPelicula from './paginas/VerPelicula.jsx'
 import EditarPelicula from './paginas/EditarPelicula.jsx'
+import TerminosCondiciones from './paginas/TerminosCondiciones.jsx'
+
+// Barra de navegación y pie de página comunes
+import BarraCliente from './common/BarraCliente.jsx'
+import PiePagina from './common/PiePagina.jsx'
 
 // Componentes y pantallas tuyas
-import BarraNavegacion from './componentes/BarraNavegacion'
 import Hero from './componentes/Hero'
-import PiePagina from './componentes/PiePagina'
 import CrearCuenta from './componentes/CrearCuenta'
 import IniciarSesion from './componentes/IniciarSesion'
 import RecuperarContrasena from './componentes/RecuperarContrasena'
@@ -27,7 +30,7 @@ const rutasPublicas = [
   '/cambiar-contrasena'
 ]
 
-// Prefijos de rutas de trabajo (usan DisenoGestion y no llevan tu navbar/footer)
+// Prefijos de rutas de trabajo (usan DisenoGestion, que ya incluye BarraEmpleado y PiePagina)
 const prefijosTrabajo = ['/peliculas', '/sedes', '/salas', '/proyecciones', '/empleados']
 
 function App() {
@@ -39,7 +42,7 @@ function App() {
 
   return (
     <>
-      {mostrarNavbarYFooter && <BarraNavegacion />}
+      {mostrarNavbarYFooter && <BarraCliente />}
 
       <Routes>
         {/* --- Pantallas públicas (auth) --- */}
@@ -62,6 +65,7 @@ function App() {
         <Route path="/dulceria" element={<div>Dulcería</div>} />
         <Route path="/cartelera" element={<div>Cartelera</div>} />
         <Route path="/perfil" element={<Perfil />} />
+        <Route path="/terminos" element={<TerminosCondiciones />} />
 
         {/* Rutas de trabajo que aún no tienen componente, quedan como placeholder */}
         <Route path="/salas" element={<div>Salas</div>} />
