@@ -106,6 +106,7 @@ function Tabla({
   numerada = true,
   onEditar,
   onEliminar,
+  accionesDeshabilitadas,
   filtros = {},
   alCambiarFiltros,
   opcionesPorPagina = [8, 16, 24, 40],
@@ -164,7 +165,7 @@ function Tabla({
         <Table className="bg-transparent">
           <TableHead>
             <TableRow className="border-b border-border">
-              {numerada && <TableHeadCell className={claseEncabezado}>##</TableHeadCell>}
+              {numerada && <TableHeadCell className={claseEncabezado}></TableHeadCell>}
               {columnas.map((columna) => (
                 <TableHeadCell key={columna.titulo} className={claseEncabezado}>
                   {columna.titulo}
@@ -172,6 +173,7 @@ function Tabla({
               ))}
               {tieneAcciones && <TableHeadCell className={claseEncabezado}>Acciones</TableHeadCell>}
             </TableRow>
+
           </TableHead>
 
           <TableBody>
@@ -206,6 +208,8 @@ function Tabla({
                           title="Editar"
                           aria-label="Editar"
                           onClick={() => onEditar(fila)}
+                          disabled={accionesDeshabilitadas?.(fila)}
+                          className="disabled:hover:bg-transparent disabled:hover:text-brand-soft"
                         >
                           <IconoEditar />
                         </Boton>
@@ -217,6 +221,8 @@ function Tabla({
                           title="Eliminar"
                           aria-label="Eliminar"
                           onClick={() => onEliminar(fila)}
+                          disabled={accionesDeshabilitadas?.(fila)}
+                          className="disabled:hover:bg-transparent disabled:hover:text-danger"
                         >
                           <IconoEliminar />
                         </Boton>

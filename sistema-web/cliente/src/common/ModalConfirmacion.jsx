@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import Modal from './Modal.jsx';
-import MensajeError from './MensajeError.jsx';
 
 function ModalConfirmacion({
   mensaje,
@@ -58,7 +57,11 @@ function ModalConfirmacion({
         },
       ]}
     >
-      {error && <MensajeError mensaje={error} />}
+      {error && (
+        <p role="alert" className="text-sm text-danger">
+          {error}
+        </p>
+      )}
     </Modal>
   );
 }
