@@ -37,8 +37,8 @@ function elementosDePaginacion(actual, total) {
 }
 
 const claseFiltro =
-  'rounded border border-brand-soft bg-transparent py-1.5 pl-3 pr-8 text-xs font-medium text-brand-soft ' +
-  'transition-colors hover:bg-brand-soft/10 focus:border-brand-soft focus:ring-brand-soft ' +
+  'rounded border border-border bg-transparent py-1.5 pl-3 pr-8 text-xs font-medium text-text-color ' +
+  'transition-colors hover:bg-white/10 focus:border-text-color focus:ring-text-color ' +
   'disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-surface [&>option]:text-text-color';
 
 function FiltroColumna({ columna, valor, alCambiar }) {
@@ -70,7 +70,7 @@ function FiltroColumna({ columna, valor, alCambiar }) {
           ))}
         </select>
         <svg
-          className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-soft peer-disabled:opacity-50"
+          className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-text-color peer-disabled:opacity-50"
           viewBox="0 0 20 20"
           fill="currentColor"
           aria-hidden="true"
@@ -89,7 +89,7 @@ function FiltroColumna({ columna, valor, alCambiar }) {
     <input
       type="search"
       aria-label={etiqueta}
-      className={`${claseFiltro} pr-3 placeholder:text-brand-soft/70`}
+      className={`${claseFiltro} pr-3 placeholder:text-text-color/70`}
       placeholder={placeholder ?? columna.titulo}
       value={valor}
       disabled={deshabilitado}

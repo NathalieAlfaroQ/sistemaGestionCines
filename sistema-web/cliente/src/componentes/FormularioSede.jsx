@@ -1,27 +1,32 @@
 import { useState } from 'react';
 import { useUbicaciones } from '../ganchos/useUbicaciones.js';
 import { POS_CANTON, POS_PROVINCIA } from '../constantes/posicionesUbicacion.js';
+import MensajeError from '../common/MensajeError.jsx';
 
 const claseEtiqueta = 'mb-2 block text-sm text-text-color';
 const claseCampo = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
-const claseDesplegable = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-brand-soft placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
+const claseDesplegable = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
 const claseBotonConfirmar = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover disabled:opacity-50';
 const claseBotonCancelar = 'flex items-center gap-2 rounded-lg bg-brand-soft px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-soft-hover disabled:opacity-50';
 
 const NOMBRE_MINIMO = 10;
-const NOMBRE_MAXIMO = 30;
-const MENSAJE_MAXIMO = `El nombre no puede superar los ${NOMBRE_MAXIMO} caracteres`;
+const NOMBRE_MAXIMO = 50;
 const PATRON_NOMBRE = /^\p{L}+(?: \p{L}+)*$/u;
 
 function normalizarNombre(nombre) {
   return nombre.trim().replace(/\s+/g, ' ');
 }
 
-function errorDeNombre(nombre) {
-  if (nombre === '') return null;
-  if (!PATRON_NOMBRE.test(nombre)) return 'El nombre solo puede contener letras y espacios';
-  if (nombre.length < NOMBRE_MINIMO) return `El nombre debe tener al menos ${NOMBRE_MINIMO} caracteres`;
-  return null;
+const MENSAJE_OBLIGATORIO = 'Este campo es obligatorio';
+
+function errorDeFormato(nombre) {
+  return nombre !== '' && !PATRON_NOMBRE.test(nombre) ? 'Solo se admiten letras' : null;
+}
+
+function errorDeLargo(nombre) {
+  return nombre !== '' && nombre.length < NOMBRE_MINIMO
+    ? `Debe tener al menos ${NOMBRE_MINIMO} caracteres`
+    : null;
 }
 
 function Asterisco() {
@@ -44,7 +49,7 @@ function FormularioSede({
     idCanton: String(valorInicial?.idCanton ?? ''),
   });
   const [intentoEnvio, setIntentoEnvio] = useState(false);
-  const [excedioMaximo, setExcedioMaximo] = useState(false); // se intentó pasar del límite
+  const [nombreTocado, setNombreTocado] = useState(false);
 
   const cantonesDisponibles = ubicaciones.cantones.filter(
     (canton) => String(canton[POS_CANTON.idProvincia]) === formulario.idProvincia
@@ -53,22 +58,18 @@ function FormularioSede({
   const nombreNormalizado = normalizarNombre(formulario.nombre);
   const hayCamposVacios =
     nombreNormalizado === '' || formulario.idProvincia === '' || formulario.idCanton === '';
-  const mostrarObligatorio = intentoEnvio && hayCamposVacios;
 
-  const errorNombre = errorDeNombre(nombreNormalizado);
-  const mensajeNombre = excedioMaximo ? MENSAJE_MAXIMO : errorNombre;
-  const mostrarErrorNombre = excedioMaximo || (intentoEnvio && errorNombre !== null);
+  // Cada error aparece debajo de su campo
+  // Los de formato salen mientras se escribe; el de largo al salir del campo; el obligatorio al guardar
+  const mensajeNombre =
+    errorDeFormato(nombreNormalizado) ??
+    (nombreTocado || intentoEnvio ? errorDeLargo(nombreNormalizado) : null) ??
+    (intentoEnvio && nombreNormalizado === '' ? MENSAJE_OBLIGATORIO : null);
+  const mensajeProvincia = intentoEnvio && formulario.idProvincia === '' ? MENSAJE_OBLIGATORIO : null;
+  const mensajeCanton = intentoEnvio && formulario.idCanton === '' ? MENSAJE_OBLIGATORIO : null;
 
   function actualizar(campo, valor) {
     setFormulario((anterior) => ({ ...anterior, [campo]: valor }));
-  }
-
-  function cambiarNombre(evento) {
-    const texto = evento.target.value;
-    const excede = texto.length > NOMBRE_MAXIMO;
-
-    setExcedioMaximo(excede);
-    actualizar('nombre', excede ? texto.slice(0, NOMBRE_MAXIMO) : texto);
   }
 
   function cambiarProvincia(evento) {
@@ -82,7 +83,7 @@ function FormularioSede({
   function manejarEnvio(evento) {
     evento.preventDefault();
 
-    if (hayCamposVacios || errorNombre !== null) {
+    if (hayCamposVacios || errorDeFormato(nombreNormalizado) || errorDeLargo(nombreNormalizado)) {
       setIntentoEnvio(true);
       return;
     }
@@ -91,7 +92,7 @@ function FormularioSede({
   }
 
   return (
-    <form onSubmit={manejarEnvio} className="flex w-full flex-col gap-6">
+    <form onSubmit={manejarEnvio} className="flex max-w-sm flex-col gap-10">
       <div>
         <label htmlFor="nombre" className={claseEtiqueta}>
           Nombre <Asterisco />
@@ -99,16 +100,14 @@ function FormularioSede({
         <input
           id="nombre"
           className={claseCampo}
-          aria-invalid={mostrarErrorNombre}
-          aria-describedby={mostrarErrorNombre ? 'error-nombre' : undefined}
+          maxLength={NOMBRE_MAXIMO}
+          aria-invalid={mensajeNombre !== null}
+          aria-describedby={mensajeNombre ? 'error-nombre' : undefined}
           value={formulario.nombre}
-          onChange={cambiarNombre}
+          onBlur={() => setNombreTocado(true)}
+          onChange={(evento) => actualizar('nombre', evento.target.value)}
         />
-        {mostrarErrorNombre && (
-          <p id="error-nombre" role="alert" className="mt-2 text-sm text-danger">
-            {mensajeNombre}
-          </p>
-        )}
+        <MensajeError id="error-nombre" mensaje={mensajeNombre} />
       </div>
 
       <div>
@@ -119,6 +118,8 @@ function FormularioSede({
           <select
             id="provincia"
             className={claseDesplegable}
+            aria-invalid={mensajeProvincia !== null}
+            aria-describedby={mensajeProvincia ? 'error-provincia' : undefined}
             value={formulario.idProvincia}
             onChange={cambiarProvincia}
           >
@@ -130,16 +131,19 @@ function FormularioSede({
             ))}
           </select>
         </div>
+        <MensajeError id="error-provincia" mensaje={mensajeProvincia} />
       </div>
 
       <div>
-        <label htmlFor="Canton" className={claseEtiqueta}>
-          Canton <Asterisco />
+        <label htmlFor="canton" className={claseEtiqueta}>
+          Cantón <Asterisco />
         </label>
         <div className="relative">
           <select
-            id="Canton"
+            id="canton"
             className={claseDesplegable}
+            aria-invalid={mensajeCanton !== null}
+            aria-describedby={mensajeCanton ? 'error-canton' : undefined}
             disabled={formulario.idProvincia === ''}
             value={formulario.idCanton}
             onChange={(evento) => actualizar('idCanton', evento.target.value)}
@@ -152,20 +156,13 @@ function FormularioSede({
             ))}
           </select>
         </div>
+        <MensajeError id="error-canton" mensaje={mensajeCanton} />
       </div>
 
       <div className="flex flex-col gap-4">
-        {mostrarObligatorio && (
-          <p role="alert" className="text-sm text-danger">
-            *Espacio obligatorio
-          </p>
-        )}
+        <MensajeError mensaje={error} className="mt-0" />
 
-        {error && (
-          <p role="alert" className="text-sm text-danger">
-            {error}
-          </p>
-        )}
+        <p className="text-sm text-danger">* Espacio obligatorio</p>
 
         <div className="flex gap-4">
           <button type="submit" disabled={guardando} className={claseBotonConfirmar}>

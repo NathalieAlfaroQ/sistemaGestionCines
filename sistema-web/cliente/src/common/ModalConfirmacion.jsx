@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Modal from './Modal.jsx';
+import MensajeError from './MensajeError.jsx';
 
 function ModalConfirmacion({
   mensaje,
@@ -16,6 +17,7 @@ function ModalConfirmacion({
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState(null);
 
+  // Mientras se espera al servidor no se puede cancelar ni cerrar
   function cancelar() {
     if (!procesando) alCancelar();
   }
@@ -57,11 +59,7 @@ function ModalConfirmacion({
         },
       ]}
     >
-      {error && (
-        <p role="alert" className="text-sm text-danger">
-          {error}
-        </p>
-      )}
+      <MensajeError mensaje={error} />
     </Modal>
   );
 }
