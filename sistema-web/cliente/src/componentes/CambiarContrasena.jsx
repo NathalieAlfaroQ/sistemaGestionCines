@@ -93,7 +93,7 @@ export default function CambiarContrasena() {
     <div className="cambiar-container">
       <div className="panel-izquierdo">
 
-        <h1 className="titulo-app">Cine Aurora</h1>
+        <h1 className="titulo-app">Cines Aurora</h1>
         <h2 className="titulo-pantalla">Cambiar Contraseña</h2>
 
         <form onSubmit={handleSubmit} className="form-cambiar" noValidate>

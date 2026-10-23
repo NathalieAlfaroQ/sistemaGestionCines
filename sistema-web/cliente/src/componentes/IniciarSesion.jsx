@@ -79,7 +79,7 @@ export default function IniciarSesion() {
           ←
         </button>
 
-        <h1 className="titulo-app">Cine Aurora</h1>
+        <h1 className="titulo-app">Cines Aurora</h1>
         <h2 className="titulo-pantalla">Iniciar Sesión</h2>
 
         <form onSubmit={handleSubmit} className="form-login" noValidate>

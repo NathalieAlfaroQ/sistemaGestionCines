@@ -62,7 +62,7 @@ function BarraNavegacion() {
       <div className="max-w-screen-2xl mx-auto px-8 py-4 flex items-center gap-12 bg-navbar rounded-2xl shadow-lg">
         
         <Link to={mostrarCliente ? '/' : '/peliculas'} className="flex items-center gap-3">
-          <img src={logo} className="h-16 w-16 rounded object-cover" alt="Logo de Cine Aurora" />
+          <img src={logo} className="h-16 w-16 rounded object-cover" alt="Logo de Cines Aurora" />
         </Link>
 
         <ul className="hidden md:flex md:gap-8 flex-col md:flex-row font-medium items-center">

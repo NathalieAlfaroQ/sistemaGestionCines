@@ -64,7 +64,7 @@ export default function CrearCuenta() {
           ←
         </button>
 
-        <h1 className="titulo-app">Cine Aurora</h1>
+        <h1 className="titulo-app">Cines Aurora</h1>
         <h2 className="titulo-pantalla">Crear Cuenta</h2>
 
         <form onSubmit={handleSubmit} className="form-registro" noValidate>

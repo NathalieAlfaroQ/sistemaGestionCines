@@ -20,10 +20,10 @@ export async function enviarCorreoContrasena(correo, nombre, contrasena, tipoUsu
     asunto = 'Cuenta registrada'
     mensajeBienvenida = 'Tu cuenta ha sido registrada exitosamente.'
   } else if (tipoUsuario === 'EMPLEADO') {
-    asunto = 'Has sido registrado como empleado'
+    asunto = 'Has sido registrado como empleado.'
     mensajeBienvenida = 'Has sido registrado como empleado del sistema.'
   } else if (tipoUsuario === 'ADMINISTRADOR') {
-    asunto = 'Has sido registrado como administrador'
+    asunto = 'Has sido registrado como administrador.'
     mensajeBienvenida = 'Has sido registrado como administrador del sistema.'
   } else {
     asunto = 'Credenciales de acceso'

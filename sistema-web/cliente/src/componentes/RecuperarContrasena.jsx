@@ -58,7 +58,7 @@ export default function RecuperarContrasena() {
           ←
         </button>
 
-        <h1 className="titulo-app">Cine Aurora</h1>
+        <h1 className="titulo-app">Cines Aurora</h1>
         <h2 className="titulo-pantalla">Recuperar Contraseña</h2>
 
         <p className="descripcion">
