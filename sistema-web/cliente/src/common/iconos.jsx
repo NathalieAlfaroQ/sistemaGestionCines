@@ -72,3 +72,11 @@ export function IconoInstagram({ className = 'h-7 w-7' }) {
     </svg>
   );
 }
+
+export function IconoEquis({ className = 'h-4 w-4' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}

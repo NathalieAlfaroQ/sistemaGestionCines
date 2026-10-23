@@ -22,7 +22,7 @@ function Modal({ titulo, mensaje, icono, children, botones, alCerrar }) {
       refEnfoque={refBotonEnfocado}
       claseCaja="w-full max-w-sm rounded-lg bg-border px-8 py-10 text-center"
     >
-      {icono && <div className="mx-auto mb-4 w-fit text-brand-soft">{icono}</div>}
+      {icono && <div className="mx-auto mb-4 w-fit text-text-color">{icono}</div>}
 
       {titulo && (
         <h2 id={idTitulo} className="mb-3 text-lg font-bold text-text-color">
