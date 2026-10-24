@@ -11,6 +11,9 @@ export function useFormularioSede(valoresIniciales = FORMULARIO_INICIAL) {
   const errores = validarTodo({ formulario });
   const erroresEnVivo = validarEnVivo({ formulario });
 
+  const hayCamposVacios =
+    formulario.nombre.trim() === '' || formulario.idProvincia === '' || formulario.idCanton === '';
+
   function actualizar(campo, valor) {
     setFormulario((anterior) => ({ ...anterior, [campo]: valor }));
   }
@@ -44,6 +47,7 @@ export function useFormularioSede(valoresIniciales = FORMULARIO_INICIAL) {
 
   return {
     formulario,
+    hayCamposVacios,
     errorVisible,
     enlazar,
     cambiarProvincia,

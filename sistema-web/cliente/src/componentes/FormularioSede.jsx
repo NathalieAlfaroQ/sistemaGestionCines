@@ -26,6 +26,7 @@ function FormularioSede({
 
   const {
     formulario,
+    hayCamposVacios,
     errorVisible,
     enlazar,
     cambiarProvincia,
@@ -124,7 +125,8 @@ function FormularioSede({
       <div className="flex flex-col gap-4">
         <MensajeError mensaje={error} className="mt-0" />
 
-        <p className="text-sm text-danger">* Espacio obligatorio</p>
+        {/* Desaparece cuando ya no queda ningún campo obligatorio vacío */}
+        {hayCamposVacios && <p className="text-sm text-danger">* Espacio obligatorio</p>}
 
         <div className="flex gap-4">
           <button type="submit" disabled={guardando} className={claseBotonConfirmar}>
