@@ -8,6 +8,7 @@ import Tabla from '../common/Tabla.jsx';
 import Modal from '../common/Modal.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import CrearSede from '../componentes/CrearSede.jsx';
+import EditarSede from '../componentes/EditarSede.jsx';
 import { eliminarSede } from '../servicios/servicioSedes.js';
 
 const OPCIONES_ESTADO = [
@@ -80,11 +81,8 @@ function Sedes() {
 
   const [sedeAEliminar, setSedeAEliminar] = useState(null);
   const [creando, setCreando] = useState(false);
+  const [sedeAEditar, setSedeAEditar] = useState(null);
   const [resultado, setResultado] = useState(null);
-
-  function editarSede(sede) {
-    console.log('Editar sede', sede[POS_SEDE.id]);
-  }
 
   async function confirmarEliminacion() {
     const sede = sedeAEliminar;
@@ -101,6 +99,11 @@ function Sedes() {
   function sedeCreada() {
     setCreando(false);
     setResultado({ mensaje: 'Sede creada con éxito', textoBoton: 'Continuar' });
+  }
+
+  function sedeEditada() {
+    setSedeAEditar(null);
+    setResultado({ mensaje: 'Sede modificada con éxito', textoBoton: 'Continuar' });
   }
 
   function cerrarResultado() {
@@ -135,7 +138,7 @@ function Sedes() {
         />
 
         {cargando && <p className="mb-4 text-text-muted">Cargando sedes...</p>}
-        {error && <p className="mb-4 text-warning">{error}</p>}
+        {error && <p className="mb-4 text-danger">{error}</p>}
 
         {/* */}
         <Tabla
@@ -145,7 +148,7 @@ function Sedes() {
           filtros={filtros}
           alCambiarFiltros={cambiarFiltros}
           textoVacio={cargando ? '' : 'No se encontraron sedes'}
-          onEditar={editarSede}
+          onEditar={setSedeAEditar}
           onEliminar={setSedeAEliminar}
           accionesDeshabilitadas={sedeEliminada}
         />
@@ -153,6 +156,14 @@ function Sedes() {
 
       {creando && (
         <CrearSede alCancelar={() => setCreando(false)} alCrear={sedeCreada} />
+      )}
+
+      {sedeAEditar && (
+        <EditarSede
+          sede={sedeAEditar}
+          alCancelar={() => setSedeAEditar(null)}
+          alEditar={sedeEditada}
+        />
       )}
 
       {sedeAEliminar && (
