@@ -3,10 +3,13 @@ import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 
 export async function listarSedes(req, res) {
   try {
-    const busqueda = req.query.busqueda || null;
-    const sedes = await obtenerSedes(busqueda);
+    const { busqueda, nombre, idProvincia, idCanton, estado } = req.query;
+    const sedes = await obtenerSedes({ busqueda, nombre, idProvincia, idCanton, estado });
     res.json(sedes);
   } catch (error) {
+    if (error instanceof ErrorValidacion) {
+      return res.status(400).json({ mensaje: error.message });
+    }
     console.error('Error al listar sedes:', error);
     res.status(500).json({ mensaje: 'No se pudieron obtener las sedes' });
   }

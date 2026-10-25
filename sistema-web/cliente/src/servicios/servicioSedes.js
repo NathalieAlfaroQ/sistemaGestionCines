@@ -4,12 +4,14 @@ async function leerCuerpo(respuesta) {
   return await respuesta.json().catch(() => ({}));
 }
 
-export async function obtenerSedes(busqueda = '') {
-  const url = busqueda
-    ? `/api/sedes?busqueda=${encodeURIComponent(busqueda)}`
-    : '/api/sedes';
+export async function obtenerSedes(filtros = {}) {
+  const parametros = new URLSearchParams();
+  Object.entries(filtros).forEach(([clave, valor]) => {
+    if (valor !== '' && valor != null) parametros.set(clave, valor);
+  });
 
-  const respuesta = await peticionApi(url);
+  const consulta = parametros.toString();
+  const respuesta = await fetch(consulta ? `/api/sedes?${consulta}` : '/api/sedes');
 
   if (!respuesta.ok) {
     throw new Error('No se pudieron obtener las sedes');
