@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import aurora from '../assets/aurora.jpg'
 import '../estilos/IniciarSesion.css'
 import { guardarSesion } from '../servicios/sesion.js'
+import BotonGoogle from '../BotonGoogle.jsx'
 
 
 const API_URL = ''
@@ -129,15 +130,13 @@ export default function IniciarSesion() {
           </div>
 
           <div className="botones-terceros">
-            <button type="button" className="boton-tercero" disabled title="Próximamente">
-              <span className="icono-google">G</span>
-            </button>
+            <BotonGoogle alError={(texto) => setMensaje({ tipo: 'error', texto })} />
 
             <button type="button" className="boton-tercero" disabled title="Próximamente">
               <span className="icono-facebook">f</span>
             </button>
           </div>
-
+          
           <p className="texto-crear-cuenta">
             <Link to="/crear-cuenta" className="texto-crear-cuenta">
               Crear cuenta
