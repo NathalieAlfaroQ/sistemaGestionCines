@@ -6,6 +6,9 @@ export function manejadorErrores(error, req, res, next) {
   if (error instanceof ErrorNoAutorizado) {
     return res.status(401).json({ mensaje: error.message });
   }
+  if (error instanceof ErrorNoAutenticado) {
+    return res.status(401).json({ mensaje: error.message });
+  }
   if (error instanceof ErrorProhibido) {
     return res.status(403).json({ mensaje: error.message });
   }
