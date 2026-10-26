@@ -21,6 +21,7 @@ export default function BotonGoogle({ alError }) {
       onSuccess={manejarExito}
       onError={() => alError('No se pudo iniciar sesión con Google')}
       type="icon"
+      theme="filled_blue"
       shape="circle"
     />
   )
