@@ -14,6 +14,7 @@ import perfil from './perfil.js'
 import { manejadorErrores } from './middlewares/manejadorErrores.js'
 import { verificarAutenticacion } from './middlewares/autenticacion.js'
 import { autorizarRoles } from './middlewares/autorizacion.js'
+import rutasGoogle from './rutas/rutasGoogle.js'
 
 dotenv.config()
 const app = express()
@@ -38,6 +39,7 @@ app.use('/api/iniciar-sesion', iniciarSesion)
 app.use('/api/recuperar-contrasena', recuperarContrasena)
 app.use('/api/cambiar-contrasena', cambiarContrasena)
 app.use('/api/perfil', perfil)
+app.use('/api/iniciar-sesion-google', rutasGoogle)
 
 app.use(manejadorErrores)
 
