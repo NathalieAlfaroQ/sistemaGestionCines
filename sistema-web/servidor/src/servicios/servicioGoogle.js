@@ -1,4 +1,4 @@
-import { clienteGoogle, idClienteGoogle } from '../configuracion/google.js';
+import { clienteGoogle, configuracionGoogle } from '../configuracion/google.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 import { ErrorNoAutenticado } from '../errores/ErrorNoAutenticado.js';
 
@@ -11,7 +11,7 @@ export async function verificarTokenGoogle(credencial) {
   try {
     ticket = await clienteGoogle.verifyIdToken({
       idToken: credencial,
-      audience: idClienteGoogle,
+      audience: configuracionGoogle.idCliente,
     });
   } catch {
     throw new ErrorNoAutenticado('La credencial de Google no es válida');
