@@ -46,6 +46,22 @@ export async function crearSede(sede) {
   return cuerpo;
 }
 
+export async function editarSede(idSede, sede) {
+  const respuesta = await fetch(`/api/sedes/${idSede}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sede),
+  });
+
+  const cuerpo = await leerCuerpo(respuesta);
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo editar la sede');
+  }
+
+  return cuerpo;
+}
+
 export async function eliminarSede(idSede) {
   const respuesta = await peticionApi(`/api/sedes/${idSede}`, { method: 'DELETE' });
 

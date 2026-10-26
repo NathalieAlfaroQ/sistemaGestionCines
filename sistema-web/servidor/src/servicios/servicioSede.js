@@ -1,4 +1,5 @@
 import {
+  actualizarSede,
   crearSede,
   desactivarSede as desactivarSedeEnRepositorio,
   existeCanton,
@@ -35,6 +36,23 @@ function validarDatosSede(datos) {
   return { nombre, idCanton };
 }
 
+function traducirErrorDeBaseDatos(error) {
+  if (error.errorNum === ORA_UNICIDAD) return new ErrorValidacion('Ya existe una sede con ese nombre');
+  if (error.errorNum === ORA_NOMBRE_MAX) {
+    return new ErrorValidacion(`El nombre no puede superar los ${NOMBRE_MAXIMO} caracteres`);
+  }
+  return error;
+}
+
+function validarIdSede(idSede) {
+  const id = Number(idSede);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new ErrorValidacion('El identificador de la sede no es válido');
+  }
+  return id;
+}
+
 export async function registrarSede(datos) {
   const { nombre, idCanton } = validarDatosSede(datos);
 
@@ -43,13 +61,20 @@ export async function registrarSede(datos) {
   try {
     return await crearSede({ nombre, idCanton });
   } catch (error) {
-    if (error.errorNum === ORA_UNICIDAD) {
-      throw new ErrorValidacion('Ya existe una sede con ese nombre');
-    }
-    if (error.errorNum === ORA_NOMBRE_MAX) {
-      throw new ErrorValidacion(`El nombre no puede superar los ${NOMBRE_MAXIMO} caracteres`);
-    }
-    throw error;
+    throw traducirErrorDeBaseDatos(error);
+  }
+}
+
+export async function modificarSede(idSede, datos) {
+  const id = validarIdSede(idSede);
+  const { nombre, idCanton } = validarDatosSede(datos);
+
+  if (!(await existeCanton(idCanton))) throw new ErrorValidacion('El cantón seleccionado no existe');
+
+  try {
+    return await actualizarSede({ idSede: id, nombre, idCanton });
+  } catch (error) {
+    throw traducirErrorDeBaseDatos(error);
   }
 }
 
@@ -80,11 +105,5 @@ export async function obtenerSedes({ busqueda, nombre, idProvincia, idCanton, es
 }
 
 export async function desactivarSede(idSede) {
-  const id = Number(idSede);
-
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new ErrorValidacion('El identificador de la sede no es válido');
-  }
-
-  return await desactivarSedeEnRepositorio(id);
+  return await desactivarSedeEnRepositorio(validarIdSede(idSede));
 }
