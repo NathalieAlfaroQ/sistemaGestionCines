@@ -54,6 +54,8 @@ sistema-web/
 
 - La Wallet de la base de datos junto con la contraseña con la que fue descargado.
 
+- Proyecto de google para autenticación de terceros
+
 
 ## Configuración de la base de datos
  
@@ -89,7 +91,7 @@ Los pósters y banners no se guardan en la base de datos ni en el repositorio. L
 El bucket es público para lectura, pero **no permite listar su contenido**: una imagen solo se puede ver si se conoce su URL exacta. Subir y borrar requiere credenciales, y solo las tiene el servidor.
 
 
-### Configuración local (cada integrante)
+### Configuración local OCI Object Storage(cada integrante)
 
 Cada integrante usa su **propia** llave de API. Las llaves no se comparten.
 
@@ -133,13 +135,48 @@ Cada integrante usa su **propia** llave de API. Las llaves no se comparten.
 |---|---|
 | `200` | Devuelve `{ "url": "..." }` con la URL pública. |
 | `400` | Id o tipo inválido, no se envió archivo o el archivo no es una imagen JPEG/PNG/WebP válida. |
-| `404` | La película no exist. |
+| `404` | La película no existe. |
 | `413` | La imagen supera los 5 MB. |
+
+## Inicio de sesión con Google
+
+El inicio de sesión con Google es **solo para clientes**. Empleados y administradores siguen entrando con correo y contraseña. El botón de Google entrega al cliente un token firmado por Google, el servidor lo verifica y, si es válido, responde con el mismo JWT que usa el resto del sistema.
+
+Las cuentas de Google se guardan en la tabla `CREDENCIALES_GOOGLE`, aparte de `CREDENCIALES`, porque esa tabla exige hash y salt de contraseña y estas cuentas no tienen contraseña.
+
+### Configuración local Google(cada integrante)
+
+1. **Client ID.** Pídelo al equipo por un canal privado. Es el mismo para todos y no es un secreto, pero tampoco se sube al repositorio.
+
+2. **Usuario de prueba.** Mientras la app de Google esté en modo "Pruebas", solo pueden iniciar sesión las cuentas agregadas como *usuarios de prueba* en la pantalla de consentimiento de OAuth. Pide que agreguen tu Gmail.
+
+3. **Variables de entorno.** Agrega el mismo valor en ambos archivos (los modelos están en los `.env.example`):
+
+```env
+   # servidor/.env
+   GOOGLE_ID_CLIENTE=<client-id>.apps.googleusercontent.com
+
+   # cliente/.env
+   VITE_GOOGLE_ID_CLIENTE=<client-id>.apps.googleusercontent.com
+```
+
+   Si no coinciden, el servidor rechaza los tokens. Después de cambiar `cliente/.env` hay que **reiniciar** `npm run dev`, porque Vite solo lee ese archivo al arrancar.
+
+4. **Probar.** Al arrancar el servidor, viaja a la página de inicio de sesión y presiona el botón de Google. Luego digita el correo previamente ingresado en *usuarios de prueba*.
+
+Google solo acepta como origen autorizado `http://localhost` o un dominio con HTTPS (no acepta IPs). Por eso el inicio de sesión con Google funciona en local, en la máquina virtual requerirá un dominio con certificado válido.
+
+| Código | Cuándo |
+|---|---|
+| `200` | Devuelve `{ mensaje, token, usuario }`, con la misma forma que el inicio de sesión normal. |
+| `400` | No se envió la credencial de Google. |
+| `401` | La credencial no es válida, expiró, es de otra aplicación o el correo no está verificado. |
 
 
 ### Nunca subir al repositorio
 
 - La llave privada (`.pem`) y `~/.oci/config`.
+- El ID del proyecto de Google
 - Imágenes de prueba.
 
 
@@ -154,3 +191,5 @@ Desde la carpeta `sistema-web/`:
 - Abre otra terminal a `cd ./sistemaGestionCines/sistema-web/cliente` y ahí se levanta el cliente con `npm run dev`.
 
 - Ahora se dirige al navegador y pega el link `http://localhost:5173`.
+
+- Tambien se puede ejecutar desde la carpeta `sistema-web/` el comando `npm run dev`, este levantara en una sola terminal el servidor y el cliente.
