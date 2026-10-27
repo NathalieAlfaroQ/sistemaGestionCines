@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import rutasSede from './rutas/rutasSede.js'
+import rutasSala from './rutas/rutasSala.js'
 import rutasUbicacion from './rutas/rutasUbicacion.js'
 
 import rutasPelicula from './rutas/rutasPelicula.js'
@@ -43,6 +44,7 @@ app.get('/api/health', (req, res) => {
 const soloPersonal = autorizarRoles('ADMINISTRADOR', 'EMPLEADO');
 
 app.use('/api/sedes', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasSede);
+app.use('/api/salas', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasSala);
 app.use('/api/ubicaciones', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasUbicacion);
 app.use('/api/catalogo', verificarAutenticacion, soloPersonal, rutasCatalogo);
 app.use('/api/peliculas',verificarAutenticacion, soloPersonal ,rutasPelicula);
