@@ -15,8 +15,8 @@ function EditarSede({ sede, alCancelar, alEditar }) {
     try {
       await editarSede(sede[POS_SEDE.id], datos);
       alEditar();
-    } catch (fallo) {
-      setError(fallo.message);
+    } catch (error) {
+      setError(error.message);
     } finally {
       setGuardando(false);
     }
