@@ -1,4 +1,4 @@
-import { obtenerFormatos, obtenerSalas, obtenerTipos } from '../servicios/servicioSala.js';
+import { desactivarSala, obtenerFormatos, obtenerSalas, obtenerTipos } from '../servicios/servicioSala.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 
 export async function listarSalas(req, res) {
@@ -30,5 +30,23 @@ export async function listarFormatos(req, res) {
   } catch (error) {
     console.error('Error al listar formatos:', error);
     res.status(500).json({ mensaje: 'No se pudieron obtener los formatos' });
+  }
+}
+
+export async function eliminarSala(req, res) {
+  try {
+    const desactivada = await desactivarSala(req.params.id);
+
+    if (!desactivada) {
+      return res.status(404).json({ mensaje: 'La sala no existe o ya fue eliminada' });
+    }
+
+    res.json({ idSala: Number(req.params.id) });
+  } catch (error) {
+    if (error instanceof ErrorValidacion) {
+      return res.status(400).json({ mensaje: error.message });
+    }
+    console.error('Error al eliminar sala:', error);
+    res.status(500).json({ mensaje: 'No se pudo eliminar la sala' });
   }
 }

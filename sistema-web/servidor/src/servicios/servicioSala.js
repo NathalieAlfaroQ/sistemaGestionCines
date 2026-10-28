@@ -1,4 +1,9 @@
-import { listarFormatos, listarSalas, listarTipos } from '../repositorios/repositorioSala.js';
+import {
+  desactivarSala as desactivarSalaEnRepositorio,
+  listarFormatos,
+  listarSalas,
+  listarTipos,
+} from '../repositorios/repositorioSala.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 
 const ESTADOS_SALA = { activas: 1, eliminadas: 0, todas: null };
@@ -35,4 +40,14 @@ export async function obtenerTipos() {
 
 export async function obtenerFormatos() {
   return await listarFormatos();
+}
+
+export async function desactivarSala(idSala) {
+  const id = Number(idSala);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new ErrorValidacion('El identificador de la sala no es válido');
+  }
+
+  return await desactivarSalaEnRepositorio(id);
 }

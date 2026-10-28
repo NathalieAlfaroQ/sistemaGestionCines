@@ -27,8 +27,11 @@ const sqlListarSalas = `
     )
   ORDER BY se.NOMBRE_SEDE, sa.NOMBRE_SALA
 `;
+
 const sqlListarTipos = `SELECT ID_TIPO, NOMBRE_TIPO FROM TIPOS_SALA ORDER BY NOMBRE_TIPO`;
 const sqlListarFormatos = `SELECT ID_FORMATO, NOMBRE_FORMATO FROM FORMATOS ORDER BY NOMBRE_FORMATO`;
+
+const sqlDesactivarSala = `UPDATE SALAS SET ESTADO_SALA = 0 WHERE ID_SALA = :idSala AND ESTADO_SALA = 1`;
 
 export async function listarSalas({
   busqueda = null,
@@ -49,4 +52,9 @@ export async function listarTipos() {
 export async function listarFormatos() {
   const resultado = await ejecutar(sqlListarFormatos);
   return resultado.rows;
+}
+
+export async function desactivarSala(idSala) {
+  const resultado = await ejecutar(sqlDesactivarSala, { idSala });
+  return resultado.rowsAffected > 0;
 }
