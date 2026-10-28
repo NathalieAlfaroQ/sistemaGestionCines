@@ -33,3 +33,19 @@ export function obtenerTiposSala() {
 export function obtenerFormatosSala() {
   return obtenerCatalogo('/api/salas/formatos', 'No se pudieron obtener los formatos');
 }
+
+async function leerCuerpo(respuesta) {
+  return await respuesta.json().catch(() => ({}));
+}
+
+export async function eliminarSala(idSala) {
+  const respuesta = await peticionApi(`/api/salas/${idSala}`, { method: 'DELETE' });
+
+  const cuerpo = await leerCuerpo(respuesta);
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo eliminar la sala');
+  }
+
+  return cuerpo;
+}

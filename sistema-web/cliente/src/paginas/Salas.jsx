@@ -6,6 +6,9 @@ import { useDebounce } from '../ganchos/useDebounce.js';
 import { POS_SALA, POS_CATALOGO_SALA, ESTADO_SALA } from '../constantes/posicionesSala.js';
 import { POS_SEDE } from '../constantes/posicionesSede.js';
 import Tabla from '../common/Tabla.jsx';
+import Modal from '../common/Modal.jsx';
+import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
+import { eliminarSala } from '../servicios/servicioSalas.js';
 
 const OPCIONES_ESTADO = [
   { valor: 'activas', texto: 'Activas' },
@@ -22,7 +25,7 @@ function Salas() {
   const busquedaRetrasada = useDebounce(busqueda, 400);
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
 
-  const { salas, cargando, error } = useSalas({
+  const { salas, cargando, error, recargar } = useSalas({
     busqueda: busquedaRetrasada,
     idSede: filtros.idSede,
     idTipo: filtros.idTipo,
@@ -30,7 +33,7 @@ function Salas() {
     estado: filtros.estado,
   });
   const { sedes } = useSedes({ estado: 'activas' });
-  const { tipos, formatos } = useCatalogoSala();
+  const { tipos, formatos, error: errorCatalogo } = useCatalogoSala();
 
   const opcionesDe = (lista) =>
     lista.map((fila) => ({
@@ -84,7 +87,25 @@ function Salas() {
 
   function editarSala() {}
 
-  function eliminarSala() {}
+  const [salaAEliminar, setSalaAEliminar] = useState(null);
+  const [resultado, setResultado] = useState(null);
+
+  async function confirmarEliminacion() {
+    const sala = salaAEliminar;
+    setSalaAEliminar(null);
+
+    try {
+      await eliminarSala(sala[POS_SALA.id]);
+      setResultado({ mensaje: 'Sala eliminada con éxito', textoBoton: 'Continuar' });
+    } catch (error) {
+      setResultado({ mensaje: error.message, textoBoton: 'Cerrar' });
+    }
+  }
+
+  function cerrarResultado() {
+    setResultado(null);
+    recargar();
+  }
 
   const salaEliminada = (sala) => sala[POS_SALA.estado] !== ESTADO_SALA.activa;
 
@@ -105,6 +126,7 @@ function Salas() {
 
         {cargando && <p className="mb-4 text-text-muted">Cargando salas...</p>}
         {error && <p className="mb-4 text-warning">{error}</p>}
+        {errorCatalogo && <p className="mb-4 text-warning">{errorCatalogo}</p>}
 
         <Tabla
           columnas={columnas}
@@ -115,10 +137,28 @@ function Salas() {
           textoVacio={cargando ? '' : textoVacio}
           onVer={verSala}
           onEditar={editarSala}
-          onEliminar={eliminarSala}
+          onEliminar={setSalaAEliminar}
           accionesDeshabilitadas={salaEliminada}
         />
       </div>
+
+      {salaAEliminar && (
+        <ModalConfirmacion
+          peligrosa
+          titulo="Eliminar sala"
+          mensaje={`¿Está seguro de que desea eliminar la sala "${salaAEliminar[POS_SALA.nombre]}" de ${salaAEliminar[POS_SALA.cine]}? Esta acción es permanente.`}
+          textoConfirmar="Eliminar"
+          alConfirmar={confirmarEliminacion}
+          alCancelar={() => setSalaAEliminar(null)}
+        />
+      )}
+
+      {resultado && (
+        <Modal
+          mensaje={resultado.mensaje}
+          botones={[{ texto: resultado.textoBoton, alPulsar: cerrarResultado }]}
+        />
+      )}
     </main>
   );
 }
