@@ -1,18 +1,19 @@
 # Proyecto Integrador de Ingeniería en Software y Bases de Datos
 
 
+
 ## Descripción del proyecto
 
 Este proyecto es una página web de acceso a través de internet, consiste en un sistema de gestión para una cadena de cines llamada Cines Aurora, esta requiere administrar a sus empleados, productos de dulcería, cartelera, salas y proyecciones, para que los clientes puedan comprar boletos o dulces de forma remota para ofrecerles una experiencia organizada. Además el sistema contará con el registro de cuentas para brindar un servicio personalizado y los administradores tendrán la posibilidad de observar las métricas de su cine asignado para mejor planificación del negocio.
 
 
-## Integrantes del grupo 4 llamado NID
 
-Universidad de Costa Rica - II Ciclo 2026
+## Integrantes del grupo 4 llamado NID
 
 - Nathalie Alfaro, B90221.
 - Isaías Alberto Alfaro Ugalde, C20261.
 - Rair Darío Gómez Bernal, C33243.
+
 
 
 ## Pila del producto en Jira
@@ -20,18 +21,19 @@ Universidad de Costa Rica - II Ciclo 2026
 https://pinid.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog?atlOrigin=eyJpIjoiYjYzZmIxMjhhOWY3NDBmMjhlZjEzZjEyZjVlNTI4YTYiLCJwIjoiaiJ9
 
 
-## Prototipo en Figma
+
+## Prototipo de baja fidelidad en Figma
 
 https://www.figma.com/design/zvC2S2bIoiGgl8rrNnKPOt/Prototipo-baja-fidelidad-NID?node-id=0-1&t=AB4ugd05wKud1FHw-1
 
 
-## Tecnologías utilizadas
+
+## Tecnologías
  
 - **Cliente:** Vite, React y Tailwind CSS v4.
-
 - **Servidor:** Node.js con Express (módulos ESM) y el driver `oracledb`.
-
 - **Base de datos:** Oracle Autonomous Database en Oracle Cloud Infrastructure (OCI), conectada mediante Wallet.
+
 
 
 ## Estructura del proyecto
@@ -46,11 +48,13 @@ sistema-web/
 ```
 
 
+
 ## Requisitos previos
  
 - Node.js en una versión LTS reciente y npm.
 
 - Un usuario y esquema propio en la base de datos Oracle del proyecto.
+- El Wallet de la base de datos, junto con la contraseña con la que fue descargado.
 
 - La Wallet de la base de datos junto con la contraseña con la que fue descargado.
 
@@ -69,19 +73,20 @@ Cada integrante desarrolla sobre su propio esquema, para que las pruebas y los e
 El script solo crea la estructura, no incluye datos.
 
 
+
 ## Configuración del servidor
  
-1. **Wallet:** Descárgala desde la consola de OCI o solicitarlo a un integrante por un canal privado. Descomprímelo fuera de `sistema-web`.
-
-2. **Variables de entorno:** Copia la plantilla y completa tus datos:
+1. **Wallet.** Descárgalo desde la consola de OCI o pedirlo a un integrante por un canal privado. Descomprímelo dentro de `sistema-web/servidor/wallet/`.
+2. **Variables de entorno.** Copia la plantilla y completa tus datos:
 
 ```bash
    cp sistema-web/servidor/.env.example sistema-web/servidor/.env
 ```
  
-Cada variable está explicada en `.env.example`. Usa siempre el usuario de **tú** esquema, nunca `ADMIN` ni el esquema oficial.
+Cada variable está explicada en `.env.example`. Usa siempre el usuario de **tu** esquema, nunca `ADMIN` ni el esquema oficial.
  
-La wallet y el archivo `.env` contienen credenciales: **nunca deben subirse al repositorio**. Ambos están incluidos en `.gitignore`.
+El wallet y el archivo `.env` contienen credenciales: **nunca deben subirse al repositorio**. Ambos están incluidos en `.gitignore`.
+
 
 
 ## Imágenes de películas (OCI Object Storage)
@@ -183,8 +188,14 @@ Google solo acepta como origen autorizado `http://localhost` o un dominio con HT
 ## Cómo ejecutar el proyecto
  
 Desde la carpeta `sistema-web/`:
+ 
+```bash
+npm run instalar-todo   # instala las dependencias de la raíz, del cliente y del servidor
+npm run dev             # levanta el cliente y el servidor al mismo tiempo
+```
+ 
+Por defecto, el cliente corre en `http://localhost:5173` y el servidor en el puerto `5000`. Vite redirige las peticiones de la API al servidor mediante un proxy.
 
-- Primero hay que instalar las dependencias en la terminal con el comando `npm run instalar-todo`.
 
 - Abre una terminal a `cd ./sistemaGestionCines/sistema-web/servidor` y ahí se levanta el servidor luego con `node src/index.js`.
 
@@ -193,3 +204,5 @@ Desde la carpeta `sistema-web/`:
 - Ahora se dirige al navegador y pega el link `http://localhost:5173`.
 
 - Tambien se puede ejecutar desde la carpeta `sistema-web/` el comando `npm run dev`, este levantara en una sola terminal el servidor y el cliente.
+
+II Ciclo 2026
