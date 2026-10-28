@@ -56,6 +56,7 @@ app.use('/api/perfil', perfil)
 
 app.use(manejadorErrores)
 
+
 app.listen(PORT, () => {
   console.log(`Servidor Express listo en http://localhost:${PORT}`)
 })

@@ -16,6 +16,8 @@ const sqlListarSalas = `
   JOIN FORMATOS f     ON f.ID_FORMATO = sa.ID_FORMATO
   WHERE (:estado IS NULL OR sa.ESTADO_SALA = :estado)
     AND (:idSede IS NULL OR se.ID_SEDE = :idSede)
+    AND (:idTipo IS NULL OR t.ID_TIPO = :idTipo)
+    AND (:idFormato IS NULL OR f.ID_FORMATO = :idFormato)
     AND (
       :busqueda IS NULL
       OR UPPER(sa.NOMBRE_SALA)    LIKE '%' || UPPER(:busqueda) || '%'
@@ -25,8 +27,26 @@ const sqlListarSalas = `
     )
   ORDER BY se.NOMBRE_SEDE, sa.NOMBRE_SALA
 `;
+const sqlListarTipos = `SELECT ID_TIPO, NOMBRE_TIPO FROM TIPOS_SALA ORDER BY NOMBRE_TIPO`;
+const sqlListarFormatos = `SELECT ID_FORMATO, NOMBRE_FORMATO FROM FORMATOS ORDER BY NOMBRE_FORMATO`;
 
-export async function listarSalas({ busqueda = null, idSede = null, estado = null } = {}) {
-  const resultado = await ejecutar(sqlListarSalas, { busqueda, idSede, estado });
+export async function listarSalas({
+  busqueda = null,
+  idSede = null,
+  idTipo = null,
+  idFormato = null,
+  estado = null,
+} = {}) {
+  const resultado = await ejecutar(sqlListarSalas, { busqueda, idSede, idTipo, idFormato, estado });
+  return resultado.rows;
+}
+
+export async function listarTipos() {
+  const resultado = await ejecutar(sqlListarTipos);
+  return resultado.rows;
+}
+
+export async function listarFormatos() {
+  const resultado = await ejecutar(sqlListarFormatos);
   return resultado.rows;
 }
