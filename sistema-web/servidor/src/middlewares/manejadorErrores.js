@@ -2,6 +2,7 @@ import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoAutorizado } from '../errores/ErrorNoAutorizado.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorProhibido } from '../errores/ErrorProhibido.js';
+import { ErrorNoAutenticado } from '../errores/ErrorNoAutenticado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 
 // eslint-disable-next-line no-unused-vars
@@ -10,6 +11,9 @@ export function manejadorErrores(error, req, res, next) {
     return res.status(400).json({ mensaje: error.message });
   }
   if (error instanceof ErrorNoAutorizado) {
+    return res.status(401).json({ mensaje: error.message });
+  }
+  if (error instanceof ErrorNoAutenticado) {
     return res.status(401).json({ mensaje: error.message });
   }
   if (error instanceof ErrorProhibido) {
