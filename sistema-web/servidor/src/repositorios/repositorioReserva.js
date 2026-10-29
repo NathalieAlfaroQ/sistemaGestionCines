@@ -49,9 +49,8 @@ const sqlGeneros = `
   ORDER BY g.NOMBRE_GENERO
 `;
 
-// Orden de columnas: 0: NOMBRE_IDIOMA, 1: SUBTITULO
 const sqlIdiomas = `
-  SELECT i.NOMBRE_IDIOMA, ip.SUBTITULO
+  SELECT i.NOMBRE_IDIOMA
   FROM IDIOMAS_PELICULA ip
   JOIN IDIOMAS i ON i.ID_IDIOMA = ip.ID_IDIOMA
   WHERE ip.ID_PELICULA = :idPelicula
@@ -80,14 +79,12 @@ export async function obtenerPelicula(idPelicula, ahora) {
   return {
     fila,
     generos: generos.rows.map(([nombre]) => nombre),
-    idiomas: idiomas.rows,
+    idiomas: idiomas.rows.map(([nombre]) => nombre),
     formatos: formatos.rows.map(([nombre]) => nombre),
   };
 }
 
-// Horarios de la película en todas las sedes
-// Orden de columnas: 0: ID_PROYECCION, 1: ID_SEDE, 2: NOMBRE_SEDE, 3: NOMBRE_PROVINCIA,
-// 4: ID_FORMATO, 5: NOMBRE_FORMATO, 6: HORA ('HH24:MI')
+// Horarios de un día
 
 const sqlHorarios = `
   SELECT p.ID_PROYECCION, se.ID_SEDE, se.NOMBRE_SEDE, pr.NOMBRE_PROVINCIA,

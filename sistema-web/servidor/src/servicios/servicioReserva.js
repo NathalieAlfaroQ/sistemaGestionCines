@@ -18,6 +18,13 @@ export const MENSAJE_FALTAN_ASIENTOS = 'Te faltan asientos por seleccionar';
 
 const PATRON_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
+// Regla de negocio: toda película en un idioma distinto del español se proyecta subtitulada al español.
+const IDIOMA_LOCAL = 'Español';
+
+function esSubtitulada(idiomas) {
+  return idiomas.some((nombre) => nombre !== IDIOMA_LOCAL);
+}
+
 // 'sv-SE' formatea como 'AAAA-MM-DD HH:MM:SS', el mismo formato que espera el repositorio
 const formateadorCostaRica = new Intl.DateTimeFormat('sv-SE', {
   timeZone: 'America/Costa_Rica',
@@ -124,7 +131,7 @@ export async function consultarPelicula(idPelicula) {
       obtenerUrlImagen(claveBanner),
     ],
     generos: detalle.generos,
-    idiomas: detalle.idiomas,
+    subtitulada: esSubtitulada(detalle.idiomas),
     formatos: detalle.formatos,
   };
 }
