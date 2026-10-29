@@ -1,4 +1,6 @@
+import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoAutorizado } from '../errores/ErrorNoAutorizado.js';
+import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorProhibido } from '../errores/ErrorProhibido.js';
 import { ErrorNoAutenticado } from '../errores/ErrorNoAutenticado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
@@ -16,6 +18,12 @@ export function manejadorErrores(error, req, res, next) {
   }
   if (error instanceof ErrorProhibido) {
     return res.status(403).json({ mensaje: error.message });
+  }
+  if (error instanceof ErrorNoEncontrado) {
+    return res.status(404).json({ mensaje: error.message });
+  }
+  if (error instanceof ErrorConflicto) {
+    return res.status(409).json({ mensaje: error.message });
   }
 
   if (error.status >= 400 && error.status < 500) {
