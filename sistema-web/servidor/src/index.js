@@ -7,6 +7,7 @@ import rutasUbicacion from './rutas/rutasUbicacion.js'
 
 import rutasPelicula from './rutas/rutasPelicula.js'
 import rutasCatalogo from './rutas/rutasCatalogo.js'
+import rutasReserva from './rutas/rutasReserva.js'
 import crearCuenta from './crearCuenta.js'
 import iniciarSesion from './iniciarSesion.js'
 import recuperarContrasena from './recuperarContrasena.js'
@@ -15,6 +16,7 @@ import perfil from './perfil.js'
 import { manejadorErrores } from './middlewares/manejadorErrores.js'
 import { verificarAutenticacion } from './middlewares/autenticacion.js'
 import { autorizarRoles } from './middlewares/autorizacion.js'
+import rutasGoogle from './rutas/rutasGoogle.js'
 
 dotenv.config()
 
@@ -48,11 +50,13 @@ app.use('/api/salas', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), r
 app.use('/api/ubicaciones', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasUbicacion);
 app.use('/api/catalogo', verificarAutenticacion, soloPersonal, rutasCatalogo);
 app.use('/api/peliculas',verificarAutenticacion, soloPersonal ,rutasPelicula);
+app.use('/api/reserva', rutasReserva);
 app.use('/api/crear-cuenta', crearCuenta)
 app.use('/api/iniciar-sesion', iniciarSesion)
 app.use('/api/recuperar-contrasena', recuperarContrasena)
 app.use('/api/cambiar-contrasena', cambiarContrasena)
 app.use('/api/perfil', perfil)
+app.use('/api/iniciar-sesion-google', rutasGoogle)
 
 app.use(manejadorErrores)
 

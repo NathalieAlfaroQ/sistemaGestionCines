@@ -19,6 +19,9 @@ import RecuperarContrasena from './componentes/RecuperarContrasena'
 import CambiarContrasena from './componentes/CambiarContrasena'
 import Perfil from './componentes/Perfil'
 
+// Compra de boletos (SCRUM-93)
+import HorariosPelicula from './paginas/HorariosPelicula.jsx'
+import SeleccionAsientos from './paginas/SeleccionAsientos.jsx'
 // Barra de navegación y pie de página comunes
 import BarraCliente from './common/BarraCliente.jsx'
 import PiePagina from './common/PiePagina.jsx'
@@ -77,6 +80,9 @@ function App() {
         {/* --- Rutas de cliente (con tu navbar y footer) --- */}
         <Route path="/dulceria" element={<div>Dulcería</div>} />
         <Route path="/cartelera" element={<div>Cartelera</div>} />
+        <Route path="/cartelera/:idPelicula" element={<HorariosPelicula />} />
+        <Route path="/funciones/:idProyeccion/asientos" element={<SeleccionAsientos />} />
+        <Route path="/pago" element={<div>Pago</div>} />
         <Route path="/terminos" element={<TerminosCondiciones />} />
 
         {/* Rutas de trabajo que aún no tienen componente, quedan como placeholder */}
