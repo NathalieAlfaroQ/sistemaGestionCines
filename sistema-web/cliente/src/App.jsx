@@ -3,22 +3,27 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 // Layout y páginas del compañero
 import DisenoGestion from './common/DisenoGestion.jsx'
 import Sedes from './paginas/Sedes.jsx'
-import CrearSede from './paginas/CrearSede.jsx'
 import Peliculas from './paginas/Peliculas.jsx'
 import FormularioPelicula from './paginas/FormularioPelicula.jsx'
 import VerPelicula from './paginas/VerPelicula.jsx'
 import EditarPelicula from './paginas/EditarPelicula.jsx'
 import RutaProtegida from './rutas/RutaProtegida.jsx'
+import TerminosCondiciones from './paginas/TerminosCondiciones.jsx'
+
 
 // Componentes y pantallas tuyas
-import BarraNavegacion from './componentes/BarraNavegacion'
-import Hero from './componentes/Hero'
-import PiePagina from './componentes/PiePagina'
 import CrearCuenta from './componentes/CrearCuenta'
 import IniciarSesion from './componentes/IniciarSesion'
 import RecuperarContrasena from './componentes/RecuperarContrasena'
 import CambiarContrasena from './componentes/CambiarContrasena'
 import Perfil from './componentes/Perfil'
+
+// Barra de navegación y pie de página comunes
+import BarraCliente from './common/BarraCliente.jsx'
+import PiePagina from './common/PiePagina.jsx'
+
+// Pantallas de cliente
+import Hero from './componentes/Hero'
 
 // Rutas que NO llevan navbar ni footer (pantallas públicas de auth)
 const rutasPublicas = [
@@ -28,7 +33,7 @@ const rutasPublicas = [
   '/cambiar-contrasena'
 ]
 
-// Prefijos de rutas de trabajo (usan DisenoGestion y no llevan tu navbar/footer)
+// Prefijos de rutas de trabajo (usan DisenoGestion, que ya incluye BarraEmpleado y PiePagina)
 const prefijosTrabajo = ['/peliculas', '/sedes', '/salas', '/proyecciones', '/empleados']
 
 function App() {
@@ -40,7 +45,7 @@ function App() {
 
   return (
     <>
-      {mostrarNavbarYFooter && <BarraNavegacion />}
+      {mostrarNavbarYFooter && <BarraCliente />}
 
       <Routes>
         {/* --- Pantallas públicas (auth) --- */}
@@ -63,7 +68,6 @@ function App() {
             <Route path="/peliculas/:id" element={<VerPelicula />} />
             <Route path="/peliculas/:id/editar" element={<EditarPelicula />} />
             <Route path="/sedes" element={<Sedes />} />
-            <Route path="/sedes/nueva" element={<CrearSede />} />
           </Route>
         </Route>
 
@@ -71,6 +75,7 @@ function App() {
         {/* --- Rutas de cliente (con tu navbar y footer) --- */}
         <Route path="/dulceria" element={<div>Dulcería</div>} />
         <Route path="/cartelera" element={<div>Cartelera</div>} />
+        <Route path="/terminos" element={<TerminosCondiciones />} />
 
         {/* Rutas de trabajo que aún no tienen componente, quedan como placeholder */}
         <Route path="/salas" element={<div>Salas</div>} />

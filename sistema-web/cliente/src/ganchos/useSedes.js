@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { obtenerSedes } from '../servicios/servicioSedes.js';
 
-export function useSedes(busqueda) {
+export function useSedes({ busqueda = '', nombre = '', idProvincia = '', idCanton = '', estado = 'activas' } = {}) {
   const [sedes, setSedes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -15,7 +15,7 @@ export function useSedes(busqueda) {
       setError(null);
 
       try {
-        const datos = await obtenerSedes(busqueda);
+        const datos = await obtenerSedes({ busqueda, nombre, idProvincia, idCanton, estado });
         if (!cancelado) setSedes(datos);
       } catch (error) {
         if (!cancelado) setError(error.message);
@@ -29,7 +29,7 @@ export function useSedes(busqueda) {
     return () => {
       cancelado = true;
     };
-  }, [busqueda, version]);
+  }, [busqueda, nombre, idProvincia, idCanton, estado, version]);
 
   function recargar() {
     setVersion((anterior) => anterior + 1);
