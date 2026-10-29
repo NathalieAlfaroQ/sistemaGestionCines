@@ -7,6 +7,8 @@ import {
   TableHeadCell,
   TableRow,
 } from 'flowbite-react';
+import Boton from './Boton.jsx';
+import { IconoEditar, IconoEliminar } from './iconos.jsx';
 
 const claseEncabezado = 'px-4 py-3 bg-transparent text-base font-normal normal-case text-text-color';
 const claseCelda = 'px-4 py-3 text-text-color';
@@ -34,19 +36,65 @@ function elementosDePaginacion(actual, total) {
   return elementos;
 }
 
-function IconoEditar() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-    </svg>
-  );
-}
+const claseFiltro =
+  'rounded border border-border bg-transparent py-1.5 pl-3 pr-8 text-xs font-medium text-text-color ' +
+  'transition-colors hover:bg-white/10 focus:border-text-color focus:ring-text-color ' +
+  'disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-surface [&>option]:text-text-color';
 
-function IconoEliminar() {
+function FiltroColumna({ columna, valor, alCambiar }) {
+  const {
+    clave,
+    tipo = 'texto',
+    opciones = [],
+    opcionVacia = columna.titulo,
+    deshabilitado = false,
+    placeholder,
+  } = columna.filtro;
+  const etiqueta = `Filtrar por ${columna.titulo}`;
+
+  if (tipo === 'seleccion') {
+    return (
+      <div className="relative">
+        <select
+          aria-label={etiqueta}
+          className={`peer appearance-none bg-none ${claseFiltro}`}
+          value={valor}
+          disabled={deshabilitado}
+          onChange={(evento) => alCambiar(clave, evento.target.value)}
+        >
+          {opcionVacia !== null && <option value="">{opcionVacia}</option>}
+          {opciones.map((opcion) => (
+            <option key={opcion.valor} value={opcion.valor}>
+              {opcion.texto}
+            </option>
+          ))}
+        </select>
+        <svg
+          className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-text-color peer-disabled:opacity-50"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </div>
+    );
+  }
+
   return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-    </svg>
+    <input
+      type="search"
+      aria-label={etiqueta}
+      className={`${claseFiltro} pr-3 placeholder:text-text-color/70`}
+      placeholder={placeholder ?? columna.titulo}
+      value={valor}
+      disabled={deshabilitado}
+      onChange={(evento) => alCambiar(clave, evento.target.value)}
+    />
   );
 }
 
@@ -58,6 +106,9 @@ function Tabla({
   numerada = true,
   onEditar,
   onEliminar,
+  accionesDeshabilitadas,
+  filtros = {},
+  alCambiarFiltros,
   opcionesPorPagina = [8, 16, 24, 40],
   porPaginaInicial = 8,
 }) {
@@ -70,8 +121,15 @@ function Tabla({
     setPagina(1);
   }
 
-  if (filas.length === 0) {
+  const tieneFiltros = Boolean(alCambiarFiltros) && columnas.some((columna) => columna.filtro);
+  const sinFilas = filas.length === 0;
+
+  if (sinFilas && !tieneFiltros) {
     return <p className="text-danger">{textoVacio}</p>;
+  }
+
+  function cambiarFiltro(clave, valor) {
+    alCambiarFiltros({ ...filtros, [clave]: valor });
   }
 
   const totalPaginas = Math.max(1, Math.ceil(filas.length / porPagina));
@@ -79,6 +137,7 @@ function Tabla({
   const inicio = (paginaActual - 1) * porPagina;
   const filasVisibles = filas.slice(inicio, inicio + porPagina);
   const tieneAcciones = Boolean(onEditar || onEliminar);
+  const totalColumnas = columnas.length + (numerada ? 1 : 0) + (tieneAcciones ? 1 : 0);
 
   function cambiarPorPagina(evento) {
     setPorPagina(Number(evento.target.value));
@@ -87,11 +146,26 @@ function Tabla({
 
   return (
     <div>
+      {tieneFiltros && (
+        <div className="mb-8 flex flex-wrap items-center gap-4">
+          {columnas
+            .filter((columna) => columna.filtro)
+            .map((columna) => (
+              <FiltroColumna
+                key={columna.titulo}
+                columna={columna}
+                valor={filtros[columna.filtro.clave] ?? ''}
+                alCambiar={cambiarFiltro}
+              />
+            ))}
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <Table className="bg-transparent">
           <TableHead>
             <TableRow className="border-b border-border">
-              {numerada && <TableHeadCell className={claseEncabezado}>##</TableHeadCell>}
+              {numerada && <TableHeadCell className={claseEncabezado}></TableHeadCell>}
               {columnas.map((columna) => (
                 <TableHeadCell key={columna.titulo} className={claseEncabezado}>
                   {columna.titulo}
@@ -99,9 +173,17 @@ function Tabla({
               ))}
               {tieneAcciones && <TableHeadCell className={claseEncabezado}>Acciones</TableHeadCell>}
             </TableRow>
+
           </TableHead>
 
           <TableBody>
+            {sinFilas && (
+              <TableRow className="bg-transparent">
+                <TableCell colSpan={totalColumnas} className="px-4 py-6 text-center text-danger">
+                  {textoVacio}
+                </TableCell>
+              </TableRow>
+            )}
             {filasVisibles.map((fila, indice) => (
               <TableRow
                 key={fila[posicionId]}
@@ -120,26 +202,30 @@ function Tabla({
                   <TableCell className={claseCelda}>
                     <div className="flex gap-2">
                       {onEditar && (
-                        <button
-                          type="button"
+                        <Boton
+                          variante="contorno"
+                          tamano="icono"
                           title="Editar"
                           aria-label="Editar"
                           onClick={() => onEditar(fila)}
-                          className="p-2 rounded-lg border border-brand-soft text-brand-soft transition-colors hover:bg-brand-hover hover:text-text-color"
+                          disabled={accionesDeshabilitadas?.(fila)}
+                          className="disabled:hover:bg-transparent disabled:hover:text-brand-soft"
                         >
                           <IconoEditar />
-                        </button>
+                        </Boton>
                       )}
                       {onEliminar && (
-                        <button
-                          type="button"
+                        <Boton
+                          variante="contornoPeligro"
+                          tamano="icono"
                           title="Eliminar"
                           aria-label="Eliminar"
                           onClick={() => onEliminar(fila)}
-                          className="p-2 rounded-lg border border-danger text-danger transition-colors hover:bg-danger hover:text-text-color"
+                          disabled={accionesDeshabilitadas?.(fila)}
+                          className="disabled:hover:bg-transparent disabled:hover:text-danger"
                         >
                           <IconoEliminar />
-                        </button>
+                        </Boton>
                       )}
                     </div>
                   </TableCell>
@@ -150,70 +236,72 @@ function Tabla({
         </Table>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-text-color">
-        <label className="flex items-center gap-2">
-          Filas por página {' '}
-          <select
-            value={porPagina}
-            onChange={cambiarPorPagina}
-            className="rounded-lg border border-border bg-surface px-2 py-1 text-text-color"
-          >
-            {opcionesPorPagina.map((cantidad) => (
-              <option key={cantidad} value={cantidad}>
-                {cantidad}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {totalPaginas > 1 && (
-          <nav aria-label="Paginación" className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className={claseBotonPagina}
-              disabled={paginaActual === 1}
-              onClick={() => setPagina(paginaActual - 1)}
+      {!sinFilas && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-text-color">
+          <label className="flex items-center gap-2">
+            Filas por página {' '}
+            <select
+              value={porPagina}
+              onChange={cambiarPorPagina}
+              className="rounded-lg border border-border bg-surface px-2 py-1 text-text-color"
             >
-              Anterior
-            </button>
+              {opcionesPorPagina.map((cantidad) => (
+                <option key={cantidad} value={cantidad}>
+                  {cantidad}
+                </option>
+              ))}
+            </select>
+          </label>
 
-            {elementosDePaginacion(paginaActual, totalPaginas).map((elemento) =>
-              typeof elemento === 'number' ? (
-                <button
-                  key={elemento}
-                  type="button"
-                  aria-current={elemento === paginaActual ? 'page' : undefined}
-                  className={
-                    elemento === paginaActual
-                      ? 'min-w-9 h-9 px-3 rounded-lg border border-brand-soft bg-brand text-text-color'
-                      : claseBotonPagina
-                  }
-                  onClick={() => setPagina(elemento)}
-                >
-                  {elemento}
-                </button>
-              ) : (
-                <span key={elemento} className="px-1 text-text-muted">
-                  …
-                </span>
-              )
-            )}
+          {totalPaginas > 1 && (
+            <nav aria-label="Paginación" className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className={claseBotonPagina}
+                disabled={paginaActual === 1}
+                onClick={() => setPagina(paginaActual - 1)}
+              >
+                Anterior
+              </button>
 
-            <button
-              type="button"
-              className={claseBotonPagina}
-              disabled={paginaActual === totalPaginas}
-              onClick={() => setPagina(paginaActual + 1)}
-            >
-              Siguiente
-            </button>
-          </nav>
-        )}
+              {elementosDePaginacion(paginaActual, totalPaginas).map((elemento) =>
+                typeof elemento === 'number' ? (
+                  <button
+                    key={elemento}
+                    type="button"
+                    aria-current={elemento === paginaActual ? 'page' : undefined}
+                    className={
+                      elemento === paginaActual
+                        ? 'min-w-9 h-9 px-3 rounded-lg border border-brand-soft bg-brand text-text-color'
+                        : claseBotonPagina
+                    }
+                    onClick={() => setPagina(elemento)}
+                  >
+                    {elemento}
+                  </button>
+                ) : (
+                  <span key={elemento} className="px-1 text-text-muted">
+                    …
+                  </span>
+                )
+              )}
 
-        <p>
-          Exhibiendo {inicio + 1}-{inicio + filasVisibles.length} de {filas.length} registros
-        </p>
-      </div>
+              <button
+                type="button"
+                className={claseBotonPagina}
+                disabled={paginaActual === totalPaginas}
+                onClick={() => setPagina(paginaActual + 1)}
+              >
+                Siguiente
+              </button>
+            </nav>
+          )}
+
+          <p>
+            Exhibiendo {inicio + 1}-{inicio + filasVisibles.length} de {filas.length} registros
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,27 +1,14 @@
-import { useState } from 'react';
 import { useUbicaciones } from '../ganchos/useUbicaciones.js';
 import { POS_CANTON, POS_PROVINCIA } from '../constantes/posicionesUbicacion.js';
+import MensajeError from '../common/MensajeError.jsx';
+import { useFormularioSede } from '../ganchos/useFormularioSede.js';
+import { normalizarNombre, NOMBRE_MAXIMO } from '../validaciones/validacionesSede.js';
 
 const claseEtiqueta = 'mb-2 block text-sm text-text-color';
 const claseCampo = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
-const claseDesplegable = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-brand-soft placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
+const claseDesplegable = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
 const claseBotonConfirmar = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover disabled:opacity-50';
 const claseBotonCancelar = 'flex items-center gap-2 rounded-lg bg-brand-soft px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-soft-hover disabled:opacity-50';
-
-const NOMBRE_MINIMO = 10;
-const NOMBRE_MAXIMO = 50;
-const PATRON_NOMBRE = /^\p{L}+(?: \p{L}+)*$/u;
-
-function normalizarNombre(nombre) {
-  return nombre.trim().replace(/\s+/g, ' ');
-}
-
-function errorDeNombre(nombre) {
-  if (nombre === '') return null;
-  if (!PATRON_NOMBRE.test(nombre)) return 'El nombre solo puede contener letras y espacios';
-  if (nombre.length < NOMBRE_MINIMO) return `El nombre debe tener al menos ${NOMBRE_MINIMO} caracteres`;
-  return null;
-}
 
 function Asterisco() {
   return <span className="text-danger">*</span>;
@@ -33,49 +20,40 @@ function FormularioSede({
   alEnviar,
   alCancelar,
   guardando = false,
+  error = null,
 }) {
   const { ubicaciones } = useUbicaciones();
 
-  const [formulario, setFormulario] = useState({
+  const {
+    formulario,
+    hayCamposVacios,
+    errorVisible,
+    enlazar,
+    cambiarProvincia,
+    marcarTocado,
+    validarAlEnviar,
+  } = useFormularioSede({
     nombre: valorInicial?.nombre ?? '',
     idProvincia: String(valorInicial?.idProvincia ?? ''),
     idCanton: String(valorInicial?.idCanton ?? ''),
   });
-  const [intentoEnvio, setIntentoEnvio] = useState(false);
+
+  const errorNombre = errorVisible('nombre');
+  const errorProvincia = errorVisible('idProvincia');
+  const errorCanton = errorVisible('idCanton');
 
   const cantonesDisponibles = ubicaciones.cantones.filter(
     (canton) => String(canton[POS_CANTON.idProvincia]) === formulario.idProvincia
   );
 
-  const nombreNormalizado = normalizarNombre(formulario.nombre);
-  const hayCamposVacios =
-    nombreNormalizado === '' || formulario.idProvincia === '' || formulario.idCanton === '';
-  const mostrarObligatorio = intentoEnvio && hayCamposVacios;
-
-  const errorNombre = errorDeNombre(nombreNormalizado);
-  const mostrarErrorNombre = intentoEnvio && errorNombre !== null;
-
-  function actualizar(campo, valor) {
-    setFormulario((anterior) => ({ ...anterior, [campo]: valor }));
-  }
-
-  function cambiarProvincia(evento) {
-    setFormulario((anterior) => ({
-      ...anterior,
-      idProvincia: evento.target.value,
-      idCanton: '',
-    }));
-  }
-
   function manejarEnvio(evento) {
     evento.preventDefault();
+    if (!validarAlEnviar()) return;
 
-    if (hayCamposVacios || errorNombre !== null) {
-      setIntentoEnvio(true);
-      return;
-    }
-
-    alEnviar({ nombre: nombreNormalizado, idCanton: Number(formulario.idCanton) });
+    alEnviar({
+      nombre: normalizarNombre(formulario.nombre),
+      idCanton: Number(formulario.idCanton),
+    });
   }
 
   return (
@@ -88,16 +66,11 @@ function FormularioSede({
           id="nombre"
           className={claseCampo}
           maxLength={NOMBRE_MAXIMO}
-          aria-invalid={mostrarErrorNombre}
-          aria-describedby={mostrarErrorNombre ? 'error-nombre' : undefined}
-          value={formulario.nombre}
-          onChange={(evento) => actualizar('nombre', evento.target.value)}
+          aria-invalid={errorNombre !== null}
+          aria-describedby={errorNombre ? 'error-nombre' : undefined}
+          {...enlazar('nombre')}
         />
-        {mostrarErrorNombre && (
-          <p id="error-nombre" role="alert" className="mt-2 text-sm text-danger">
-            {errorNombre}
-          </p>
-        )}
+        <MensajeError id="error-nombre" mensaje={errorNombre} />
       </div>
 
       <div>
@@ -108,8 +81,11 @@ function FormularioSede({
           <select
             id="provincia"
             className={claseDesplegable}
+            aria-invalid={errorProvincia !== null}
+            aria-describedby={errorProvincia ? 'error-provincia' : undefined}
             value={formulario.idProvincia}
-            onChange={cambiarProvincia}
+            onChange={(evento) => cambiarProvincia(evento.target.value)}
+            onBlur={() => marcarTocado('idProvincia')}
           >
             <option value="" />
             {ubicaciones.provincias.map((provincia) => (
@@ -119,19 +95,21 @@ function FormularioSede({
             ))}
           </select>
         </div>
+        <MensajeError id="error-provincia" mensaje={errorProvincia} />
       </div>
 
       <div>
-        <label htmlFor="Canton" className={claseEtiqueta}>
-          Canton <Asterisco />
+        <label htmlFor="canton" className={claseEtiqueta}>
+          Cantón <Asterisco />
         </label>
         <div className="relative">
           <select
-            id="Canton"
+            id="canton"
             className={claseDesplegable}
+            aria-invalid={errorCanton !== null}
+            aria-describedby={errorCanton ? 'error-canton' : undefined}
             disabled={formulario.idProvincia === ''}
-            value={formulario.idCanton}
-            onChange={(evento) => actualizar('idCanton', evento.target.value)}
+            {...enlazar('idCanton')}
           >
             <option value="" />
             {cantonesDisponibles.map((canton) => (
@@ -141,14 +119,14 @@ function FormularioSede({
             ))}
           </select>
         </div>
+        <MensajeError id="error-canton" mensaje={errorCanton} />
       </div>
 
       <div className="flex flex-col gap-4">
-        {mostrarObligatorio && (
-          <p role="alert" className="text-sm text-danger">
-            *Espacio obligatorio
-          </p>
-        )}
+        <MensajeError mensaje={error} className="mt-0" />
+
+        {/* Desaparece cuando ya no queda ningún campo obligatorio vacío */}
+        {hayCamposVacios && <p className="text-sm text-danger">* Espacio obligatorio</p>}
 
         <div className="flex gap-4">
           <button type="submit" disabled={guardando} className={claseBotonConfirmar}>
