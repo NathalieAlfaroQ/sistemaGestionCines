@@ -20,6 +20,10 @@ import RecuperarContrasena from './componentes/RecuperarContrasena'
 import CambiarContrasena from './componentes/CambiarContrasena'
 import Perfil from './componentes/Perfil'
 
+// Compra de boletos (SCRUM-93)
+import HorariosPelicula from './paginas/HorariosPelicula.jsx'
+import SeleccionAsientos from './paginas/SeleccionAsientos.jsx'
+
 // Rutas que NO llevan navbar ni footer (pantallas públicas de auth)
 const rutasPublicas = [
   '/iniciar-sesion',
@@ -71,6 +75,10 @@ function App() {
         {/* --- Rutas de cliente (con tu navbar y footer) --- */}
         <Route path="/dulceria" element={<div>Dulcería</div>} />
         <Route path="/cartelera" element={<div>Cartelera</div>} />
+        <Route path="/cartelera/:idPelicula" element={<HorariosPelicula />} />
+        <Route path="/funciones/:idProyeccion/asientos" element={<SeleccionAsientos />} />
+        {/* Pantalla de pago: pendiente de su propia historia */}
+        <Route path="/pago" element={<div>Pago</div>} />
 
         {/* Rutas de trabajo que aún no tienen componente, quedan como placeholder */}
         <Route path="/salas" element={<div>Salas</div>} />
