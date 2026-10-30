@@ -8,7 +8,7 @@ import {
   TableRow,
 } from 'flowbite-react';
 import Boton from './Boton.jsx';
-import { IconoEditar, IconoEliminar } from './iconos.jsx';
+import { IconoEditar, IconoEliminar, IconoVer } from './iconos.jsx';
 
 const claseEncabezado = 'px-4 py-3 bg-transparent text-base font-normal normal-case text-text-color';
 const claseCelda = 'px-4 py-3 text-text-color';
@@ -106,6 +106,7 @@ function Tabla({
   numerada = true,
   onEditar,
   onEliminar,
+  onVer,
   accionesDeshabilitadas,
   filtros = {},
   alCambiarFiltros,
@@ -136,7 +137,7 @@ function Tabla({
   const paginaActual = Math.min(pagina, totalPaginas);
   const inicio = (paginaActual - 1) * porPagina;
   const filasVisibles = filas.slice(inicio, inicio + porPagina);
-  const tieneAcciones = Boolean(onEditar || onEliminar);
+  const tieneAcciones = Boolean(onVer || onEditar || onEliminar);
   const totalColumnas = columnas.length + (numerada ? 1 : 0) + (tieneAcciones ? 1 : 0);
 
   function cambiarPorPagina(evento) {
@@ -201,6 +202,17 @@ function Tabla({
                 {tieneAcciones && (
                   <TableCell className={claseCelda}>
                     <div className="flex gap-2">
+                      {onVer && (
+                        <Boton
+                          variante="contorno"
+                          tamano="icono"
+                          title="Ver detalles"
+                          aria-label="Ver detalles"
+                          onClick={() => onVer(fila)}
+                        >
+                          <IconoVer />
+                        </Boton>
+                      )}
                       {onEditar && (
                         <Boton
                           variante="contorno"

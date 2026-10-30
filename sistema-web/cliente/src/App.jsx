@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 // Layout y páginas del compañero
 import DisenoGestion from './common/DisenoGestion.jsx'
 import Sedes from './paginas/Sedes.jsx'
+import Salas from './paginas/Salas.jsx'
 import Peliculas from './paginas/Peliculas.jsx'
 import FormularioPelicula from './paginas/FormularioPelicula.jsx'
 import VerPelicula from './paginas/VerPelicula.jsx'
@@ -71,6 +72,7 @@ function App() {
             <Route path="/peliculas/:id" element={<VerPelicula />} />
             <Route path="/peliculas/:id/editar" element={<EditarPelicula />} />
             <Route path="/sedes" element={<Sedes />} />
+            <Route path="/salas" element={<Salas />} />
           </Route>
         </Route>
 
@@ -84,7 +86,6 @@ function App() {
         <Route path="/terminos" element={<TerminosCondiciones />} />
 
         {/* Rutas de trabajo que aún no tienen componente, quedan como placeholder */}
-        <Route path="/salas" element={<div>Salas</div>} />
         <Route path="/proyecciones" element={<div>Proyecciones</div>} />
         <Route path="/empleados" element={<div>Empleados</div>} />
 
