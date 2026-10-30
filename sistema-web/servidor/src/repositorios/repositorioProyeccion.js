@@ -1,3 +1,4 @@
+import oracledb from 'oracledb';
 import { ejecutar } from '../configuracion/baseDatos.js';
 
 const sqlListarProyecciones = `
@@ -49,4 +50,55 @@ export async function listarProyecciones({
     estado,
   });
   return resultado.rows;
+}
+
+const sqlDuracionPelicula = `
+  SELECT DURACION FROM PELICULAS WHERE ID_PELICULA = :idPelicula AND ESTADO_PELICULA = 1
+`;
+
+const sqlExisteSalaActiva = `SELECT 1 FROM SALAS WHERE ID_SALA = :idSala AND ESTADO_SALA = 1`;
+
+// Hay choque si otra proyección activa de la sala empieza antes de que termine la nueva
+// y termina después de que empiece la nueva
+const sqlChoqueDeHorario = `
+  SELECT 1
+  FROM PROYECCIONES pr
+  JOIN PELICULAS pe ON pe.ID_PELICULA = pr.ID_PELICULA
+  WHERE pr.ID_SALA = :idSala
+    AND pr.ESTADO_PROYECCION = 1
+    AND pr.FECHA < TO_DATE(:fechaHora, 'YYYY-MM-DD HH24:MI') + :duracion / 1440
+    AND pr.FECHA + pe.DURACION / 1440 > TO_DATE(:fechaHora, 'YYYY-MM-DD HH24:MI')
+`;
+
+const sqlCrearProyeccion = `
+  INSERT INTO PROYECCIONES (ID_SALA, ID_PELICULA, FECHA, ESTADO_PROYECCION)
+  VALUES (:idSala, :idPelicula, TO_DATE(:fechaHora, 'YYYY-MM-DD HH24:MI'), 1)
+  RETURNING ID_PROYECCION INTO :idProyeccion
+`;
+
+// Devuelve la duración en minutos, o null si la película no existe o está eliminada
+export async function obtenerDuracionPelicula(idPelicula) {
+  const resultado = await ejecutar(sqlDuracionPelicula, { idPelicula });
+  return resultado.rows[0]?.[0] ?? null;
+}
+
+export async function existeSalaActiva(idSala) {
+  const resultado = await ejecutar(sqlExisteSalaActiva, { idSala });
+  return resultado.rows.length > 0;
+}
+
+export async function hayChoqueDeHorario({ idSala, fechaHora, duracion }) {
+  const resultado = await ejecutar(sqlChoqueDeHorario, { idSala, fechaHora, duracion });
+  return resultado.rows.length > 0;
+}
+
+export async function crearProyeccion({ idSala, idPelicula, fechaHora }) {
+  const resultado = await ejecutar(sqlCrearProyeccion, {
+    idSala,
+    idPelicula,
+    fechaHora,
+    idProyeccion: { type: oracledb.NUMBER, dir: oracledb.BIND_OUT },
+  });
+
+  return resultado.outBinds.idProyeccion[0];
 }
