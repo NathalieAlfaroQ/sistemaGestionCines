@@ -1,6 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Avatar,
   Dropdown,
   DropdownDivider,
   DropdownHeader,
@@ -12,6 +11,7 @@ import {
   NavbarToggle,
   Tooltip,
 } from 'flowbite-react';
+import { cerrarSesion, obtenerUsuario } from '../servicios/sesion.js';
 
 const claseBarra = 'sticky top-4 z-30 mx-4 rounded-2xl bg-navbar text-text-color shadow-lg md:mx-8 dark:bg-navbar';
 const claseHamburguesa = 'text-text-color hover:bg-white/10 dark:text-text-color dark:hover:bg-white/10';
@@ -23,20 +23,41 @@ const claseEnlaceActivo =
   'bg-transparent font-semibold text-text-color underline decoration-2 underline-offset-8 ' +
   'md:bg-transparent md:text-text-color dark:text-text-color';
 
+const temaMenuUsuario = {
+  floating: {
+    base: 'z-10 w-fit divide-y divide-border rounded-lg shadow-lg focus:outline-none',
+    style: {
+      auto: 'border border-border bg-surface text-text-color dark:border-border dark:bg-surface dark:text-text-color',
+    },
+    header: 'block px-4 py-2 text-sm text-text-color dark:text-text-color',
+    divider: 'my-1 h-px bg-border dark:bg-border',
+    item: {
+      base:
+        'flex w-full cursor-pointer items-center justify-start px-4 py-2 text-sm text-text-color transition ' +
+        'hover:bg-brand focus:bg-brand focus:outline-none ' +
+        'dark:text-text-color dark:hover:bg-brand dark:hover:text-text-color dark:focus:bg-brand dark:focus:text-text-color',
+    },
+  },
+};
+
 function BarraNavegacion({
   enlaces,
   logo,
   nombreSitio = 'Cines Aurora',
   rutaInicio = '/',
-  usuario = null,
   rutaIniciarSesion = '/iniciar-sesion',
   opcionesPerfil = [],
-  alCerrarSesion,
 }) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const usuario = obtenerUsuario();
+
+  function alCerrarSesion() {
+    cerrarSesion();
+    navigate('/iniciar-sesion');
+  }
+
   const estaActivo = (ruta) => (ruta === '/' ? pathname === '/' : pathname.startsWith(ruta));
-  // Sin sesión, "Iniciar sesión" es un enlace más, junto a los demás
-  const todosLosEnlaces = usuario ? enlaces : [...enlaces, { texto: 'Iniciar sesión', ruta: rutaIniciarSesion }];
   const nombreUsuario = usuario?.nombre ?? usuario?.nombreUsuario ?? usuario?.correo ?? 'Mi cuenta';
 
   return (
@@ -48,14 +69,21 @@ function BarraNavegacion({
       </Tooltip>
 
       <div className="flex items-center gap-2 md:order-2">
+        {!usuario && (
+          <Link to={rutaIniciarSesion} className={claseEnlace}>
+            Iniciar sesión
+          </Link>
+        )}
+
         {usuario && (
           <Dropdown
+            theme={temaMenuUsuario}
             inline
             arrowIcon={false}
             placement="bottom-end"
             renderTrigger={() => (
-              <button type="button" aria-label="Menú del usuario" className="rounded-full">
-                <Avatar rounded />
+              <button type="button" aria-label="Menú del usuario" className={claseEnlace}>
+                Perfil
               </button>
             )}
           >
@@ -84,7 +112,7 @@ function BarraNavegacion({
       </div>
 
       <NavbarCollapse className={claseLista}>
-        {todosLosEnlaces.map((enlace) => {
+        {enlaces.map((enlace) => {
           const activo = estaActivo(enlace.ruta);
           return (
             <NavbarLink
