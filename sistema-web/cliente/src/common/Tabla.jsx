@@ -85,6 +85,20 @@ function FiltroColumna({ columna, valor, alCambiar }) {
     );
   }
 
+  if (tipo === 'fecha' || tipo === 'hora') {
+    return (
+      <input
+        type={tipo === 'fecha' ? 'date' : 'time'}
+        aria-label={etiqueta}
+        title={etiqueta}
+        className={`${claseFiltro} pr-3 [color-scheme:dark]`}
+        value={valor}
+        disabled={deshabilitado}
+        onChange={(evento) => alCambiar(clave, evento.target.value)}
+      />
+    );
+  }
+
   return (
     <input
       type="search"
