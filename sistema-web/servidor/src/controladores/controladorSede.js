@@ -1,4 +1,5 @@
 import { desactivarSede, modificarSede, obtenerSedes, registrarSede } from '../servicios/servicioSede.js';
+import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 
 export async function listarSedes(req, res) {
@@ -30,16 +31,14 @@ export async function crearSede(req, res) {
 
 export async function editarSede(req, res) {
   try {
-    const actualizada = await modificarSede(req.params.id, req.body);
-
-    if (!actualizada) {
-      return res.status(404).json({ mensaje: 'La sede no existe o ya fue eliminada' });
-    }
-
+    await modificarSede(req.params.id, req.body);
     res.json({ idSede: Number(req.params.id) });
   } catch (error) {
     if (error instanceof ErrorValidacion) {
       return res.status(400).json({ mensaje: error.message });
+    }
+    if (error instanceof ErrorNoEncontrado) {
+      return res.status(404).json({ mensaje: error.message });
     }
     console.error('Error al editar sede:', error);
     res.status(500).json({ mensaje: 'No se pudo editar la sede' });
@@ -48,16 +47,14 @@ export async function editarSede(req, res) {
 
 export async function eliminarSede(req, res) {
   try {
-    const desactivada = await desactivarSede(req.params.id);
-
-    if (!desactivada) {
-      return res.status(404).json({ mensaje: 'La sede no existe o ya fue eliminada' });
-    }
-
+    await desactivarSede(req.params.id);
     res.json({ idSede: Number(req.params.id) });
   } catch (error) {
     if (error instanceof ErrorValidacion) {
       return res.status(400).json({ mensaje: error.message });
+    }
+    if (error instanceof ErrorNoEncontrado) {
+      return res.status(404).json({ mensaje: error.message });
     }
     console.error('Error al eliminar sede:', error);
     res.status(500).json({ mensaje: 'No se pudo eliminar la sede' });

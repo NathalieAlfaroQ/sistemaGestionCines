@@ -4,6 +4,7 @@ import {
   listarSalas,
   listarTipos,
 } from '../repositorios/repositorioSala.js';
+import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 
 const ESTADOS_SALA = { activas: 1, eliminadas: 0, todas: null };
@@ -49,5 +50,7 @@ export async function desactivarSala(idSala) {
     throw new ErrorValidacion('El identificador de la sala no es válido');
   }
 
-  return await desactivarSalaEnRepositorio(id);
+  if (!(await desactivarSalaEnRepositorio(id))) {
+    throw new ErrorNoEncontrado('La sala no existe o ya fue eliminada');
+  }
 }

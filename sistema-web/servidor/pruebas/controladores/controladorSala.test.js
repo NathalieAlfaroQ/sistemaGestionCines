@@ -9,6 +9,7 @@ vi.mock('../../src/servicios/servicioSala.js', () => ({
 
 import * as servicio from '../../src/servicios/servicioSala.js'
 import { eliminarSala, listarFormatos, listarSalas, listarTipos } from '../../src/controladores/controladorSala.js'
+import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
 
 function crearRes() {
@@ -104,7 +105,7 @@ describe.each([
 
 describe('eliminarSala', () => {
   it('responde con el id numérico de la sala eliminada', async () => {
-    servicio.desactivarSala.mockResolvedValue(true)
+    servicio.desactivarSala.mockResolvedValue(undefined)
     const res = crearRes()
 
     await eliminarSala({ params: { id: '9' } }, res)
@@ -115,7 +116,7 @@ describe('eliminarSala', () => {
   })
 
   it('responde 404 si la sala no existe o ya fue eliminada', async () => {
-    servicio.desactivarSala.mockResolvedValue(false)
+    servicio.desactivarSala.mockRejectedValue(new ErrorNoEncontrado('La sala no existe o ya fue eliminada'))
     const res = crearRes()
 
     await eliminarSala({ params: { id: '9' } }, res)

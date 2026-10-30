@@ -9,6 +9,7 @@ vi.mock('../../src/repositorios/repositorioSala.js', () => ({
 
 import * as repositorio from '../../src/repositorios/repositorioSala.js'
 import { desactivarSala, obtenerFormatos, obtenerSalas, obtenerTipos } from '../../src/servicios/servicioSala.js'
+import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
 
 async function capturarError(funcion) {
@@ -128,14 +129,17 @@ describe('desactivarSala', () => {
   it('desactiva la sala indicada', async () => {
     repositorio.desactivarSala.mockResolvedValue(true)
 
-    expect(await desactivarSala('9')).toBe(true)
+    expect(await desactivarSala('9')).toBeUndefined()
     expect(repositorio.desactivarSala).toHaveBeenCalledWith(9)
   })
 
-  it('devuelve false si la sala no existe o ya estaba eliminada', async () => {
+  it('lanza ErrorNoEncontrado si la sala no existe o ya estaba eliminada', async () => {
     repositorio.desactivarSala.mockResolvedValue(false)
 
-    expect(await desactivarSala(9)).toBe(false)
+    const error = await capturarError(() => desactivarSala(9))
+
+    expect(error).toBeInstanceOf(ErrorNoEncontrado)
+    expect(error.message).toBe('La sala no existe o ya fue eliminada')
   })
 
   it.each([0, -1, 'abc', 1.2, '', null, undefined])('rechaza el id %j', async (id) => {
