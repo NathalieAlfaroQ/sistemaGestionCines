@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../../src/servicios/servicioProyeccion.js', () => ({
+  desactivarProyeccion: vi.fn(),
   obtenerProyecciones: vi.fn(),
   registrarProyeccion: vi.fn(),
 }))
 
 import * as servicio from '../../src/servicios/servicioProyeccion.js'
-import { crearProyeccion, listarProyecciones } from '../../src/controladores/controladorProyeccion.js'
+import { crearProyeccion, eliminarProyeccion, listarProyecciones } from '../../src/controladores/controladorProyeccion.js'
 import { ErrorConflicto } from '../../src/errores/ErrorConflicto.js'
+import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
 
 function crearRes() {
@@ -120,6 +122,50 @@ describe('crearProyeccion', () => {
 
     expect(res.status).toHaveBeenCalledWith(500)
     expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudo crear la proyección' })
+    expect(console.error).toHaveBeenCalled()
+  })
+})
+
+describe('eliminarProyeccion', () => {
+  it('responde con el id de la proyección eliminada', async () => {
+    servicio.desactivarProyeccion.mockResolvedValue(undefined)
+    const res = crearRes()
+
+    await eliminarProyeccion({ params: { id: '9' } }, res)
+
+    expect(servicio.desactivarProyeccion).toHaveBeenCalledWith('9')
+    expect(res.json).toHaveBeenCalledWith({ idProyeccion: 9 })
+    expect(res.status).not.toHaveBeenCalled()
+  })
+
+  it('responde 400 con el mensaje de un ErrorValidacion', async () => {
+    servicio.desactivarProyeccion.mockRejectedValue(new ErrorValidacion('El identificador de la proyección no es válido'))
+    const res = crearRes()
+
+    await eliminarProyeccion({ params: { id: 'abc' } }, res)
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'El identificador de la proyección no es válido' })
+  })
+
+  it('responde 404 con el mensaje de un ErrorNoEncontrado', async () => {
+    servicio.desactivarProyeccion.mockRejectedValue(new ErrorNoEncontrado('La proyección no existe o ya fue eliminada'))
+    const res = crearRes()
+
+    await eliminarProyeccion({ params: { id: '9' } }, res)
+
+    expect(res.status).toHaveBeenCalledWith(404)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'La proyección no existe o ya fue eliminada' })
+  })
+
+  it('responde 500 genérico ante un error inesperado, sin exponer el detalle', async () => {
+    servicio.desactivarProyeccion.mockRejectedValue(new Error('ORA-03113 detalle interno'))
+    const res = crearRes()
+
+    await eliminarProyeccion({ params: { id: '9' } }, res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudo eliminar la proyección' })
     expect(console.error).toHaveBeenCalled()
   })
 })

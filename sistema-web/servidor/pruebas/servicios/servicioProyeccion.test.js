@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('../../src/repositorios/repositorioProyeccion.js', () => ({
   crearProyeccion: vi.fn(),
+  desactivarProyeccion: vi.fn(),
   existeSalaActiva: vi.fn(),
   hayChoqueDeHorario: vi.fn(),
   listarProyecciones: vi.fn(),
@@ -9,8 +10,9 @@ vi.mock('../../src/repositorios/repositorioProyeccion.js', () => ({
 }))
 
 import * as repositorio from '../../src/repositorios/repositorioProyeccion.js'
-import { obtenerProyecciones, registrarProyeccion } from '../../src/servicios/servicioProyeccion.js'
+import { desactivarProyeccion, obtenerProyecciones, registrarProyeccion } from '../../src/servicios/servicioProyeccion.js'
 import { ErrorConflicto } from '../../src/errores/ErrorConflicto.js'
+import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
 
 async function capturarError(funcion) {
@@ -288,5 +290,39 @@ describe('registrarProyeccion', () => {
     const error = await capturarError(() => registrarProyeccion(DATOS))
 
     expect(error).toBe(original)
+  })
+})
+
+describe('desactivarProyeccion', () => {
+  it('desactiva la proyección usando el id numérico', async () => {
+    repositorio.desactivarProyeccion.mockResolvedValue(true)
+
+    expect(await desactivarProyeccion('9')).toBeUndefined()
+
+    expect(repositorio.desactivarProyeccion).toHaveBeenCalledWith(9)
+  })
+
+  it.each(['abc', '0', '-1', '1.5', undefined])('rechaza el id inválido %s con ErrorValidacion', async (id) => {
+    const error = await capturarError(() => desactivarProyeccion(id))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('El identificador de la proyección no es válido')
+    expect(repositorio.desactivarProyeccion).not.toHaveBeenCalled()
+  })
+
+  it('lanza ErrorNoEncontrado si la proyección no existe o ya fue eliminada', async () => {
+    repositorio.desactivarProyeccion.mockResolvedValue(false)
+
+    const error = await capturarError(() => desactivarProyeccion(9))
+
+    expect(error).toBeInstanceOf(ErrorNoEncontrado)
+    expect(error.message).toBe('La proyección no existe o ya fue eliminada')
+  })
+
+  it('propaga el error del repositorio sin traducirlo', async () => {
+    const original = new Error('ORA-03113')
+    repositorio.desactivarProyeccion.mockRejectedValue(original)
+
+    expect(await capturarError(() => desactivarProyeccion(9))).toBe(original)
   })
 })

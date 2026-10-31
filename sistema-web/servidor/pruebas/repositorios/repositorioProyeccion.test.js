@@ -6,6 +6,7 @@ vi.mock('oracledb', () => ({ default: { NUMBER: 'NUMBER', BIND_OUT: 'BIND_OUT' }
 import { ejecutar } from '../../src/configuracion/baseDatos.js'
 import {
   crearProyeccion,
+  desactivarProyeccion,
   existeSalaActiva,
   hayChoqueDeHorario,
   listarProyecciones,
@@ -181,5 +182,25 @@ describe('crearProyeccion', () => {
     ejecutar.mockRejectedValue(new Error('ORA-02291'))
 
     await expect(crearProyeccion({ idSala: 3, idPelicula: 5, fechaHora: '2026-11-05 14:30' })).rejects.toThrow('ORA-02291')
+  })
+})
+
+describe('desactivarProyeccion', () => {
+  it('es una eliminación lógica: hace UPDATE a ESTADO_PROYECCION = 0, no DELETE', async () => {
+    ejecutar.mockResolvedValue({ rowsAffected: 1 })
+
+    const resultado = await desactivarProyeccion(9)
+
+    expect(resultado).toBe(true)
+    const [sql, parametros] = ejecutar.mock.calls[0]
+    expect(sql).toContain('UPDATE PROYECCIONES SET ESTADO_PROYECCION = 0')
+    expect(sql).not.toContain('DELETE')
+    expect(parametros).toEqual({ idProyeccion: 9 })
+  })
+
+  it('devuelve false si la proyección no existía o ya estaba eliminada', async () => {
+    ejecutar.mockResolvedValue({ rowsAffected: 0 })
+
+    expect(await desactivarProyeccion(9)).toBe(false)
   })
 })
