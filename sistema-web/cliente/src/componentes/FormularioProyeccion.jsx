@@ -12,6 +12,9 @@ import MensajeError from '../common/MensajeError.jsx';
 
 const claseEtiqueta = 'mb-2 block text-sm text-text-color';
 const claseDesplegable = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
+const claseDesplegableVacio = claseDesplegable.replace('text-text-color', 'text-text-muted') + ' [&>option]:text-text-color';
+const claseDesplegableHora = (valor) => (valor === '' ? claseDesplegableVacio : claseDesplegable);
+
 const claseBotonConfirmar = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover disabled:opacity-50';
 const claseBotonCancelar = 'flex items-center gap-2 rounded-lg bg-brand-soft px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-soft-hover disabled:opacity-50';
 
@@ -159,7 +162,7 @@ function FormularioProyeccion({
         <div className="flex items-center gap-2">
           <select
             id="hora"
-            className={claseDesplegable}
+            className={claseDesplegableHora(formulario.hora)}
             aria-label="Hora"
             aria-invalid={errorHora !== null}
             aria-describedby={errorHora ? 'error-hora' : undefined}
@@ -176,7 +179,7 @@ function FormularioProyeccion({
           <span aria-hidden="true">:</span>
           <select
             id="minuto"
-            className={claseDesplegable}
+            className={claseDesplegableHora(formulario.minuto)}
             aria-label="Minutos"
             aria-invalid={errorHora !== null}
             aria-describedby={errorHora ? 'error-hora' : undefined}

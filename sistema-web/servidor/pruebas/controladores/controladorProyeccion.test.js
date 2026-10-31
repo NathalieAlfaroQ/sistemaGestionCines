@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../../src/servicios/servicioProyeccion.js', () => ({
   obtenerProyecciones: vi.fn(),
+  registrarProyeccion: vi.fn(),
 }))
 
 import * as servicio from '../../src/servicios/servicioProyeccion.js'
-import { listarProyecciones } from '../../src/controladores/controladorProyeccion.js'
+import { crearProyeccion, listarProyecciones } from '../../src/controladores/controladorProyeccion.js'
+import { ErrorConflicto } from '../../src/errores/ErrorConflicto.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
 
 function crearRes() {
@@ -72,6 +74,52 @@ describe('listarProyecciones', () => {
 
     expect(res.status).toHaveBeenCalledWith(500)
     expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudieron obtener las proyecciones' })
+    expect(console.error).toHaveBeenCalled()
+  })
+})
+
+describe('crearProyeccion', () => {
+  const body = { idPelicula: 5, idSala: 3, fecha: '2099-11-05', hora: '14:30' }
+
+  it('responde 201 con el id de la proyección creada', async () => {
+    servicio.registrarProyeccion.mockResolvedValue(77)
+    const res = crearRes()
+
+    await crearProyeccion({ body }, res)
+
+    expect(servicio.registrarProyeccion).toHaveBeenCalledWith(body)
+    expect(res.status).toHaveBeenCalledWith(201)
+    expect(res.json).toHaveBeenCalledWith({ idProyeccion: 77 })
+  })
+
+  it('responde 400 con el mensaje de un ErrorValidacion', async () => {
+    servicio.registrarProyeccion.mockRejectedValue(new ErrorValidacion('La sala es obligatoria'))
+    const res = crearRes()
+
+    await crearProyeccion({ body: {} }, res)
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'La sala es obligatoria' })
+  })
+
+  it('responde 409 con el mensaje de un ErrorConflicto', async () => {
+    servicio.registrarProyeccion.mockRejectedValue(new ErrorConflicto('La sala ya tiene una proyección en ese horario'))
+    const res = crearRes()
+
+    await crearProyeccion({ body }, res)
+
+    expect(res.status).toHaveBeenCalledWith(409)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'La sala ya tiene una proyección en ese horario' })
+  })
+
+  it('responde 500 genérico ante un error inesperado, sin exponer el detalle', async () => {
+    servicio.registrarProyeccion.mockRejectedValue(new Error('ORA-03113 detalle interno'))
+    const res = crearRes()
+
+    await crearProyeccion({ body }, res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudo crear la proyección' })
     expect(console.error).toHaveBeenCalled()
   })
 })
