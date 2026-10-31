@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { eliminarProyeccion } from '../servicios/servicioProyecciones.js';
 import { useProyecciones } from '../ganchos/useProyecciones.js';
 import { usePeliculas } from '../ganchos/usePeliculas.js';
 import { useSalas } from '../ganchos/useSalas.js';
@@ -11,6 +12,7 @@ import { POS_SEDE } from '../constantes/posicionesSede.js';
 import { formatearHora } from '../utilidades/fechas.js';
 import Tabla from '../common/Tabla.jsx';
 import Modal from '../common/Modal.jsx';
+import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import CrearProyeccion from '../componentes/CrearProyeccion.jsx';
 
 const OPCIONES_ESTADO = [
@@ -117,6 +119,7 @@ function Proyecciones() {
     ? 'No se encontraron proyecciones con esos criterios'
     : 'No hay proyecciones para mostrar en este momento';
 
+  const [proyeccionAEliminar, setProyeccionAEliminar] = useState(null);
   const [creando, setCreando] = useState(false);
   const [resultado, setResultado] = useState(null);
 
@@ -134,7 +137,17 @@ function Proyecciones() {
 
   function editarProyeccion() {}
 
-=  function eliminarProyeccion() {}
+  async function confirmarEliminacion() {
+    const proyeccion = proyeccionAEliminar;
+    setProyeccionAEliminar(null);
+
+    try {
+      await eliminarProyeccion(proyeccion[POS_PROYECCION.id]);
+      setResultado({ mensaje: 'Proyección eliminada con éxito', textoBoton: 'Continuar' });
+    } catch (error) {
+      setResultado({ mensaje: error.message, textoBoton: 'Cerrar' });
+    }
+  }
 
   const proyeccionEliminada = (proyeccion) => proyeccion[POS_PROYECCION.estado] !== ESTADO_PROYECCION.activa;
 
@@ -177,13 +190,24 @@ function Proyecciones() {
           textoVacio={cargando ? '' : textoVacio}
           onVer={verProyeccion}
           onEditar={editarProyeccion}
-          onEliminar={eliminarProyeccion}
+          onEliminar={setProyeccionAEliminar}
           accionesDeshabilitadas={proyeccionEliminada}
         />
       </div>
 
       {creando && (
         <CrearProyeccion alCancelar={() => setCreando(false)} alCrear={proyeccionCreada} />
+      )}
+
+      {proyeccionAEliminar && (
+        <ModalConfirmacion
+          peligrosa
+          titulo="Eliminar proyección"
+          mensaje={`¿Está seguro de que desea eliminar la proyección de "${proyeccionAEliminar[POS_PROYECCION.pelicula]}" del ${formatearFecha(proyeccionAEliminar[POS_PROYECCION.fecha])} a las ${formatearHora(proyeccionAEliminar[POS_PROYECCION.hora])} en ${proyeccionAEliminar[POS_PROYECCION.sala]} (${proyeccionAEliminar[POS_PROYECCION.cine]})? Esta acción es permanente.`}
+          textoConfirmar="Eliminar"
+          alConfirmar={confirmarEliminacion}
+          alCancelar={() => setProyeccionAEliminar(null)}
+        />
       )}
 
       {resultado && (

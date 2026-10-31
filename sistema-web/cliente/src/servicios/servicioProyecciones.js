@@ -35,3 +35,15 @@ export async function crearProyeccion(proyeccion) {
 
   return cuerpo;
 }
+
+export async function eliminarProyeccion(idProyeccion) {
+  const respuesta = await peticionApi(`/api/proyecciones/${idProyeccion}`, { method: 'DELETE' });
+
+  const cuerpo = await leerCuerpo(respuesta);
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo eliminar la proyección');
+  }
+
+  return cuerpo;
+}

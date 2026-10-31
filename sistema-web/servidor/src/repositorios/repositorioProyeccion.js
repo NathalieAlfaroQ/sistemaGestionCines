@@ -76,7 +76,6 @@ const sqlCrearProyeccion = `
   RETURNING ID_PROYECCION INTO :idProyeccion
 `;
 
-// Devuelve la duración en minutos, o null si la película no existe o está eliminada
 export async function obtenerDuracionPelicula(idPelicula) {
   const resultado = await ejecutar(sqlDuracionPelicula, { idPelicula });
   return resultado.rows[0]?.[0] ?? null;
@@ -101,4 +100,14 @@ export async function crearProyeccion({ idSala, idPelicula, fechaHora }) {
   });
 
   return resultado.outBinds.idProyeccion[0];
+}
+
+const sqlDesactivarProyeccion = `
+  UPDATE PROYECCIONES SET ESTADO_PROYECCION = 0
+  WHERE ID_PROYECCION = :idProyeccion AND ESTADO_PROYECCION = 1
+`;
+
+export async function desactivarProyeccion(idProyeccion) {
+  const resultado = await ejecutar(sqlDesactivarProyeccion, { idProyeccion });
+  return resultado.rowsAffected > 0;
 }

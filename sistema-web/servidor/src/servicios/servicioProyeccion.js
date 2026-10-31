@@ -1,11 +1,13 @@
 import {
   crearProyeccion,
+  desactivarProyeccion as desactivarProyeccionEnRepositorio,
   existeSalaActiva,
   hayChoqueDeHorario,
   listarProyecciones,
   obtenerDuracionPelicula,
 } from '../repositorios/repositorioProyeccion.js';
 import { ErrorConflicto } from '../errores/ErrorConflicto.js';
+import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 
 const ESTADOS_PROYECCION = { activas: 1, eliminadas: 0, todas: null };
@@ -126,4 +128,16 @@ export async function registrarProyeccion(datos) {
   }
 
   return await crearProyeccion({ idSala, idPelicula, fechaHora });
+}
+
+export async function desactivarProyeccion(idProyeccion) {
+  const id = Number(idProyeccion);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new ErrorValidacion('El identificador de la proyección no es válido');
+  }
+
+  if (!(await desactivarProyeccionEnRepositorio(id))) {
+    throw new ErrorNoEncontrado('La proyección no existe o ya fue eliminada');
+  }
 }
