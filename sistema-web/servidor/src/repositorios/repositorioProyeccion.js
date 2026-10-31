@@ -66,6 +66,7 @@ const sqlChoqueDeHorario = `
   JOIN PELICULAS pe ON pe.ID_PELICULA = pr.ID_PELICULA
   WHERE pr.ID_SALA = :idSala
     AND pr.ESTADO_PROYECCION = 1
+    AND (:idExcluida IS NULL OR pr.ID_PROYECCION <> :idExcluida)
     AND pr.FECHA < TO_DATE(:fechaHora, 'YYYY-MM-DD HH24:MI') + :duracion / 1440
     AND pr.FECHA + pe.DURACION / 1440 > TO_DATE(:fechaHora, 'YYYY-MM-DD HH24:MI')
 `;
@@ -86,8 +87,8 @@ export async function existeSalaActiva(idSala) {
   return resultado.rows.length > 0;
 }
 
-export async function hayChoqueDeHorario({ idSala, fechaHora, duracion }) {
-  const resultado = await ejecutar(sqlChoqueDeHorario, { idSala, fechaHora, duracion });
+export async function hayChoqueDeHorario({ idSala, fechaHora, duracion, idExcluida = null }) {
+  const resultado = await ejecutar(sqlChoqueDeHorario, { idSala, fechaHora, duracion, idExcluida });
   return resultado.rows.length > 0;
 }
 
@@ -109,5 +110,18 @@ const sqlDesactivarProyeccion = `
 
 export async function desactivarProyeccion(idProyeccion) {
   const resultado = await ejecutar(sqlDesactivarProyeccion, { idProyeccion });
+  return resultado.rowsAffected > 0;
+}
+
+const sqlActualizarProyeccion = `
+  UPDATE PROYECCIONES
+  SET ID_SALA = :idSala,
+      ID_PELICULA = :idPelicula,
+      FECHA = TO_DATE(:fechaHora, 'YYYY-MM-DD HH24:MI')
+  WHERE ID_PROYECCION = :idProyeccion AND ESTADO_PROYECCION = 1
+`;
+
+export async function actualizarProyeccion({ idProyeccion, idSala, idPelicula, fechaHora }) {
+  const resultado = await ejecutar(sqlActualizarProyeccion, { idProyeccion, idSala, idPelicula, fechaHora });
   return resultado.rowsAffected > 0;
 }

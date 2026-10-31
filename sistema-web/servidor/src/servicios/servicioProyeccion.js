@@ -1,4 +1,5 @@
 import {
+  actualizarProyeccion,
   crearProyeccion,
   desactivarProyeccion as desactivarProyeccionEnRepositorio,
   existeSalaActiva,
@@ -111,9 +112,17 @@ function validarDatosProyeccion(datos) {
   return { idPelicula, idSala, fechaHora: `${datos.fecha} ${datos.hora}` };
 }
 
-export async function registrarProyeccion(datos) {
-  const { idPelicula, idSala, fechaHora } = validarDatosProyeccion(datos);
+function validarIdProyeccion(idProyeccion) {
+  const id = Number(idProyeccion);
 
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new ErrorValidacion('El identificador de la proyección no es válido');
+  }
+
+  return id;
+}
+
+async function validarProgramacion({ idPelicula, idSala, fechaHora }, idExcluida = null) {
   if (fechaHora <= formateadorCostaRica.format(new Date())) {
     throw new ErrorValidacion('La proyección debe ser posterior a la fecha y hora actuales');
   }
@@ -123,19 +132,32 @@ export async function registrarProyeccion(datos) {
 
   if (!(await existeSalaActiva(idSala))) throw new ErrorValidacion('La sala seleccionada no existe');
 
-  if (await hayChoqueDeHorario({ idSala, fechaHora, duracion })) {
+  if (await hayChoqueDeHorario({ idSala, fechaHora, duracion, idExcluida })) {
     throw new ErrorConflicto('La sala ya tiene una proyección en ese horario');
   }
+}
 
-  return await crearProyeccion({ idSala, idPelicula, fechaHora });
+export async function registrarProyeccion(datos) {
+  const proyeccion = validarDatosProyeccion(datos);
+
+  await validarProgramacion(proyeccion);
+
+  return await crearProyeccion(proyeccion);
+}
+
+export async function modificarProyeccion(idProyeccion, datos) {
+  const id = validarIdProyeccion(idProyeccion);
+  const proyeccion = validarDatosProyeccion(datos);
+
+  await validarProgramacion(proyeccion, id);
+
+  if (!(await actualizarProyeccion({ idProyeccion: id, ...proyeccion }))) {
+    throw new ErrorNoEncontrado('La proyección no existe o ya fue eliminada');
+  }
 }
 
 export async function desactivarProyeccion(idProyeccion) {
-  const id = Number(idProyeccion);
-
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new ErrorValidacion('El identificador de la proyección no es válido');
-  }
+  const id = validarIdProyeccion(idProyeccion);
 
   if (!(await desactivarProyeccionEnRepositorio(id))) {
     throw new ErrorNoEncontrado('La proyección no existe o ya fue eliminada');
