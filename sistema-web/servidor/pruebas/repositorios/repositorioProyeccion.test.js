@@ -5,6 +5,7 @@ vi.mock('oracledb', () => ({ default: { NUMBER: 'NUMBER', BIND_OUT: 'BIND_OUT' }
 
 import { ejecutar } from '../../src/configuracion/baseDatos.js'
 import {
+  actualizarProyeccion,
   crearProyeccion,
   desactivarProyeccion,
   existeSalaActiva,
@@ -154,7 +155,7 @@ describe('hayChoqueDeHorario', () => {
     const [sql, parametros] = ejecutar.mock.calls[0]
     expect(sql).toContain('pr.ID_SALA = :idSala')
     expect(sql).toContain('pr.ESTADO_PROYECCION = 1')
-    expect(parametros).toEqual(datos)
+    expect(parametros).toEqual({ ...datos, idExcluida: null })
     expect(sql).not.toContain('2026-11-05')
   })
 })
@@ -202,5 +203,40 @@ describe('desactivarProyeccion', () => {
     ejecutar.mockResolvedValue({ rowsAffected: 0 })
 
     expect(await desactivarProyeccion(9)).toBe(false)
+  })
+})
+
+describe('hayChoqueDeHorario al editar', () => {
+  it('excluye la propia proyección de la comparación', async () => {
+    ejecutar.mockResolvedValue({ rows: [] })
+
+    await hayChoqueDeHorario({ idSala: 3, fechaHora: '2026-11-05 14:30', duracion: 120, idExcluida: 9 })
+
+    const [sql, parametros] = ejecutar.mock.calls[0]
+    expect(sql).toContain('pr.ID_PROYECCION <> :idExcluida')
+    expect(parametros.idExcluida).toBe(9)
+  })
+})
+
+describe('actualizarProyeccion', () => {
+  const datos = { idProyeccion: 9, idSala: 3, idPelicula: 5, fechaHora: '2026-11-05 14:30' }
+
+  it('actualiza solo una proyección activa, con parámetros enlazados', async () => {
+    ejecutar.mockResolvedValue({ rowsAffected: 1 })
+
+    const resultado = await actualizarProyeccion(datos)
+
+    expect(resultado).toBe(true)
+    const [sql, parametros] = ejecutar.mock.calls[0]
+    expect(sql).toContain('UPDATE PROYECCIONES')
+    expect(sql).toContain('ESTADO_PROYECCION = 1')
+    expect(sql).not.toContain('2026-11-05')
+    expect(parametros).toEqual(datos)
+  })
+
+  it('devuelve false si la proyección no existía o estaba eliminada', async () => {
+    ejecutar.mockResolvedValue({ rowsAffected: 0 })
+
+    expect(await actualizarProyeccion(datos)).toBe(false)
   })
 })

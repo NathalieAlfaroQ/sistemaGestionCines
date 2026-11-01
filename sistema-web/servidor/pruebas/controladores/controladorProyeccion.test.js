@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../../src/servicios/servicioProyeccion.js', () => ({
   desactivarProyeccion: vi.fn(),
+  modificarProyeccion: vi.fn(),
   obtenerProyecciones: vi.fn(),
   registrarProyeccion: vi.fn(),
 }))
 
 import * as servicio from '../../src/servicios/servicioProyeccion.js'
-import { crearProyeccion, eliminarProyeccion, listarProyecciones } from '../../src/controladores/controladorProyeccion.js'
+import { crearProyeccion, editarProyeccion, eliminarProyeccion, listarProyecciones } from '../../src/controladores/controladorProyeccion.js'
 import { ErrorConflicto } from '../../src/errores/ErrorConflicto.js'
 import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
@@ -166,6 +167,63 @@ describe('eliminarProyeccion', () => {
 
     expect(res.status).toHaveBeenCalledWith(500)
     expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudo eliminar la proyección' })
+    expect(console.error).toHaveBeenCalled()
+  })
+})
+
+describe('editarProyeccion', () => {
+  const body = { idPelicula: 5, idSala: 3, fecha: '2099-11-05', hora: '14:30' }
+  const req = { params: { id: '9' }, body }
+
+  it('responde con el id de la proyección editada', async () => {
+    servicio.modificarProyeccion.mockResolvedValue(undefined)
+    const res = crearRes()
+
+    await editarProyeccion(req, res)
+
+    expect(servicio.modificarProyeccion).toHaveBeenCalledWith('9', body)
+    expect(res.json).toHaveBeenCalledWith({ idProyeccion: 9 })
+    expect(res.status).not.toHaveBeenCalled()
+  })
+
+  it('responde 400 con el mensaje de un ErrorValidacion', async () => {
+    servicio.modificarProyeccion.mockRejectedValue(new ErrorValidacion('La sala es obligatoria'))
+    const res = crearRes()
+
+    await editarProyeccion(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'La sala es obligatoria' })
+  })
+
+  it('responde 404 con el mensaje de un ErrorNoEncontrado', async () => {
+    servicio.modificarProyeccion.mockRejectedValue(new ErrorNoEncontrado('La proyección no existe o ya fue eliminada'))
+    const res = crearRes()
+
+    await editarProyeccion(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(404)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'La proyección no existe o ya fue eliminada' })
+  })
+
+  it('responde 409 con el mensaje de un ErrorConflicto', async () => {
+    servicio.modificarProyeccion.mockRejectedValue(new ErrorConflicto('La sala ya tiene una proyección en ese horario'))
+    const res = crearRes()
+
+    await editarProyeccion(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(409)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'La sala ya tiene una proyección en ese horario' })
+  })
+
+  it('responde 500 genérico ante un error inesperado, sin exponer el detalle', async () => {
+    servicio.modificarProyeccion.mockRejectedValue(new Error('ORA-03113 detalle interno'))
+    const res = crearRes()
+
+    await editarProyeccion(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudo editar la proyección' })
     expect(console.error).toHaveBeenCalled()
   })
 })

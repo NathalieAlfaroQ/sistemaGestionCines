@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('../../src/repositorios/repositorioProyeccion.js', () => ({
+  actualizarProyeccion: vi.fn(),
   crearProyeccion: vi.fn(),
   desactivarProyeccion: vi.fn(),
   existeSalaActiva: vi.fn(),
@@ -10,7 +11,7 @@ vi.mock('../../src/repositorios/repositorioProyeccion.js', () => ({
 }))
 
 import * as repositorio from '../../src/repositorios/repositorioProyeccion.js'
-import { desactivarProyeccion, obtenerProyecciones, registrarProyeccion } from '../../src/servicios/servicioProyeccion.js'
+import { desactivarProyeccion, modificarProyeccion, obtenerProyecciones, registrarProyeccion } from '../../src/servicios/servicioProyeccion.js'
 import { ErrorConflicto } from '../../src/errores/ErrorConflicto.js'
 import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
@@ -172,6 +173,7 @@ describe('registrarProyeccion', () => {
       idSala: 3,
       fechaHora: '2099-11-05 14:30',
       duracion: 120,
+      idExcluida: null,
     })
     expect(repositorio.crearProyeccion).toHaveBeenCalledWith({
       idSala: 3,
@@ -324,5 +326,106 @@ describe('desactivarProyeccion', () => {
     repositorio.desactivarProyeccion.mockRejectedValue(original)
 
     expect(await capturarError(() => desactivarProyeccion(9))).toBe(original)
+  })
+})
+
+describe('modificarProyeccion', () => {
+  const DATOS = { idPelicula: 5, idSala: 3, fecha: '2099-11-05', hora: '14:30' }
+
+  beforeEach(() => {
+    repositorio.obtenerDuracionPelicula.mockResolvedValue(120)
+    repositorio.existeSalaActiva.mockResolvedValue(true)
+    repositorio.hayChoqueDeHorario.mockResolvedValue(false)
+    repositorio.actualizarProyeccion.mockResolvedValue(true)
+  })
+
+  it('actualiza la proyección con los datos convertidos', async () => {
+    expect(await modificarProyeccion('9', { ...DATOS, idPelicula: '5' })).toBeUndefined()
+
+    expect(repositorio.actualizarProyeccion).toHaveBeenCalledWith({
+      idProyeccion: 9,
+      idSala: 3,
+      idPelicula: 5,
+      fechaHora: '2099-11-05 14:30',
+    })
+  })
+
+  it('al revisar el choque de horario excluye la propia proyección', async () => {
+    await modificarProyeccion(9, DATOS)
+
+    expect(repositorio.hayChoqueDeHorario).toHaveBeenCalledWith({
+      idSala: 3,
+      fechaHora: '2099-11-05 14:30',
+      duracion: 120,
+      idExcluida: 9,
+    })
+  })
+
+  it.each(['abc', '0', '-1', '1.5', undefined])('rechaza el id inválido %s con ErrorValidacion', async (id) => {
+    const error = await capturarError(() => modificarProyeccion(id, DATOS))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('El identificador de la proyección no es válido')
+    expect(repositorio.actualizarProyeccion).not.toHaveBeenCalled()
+  })
+
+  it.each([null, 'texto', []])('rechaza los datos %j', async (datos) => {
+    const error = await capturarError(() => modificarProyeccion(9, datos))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('Los datos de la proyección no son válidos')
+  })
+
+  it('rechaza una fecha y hora que ya pasaron', async () => {
+    const error = await capturarError(() => modificarProyeccion(9, { ...DATOS, fecha: '2000-01-01' }))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('La proyección debe ser posterior a la fecha y hora actuales')
+    expect(repositorio.actualizarProyeccion).not.toHaveBeenCalled()
+  })
+
+  it('rechaza una película inexistente o eliminada', async () => {
+    repositorio.obtenerDuracionPelicula.mockResolvedValue(null)
+
+    const error = await capturarError(() => modificarProyeccion(9, DATOS))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('La película seleccionada no existe')
+    expect(repositorio.actualizarProyeccion).not.toHaveBeenCalled()
+  })
+
+  it('rechaza una sala inexistente o eliminada', async () => {
+    repositorio.existeSalaActiva.mockResolvedValue(false)
+
+    const error = await capturarError(() => modificarProyeccion(9, DATOS))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('La sala seleccionada no existe')
+  })
+
+  it('lanza ErrorConflicto si la sala ya tiene otra proyección en ese horario', async () => {
+    repositorio.hayChoqueDeHorario.mockResolvedValue(true)
+
+    const error = await capturarError(() => modificarProyeccion(9, DATOS))
+
+    expect(error).toBeInstanceOf(ErrorConflicto)
+    expect(error.message).toBe('La sala ya tiene una proyección en ese horario')
+    expect(repositorio.actualizarProyeccion).not.toHaveBeenCalled()
+  })
+
+  it('lanza ErrorNoEncontrado si la proyección no existe o ya fue eliminada', async () => {
+    repositorio.actualizarProyeccion.mockResolvedValue(false)
+
+    const error = await capturarError(() => modificarProyeccion(9, DATOS))
+
+    expect(error).toBeInstanceOf(ErrorNoEncontrado)
+    expect(error.message).toBe('La proyección no existe o ya fue eliminada')
+  })
+
+  it('propaga el error del repositorio sin traducirlo', async () => {
+    const original = new Error('ORA-03113')
+    repositorio.actualizarProyeccion.mockRejectedValue(original)
+
+    expect(await capturarError(() => modificarProyeccion(9, DATOS))).toBe(original)
   })
 })
