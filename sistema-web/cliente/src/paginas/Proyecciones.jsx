@@ -14,6 +14,7 @@ import Tabla from '../common/Tabla.jsx';
 import Modal from '../common/Modal.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import CrearProyeccion from '../componentes/CrearProyeccion.jsx';
+import EditarProyeccion from '../componentes/EditarProyeccion.jsx';
 
 const OPCIONES_ESTADO = [
   { valor: 'activas', texto: 'Activas' },
@@ -121,6 +122,7 @@ function Proyecciones() {
 
   const [proyeccionAEliminar, setProyeccionAEliminar] = useState(null);
   const [creando, setCreando] = useState(false);
+  const [proyeccionAEditar, setProyeccionAEditar] = useState(null);
   const [resultado, setResultado] = useState(null);
 
   function proyeccionCreada() {
@@ -135,7 +137,10 @@ function Proyecciones() {
 
   function verProyeccion() {}
 
-  function editarProyeccion() {}
+  function proyeccionEditada() {
+    setProyeccionAEditar(null);
+    setResultado({ mensaje: 'Proyección modificada con éxito', textoBoton: 'Continuar' });
+  }
 
   async function confirmarEliminacion() {
     const proyeccion = proyeccionAEliminar;
@@ -189,7 +194,7 @@ function Proyecciones() {
           alCambiarFiltros={cambiarFiltros}
           textoVacio={cargando ? '' : textoVacio}
           onVer={verProyeccion}
-          onEditar={editarProyeccion}
+          onEditar={setProyeccionAEditar}
           onEliminar={setProyeccionAEliminar}
           accionesDeshabilitadas={proyeccionEliminada}
         />
@@ -197,6 +202,14 @@ function Proyecciones() {
 
       {creando && (
         <CrearProyeccion alCancelar={() => setCreando(false)} alCrear={proyeccionCreada} />
+      )}
+
+      {proyeccionAEditar && (
+        <EditarProyeccion
+          proyeccion={proyeccionAEditar}
+          alCancelar={() => setProyeccionAEditar(null)}
+          alEditar={proyeccionEditada}
+        />
       )}
 
       {proyeccionAEliminar && (

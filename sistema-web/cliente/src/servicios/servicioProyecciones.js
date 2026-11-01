@@ -47,3 +47,19 @@ export async function eliminarProyeccion(idProyeccion) {
 
   return cuerpo;
 }
+
+export async function editarProyeccion(idProyeccion, proyeccion) {
+  const respuesta = await peticionApi(`/api/proyecciones/${idProyeccion}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(proyeccion),
+  });
+
+  const cuerpo = await leerCuerpo(respuesta);
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo editar la proyección');
+  }
+
+  return cuerpo;
+}

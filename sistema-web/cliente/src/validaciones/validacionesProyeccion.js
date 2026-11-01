@@ -27,6 +27,7 @@ export function horaATexto({ hora, minuto }) {
   return `${hora}:${minuto}`;
 }
 
+// Primer día que se puede elegir en el calendario: hoy, en Costa Rica
 export function hoyParaCalendario() {
   const [anio, mes, dia] = formateadorCostaRica.format(new Date()).slice(0, 10).split('-').map(Number);
   return new Date(anio, mes - 1, dia);
@@ -59,7 +60,12 @@ export function validarTodo(datos) {
   return errores;
 }
 
-// Se avisa de inmediato cuando la fecha y hora elegidas ya pasaron
 export function validarEnVivo({ formulario }) {
   return horaYaPaso(formulario) ? { hora: MENSAJE_HORA_PASADA } : {};
+}
+
+// Convierte AAAA-MM-DD (como llega de la API) a la fecha local que usa el calendario
+export function textoAFecha(texto) {
+  const [anio, mes, dia] = texto.split('-').map(Number);
+  return new Date(anio, mes - 1, dia);
 }
