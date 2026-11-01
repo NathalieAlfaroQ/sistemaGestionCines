@@ -1,4 +1,12 @@
-import { desactivarSala, obtenerFormatos, obtenerSalas, obtenerTipos } from '../servicios/servicioSala.js';
+import {
+  desactivarSala,
+  obtenerDistribuciones,
+  obtenerFormatos,
+  obtenerSalas,
+  obtenerTipos,
+  registrarSala,
+} from '../servicios/servicioSala.js';
+import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 
@@ -31,6 +39,31 @@ export async function listarFormatos(req, res) {
   } catch (error) {
     console.error('Error al listar formatos:', error);
     res.status(500).json({ mensaje: 'No se pudieron obtener los formatos' });
+  }
+}
+
+export async function listarDistribuciones(req, res) {
+  try {
+    res.json(await obtenerDistribuciones());
+  } catch (error) {
+    console.error('Error al listar distribuciones:', error);
+    res.status(500).json({ mensaje: 'No se pudieron obtener las distribuciones' });
+  }
+}
+
+export async function crearSala(req, res) {
+  try {
+    const idSala = await registrarSala(req.body);
+    res.status(201).json({ idSala });
+  } catch (error) {
+    if (error instanceof ErrorValidacion) {
+      return res.status(400).json({ mensaje: error.message });
+    }
+    if (error instanceof ErrorConflicto) {
+      return res.status(409).json({ mensaje: error.message });
+    }
+    console.error('Error al crear sala:', error);
+    res.status(500).json({ mensaje: 'No se pudo crear la sala' });
   }
 }
 

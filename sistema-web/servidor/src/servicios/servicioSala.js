@@ -1,9 +1,17 @@
 import {
+  crearSalaConAsientos,
   desactivarSala as desactivarSalaEnRepositorio,
+  existeNombreSala,
+  existeSedeActiva,
+  listarDistribuciones,
   listarFormatos,
   listarSalas,
   listarTipos,
+  obtenerDistribucion,
+  obtenerPrecioFormato,
+  obtenerPrecioTipo,
 } from '../repositorios/repositorioSala.js';
+import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 
@@ -41,6 +49,97 @@ export async function obtenerTipos() {
 
 export async function obtenerFormatos() {
   return await listarFormatos();
+}
+
+export async function obtenerDistribuciones() {
+  return await listarDistribuciones();
+}
+
+export const NOMBRE_SALA_MINIMO = 5;
+export const NOMBRE_SALA_MAXIMO = 20;
+
+const PATRON_NOMBRE_SALA = /^[\p{L}\d]+(?: [\p{L}\d]+)*$/u;
+
+// Las filas se nombran A, B, ... Z, AA, AB, ...
+export function nombreFila(indice) {
+  let numero = indice + 1;
+  let nombre = '';
+  while (numero > 0) {
+    const resto = (numero - 1) % 26;
+    nombre = String.fromCodePoint(65 + resto) + nombre;
+    numero = Math.floor((numero - 1) / 26);
+  }
+  return nombre;
+}
+
+export function generarAsientos(filas, columnas) {
+  const asientos = [];
+  for (let fila = 0; fila < filas; fila++) {
+    for (let numero = 1; numero <= columnas; numero++) {
+      asientos.push({ fila: nombreFila(fila), numero });
+    }
+  }
+  return asientos;
+}
+
+function idObligatorio(valor, mensaje) {
+  const id = Number(valor);
+  if (valor === undefined || valor === null || valor === '' || !Number.isInteger(id) || id <= 0) {
+    throw new ErrorValidacion(mensaje);
+  }
+  return id;
+}
+
+function validarDatosSala(datos) {
+  if (datos === null || typeof datos !== 'object' || Array.isArray(datos)) {
+    throw new ErrorValidacion('Los datos de la sala no son válidos');
+  }
+
+  const nombre = typeof datos.nombre === 'string' ? datos.nombre.trim().replaceAll(/\s+/g, ' ') : '';
+  if (nombre === '') throw new ErrorValidacion('El nombre es obligatorio');
+  if (!PATRON_NOMBRE_SALA.test(nombre)) throw new ErrorValidacion('El nombre solo admite letras y números');
+  if (nombre.length < NOMBRE_SALA_MINIMO) {
+    throw new ErrorValidacion(`El nombre debe tener al menos ${NOMBRE_SALA_MINIMO} caracteres`);
+  }
+  if (nombre.length > NOMBRE_SALA_MAXIMO) {
+    throw new ErrorValidacion(`El nombre no puede superar los ${NOMBRE_SALA_MAXIMO} caracteres`);
+  }
+
+  return {
+    nombre,
+    idSede: idObligatorio(datos.idSede, 'El cine es obligatorio'),
+    idTipo: idObligatorio(datos.idTipo, 'El tipo es obligatorio'),
+    idFormato: idObligatorio(datos.idFormato, 'El formato es obligatorio'),
+    idDistribucion: idObligatorio(datos.idDistribucion, 'La distribución es obligatoria'),
+  };
+}
+
+// El monto de la sala no lo digita el usuario, se calcula con el del tipo más el del formato
+export async function registrarSala(datos) {
+  const sala = validarDatosSala(datos);
+
+  if (!(await existeSedeActiva(sala.idSede))) throw new ErrorValidacion('El cine seleccionado no existe');
+
+  const precioTipo = await obtenerPrecioTipo(sala.idTipo);
+  if (precioTipo === null) throw new ErrorValidacion('El tipo de sala seleccionado no existe');
+
+  const precioFormato = await obtenerPrecioFormato(sala.idFormato);
+  if (precioFormato === null) throw new ErrorValidacion('El formato seleccionado no existe');
+
+  const distribucion = await obtenerDistribucion(sala.idDistribucion);
+  if (distribucion === null) throw new ErrorValidacion('La distribución seleccionada no existe');
+
+  if (await existeNombreSala({ idSede: sala.idSede, nombre: sala.nombre })) {
+    throw new ErrorConflicto('Ya existe una sala con ese nombre en este cine');
+  }
+
+  const [filas, columnas] = distribucion;
+
+  return await crearSalaConAsientos({
+    ...sala,
+    monto: precioTipo + precioFormato,
+    asientos: generarAsientos(filas, columnas),
+  });
 }
 
 export async function desactivarSala(idSala) {
