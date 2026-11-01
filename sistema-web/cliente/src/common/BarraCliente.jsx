@@ -2,7 +2,7 @@ import BarraNavegacion from './BarraNavegacion.jsx';
 import logo from '../assets/logo.jpg';
 import { obtenerUsuario } from '../servicios/sesion.js';
 
-const ROLES_PERSONAL = ['EMPLEADO', 'ADMINISTRADOR'];
+const ROLES_PERSONAL = new Set(['EMPLEADO', 'ADMINISTRADOR']);
 
 const enlaces = [
   { texto: 'Dulcería', ruta: '/dulceria' },
@@ -10,7 +10,7 @@ const enlaces = [
 ];
 
 function BarraCliente({ rutaIniciarSesion, opcionesExtra = [] }) {
-  const esPersonal = ROLES_PERSONAL.includes(obtenerUsuario()?.tipoUsuario);
+  const esPersonal = ROLES_PERSONAL.has(obtenerUsuario()?.tipoUsuario);
   const enlacesVisibles = esPersonal ? [...enlaces, { texto: 'Trabajo', ruta: '/peliculas' }] : enlaces;
   const opcionesPerfil = [{ texto: 'Mi perfil', ruta: '/perfil' }, ...opcionesExtra];
 
