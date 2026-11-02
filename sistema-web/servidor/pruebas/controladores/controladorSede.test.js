@@ -14,6 +14,7 @@ import {
   eliminarSede,
   listarSedes,
 } from '../../src/controladores/controladorSede.js'
+import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
 
 function crearRes() {
@@ -115,7 +116,7 @@ describe('editarSede', () => {
   const body = { nombre: 'Cine Aurora Metropoli', idCanton: 2 }
 
   it('responde con el id numérico de la sede editada', async () => {
-    servicio.modificarSede.mockResolvedValue(true)
+    servicio.modificarSede.mockResolvedValue(undefined)
     const res = crearRes()
 
     await editarSede({ params: { id: '4' }, body }, res)
@@ -126,7 +127,7 @@ describe('editarSede', () => {
   })
 
   it('responde 404 si la sede no existe o fue eliminada', async () => {
-    servicio.modificarSede.mockResolvedValue(false)
+    servicio.modificarSede.mockRejectedValue(new ErrorNoEncontrado('La sede no existe o ya fue eliminada'))
     const res = crearRes()
 
     await editarSede({ params: { id: '4' }, body }, res)
@@ -159,7 +160,7 @@ describe('editarSede', () => {
 
 describe('eliminarSede', () => {
   it('responde con el id numérico de la sede eliminada', async () => {
-    servicio.desactivarSede.mockResolvedValue(true)
+    servicio.desactivarSede.mockResolvedValue(undefined)
     const res = crearRes()
 
     await eliminarSede({ params: { id: '9' } }, res)
@@ -170,7 +171,7 @@ describe('eliminarSede', () => {
   })
 
   it('responde 404 si la sede no existe o ya fue eliminada', async () => {
-    servicio.desactivarSede.mockResolvedValue(false)
+    servicio.desactivarSede.mockRejectedValue(new ErrorNoEncontrado('La sede no existe o ya fue eliminada'))
     const res = crearRes()
 
     await eliminarSede({ params: { id: '9' } }, res)

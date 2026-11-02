@@ -14,7 +14,7 @@
   --color-brand-soft-hover: #c7b1d8;
 
 
-  --color-background: ##1C1C21;
+  --color-background: #1C1C21;
   --color-surface: #131316;
   --color-surface-clear: #FFFFFF;
   --color-navbar: #000000;
@@ -48,7 +48,7 @@ input:-webkit-autofill:active {
   caret-color: var(--color-text-muted);
 }
 @theme {
-  --color-fondo: #1F1F24;
-  --color-boton: #3D1D53;
-  --color-linea: #B188CE;
+  --color-fondo: #1C1C21;
+  --color-boton: #381b4b;
+  --color-linea: #a06ec4;
 }

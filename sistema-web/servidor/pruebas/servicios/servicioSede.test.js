@@ -15,6 +15,7 @@ import {
   obtenerSedes,
   registrarSede,
 } from '../../src/servicios/servicioSede.js'
+import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
 
 const NOMBRE_VALIDO = 'Cine Aurora San Pedro'
@@ -199,12 +200,11 @@ describe('registrarSede', () => {
 })
 
 describe('modificarSede', () => {
-  it('actualiza la sede y devuelve true', async () => {
+  it('actualiza la sede con los datos normalizados', async () => {
     repositorio.actualizarSede.mockResolvedValue(true)
 
-    const resultado = await modificarSede('4', { nombre: 'Cine Aurora Metropoli', idCanton: 2 })
+    await modificarSede('4', { nombre: 'Cine Aurora Metropoli', idCanton: 2 })
 
-    expect(resultado).toBe(true)
     expect(repositorio.actualizarSede).toHaveBeenCalledWith({
       idSede: 4,
       nombre: 'Cine Aurora Metropoli',
@@ -212,12 +212,13 @@ describe('modificarSede', () => {
     })
   })
 
-  it('devuelve false cuando la sede no existe o está eliminada', async () => {
+  it('lanza ErrorNoEncontrado cuando la sede no existe o está eliminada', async () => {
     repositorio.actualizarSede.mockResolvedValue(false)
 
-    const resultado = await modificarSede(4, { nombre: NOMBRE_VALIDO, idCanton: 2 })
+    const error = await capturarError(() => modificarSede(4, { nombre: NOMBRE_VALIDO, idCanton: 2 }))
 
-    expect(resultado).toBe(false)
+    expect(error).toBeInstanceOf(ErrorNoEncontrado)
+    expect(error.message).toBe('La sede no existe o ya fue eliminada')
   })
 
   it.each([
@@ -359,16 +360,17 @@ describe('desactivarSede', () => {
   it('desactiva la sede indicada', async () => {
     repositorio.desactivarSede.mockResolvedValue(true)
 
-    const resultado = await desactivarSede('9')
-
-    expect(resultado).toBe(true)
+    expect(await desactivarSede('9')).toBeUndefined()
     expect(repositorio.desactivarSede).toHaveBeenCalledWith(9)
   })
 
-  it('devuelve false si la sede no existe o ya estaba eliminada', async () => {
+  it('lanza ErrorNoEncontrado si la sede no existe o ya estaba eliminada', async () => {
     repositorio.desactivarSede.mockResolvedValue(false)
 
-    expect(await desactivarSede(9)).toBe(false)
+    const error = await capturarError(() => desactivarSede(9))
+
+    expect(error).toBeInstanceOf(ErrorNoEncontrado)
+    expect(error.message).toBe('La sede no existe o ya fue eliminada')
   })
 
   it.each([0, -1, 'abc', 1.2, ''])('rechaza el id %j', async (id) => {
