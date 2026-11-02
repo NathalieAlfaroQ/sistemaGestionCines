@@ -91,7 +91,8 @@ function Proyecciones() {
       titulo: 'Hora',
       posicion: POS_PROYECCION.hora,
       formato: formatearHora,
-      filtro: { clave: 'hora', tipo: 'hora' },
+      // TODO: Filtro por hora, incompleto
+      // filtro: { clave: 'hora', tipo: 'hora' },
     },
     {
       titulo: 'Sala',

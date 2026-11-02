@@ -117,11 +117,11 @@ function Salas() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5 flex items-center gap-31"> 
+        <div className="mb-5 flex items-center gap-38"> 
           <h1 className="text-4xl font-bold">Salas</h1>
 
           <button type="button" onClick={() => navegar('/salas/nueva')} className={claseBoton}>
-            Crear sala
+            Crear
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path
                 fillRule="evenodd"

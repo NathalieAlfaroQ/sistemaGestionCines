@@ -114,11 +114,11 @@ function Sedes() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5 flex items-center gap-27">
+        <div className="mb-5 flex items-center gap-35">
           <h1 className="text-4xl font-bold">Sedes</h1>
 
           <button type="button" onClick={() => setCreando(true)} className={claseBoton}>
-            Crear sede
+            Crear
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path
                 fillRule="evenodd"
