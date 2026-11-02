@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSalas } from '../ganchos/useSalas.js';
 import { useSedes } from '../ganchos/useSedes.js';
 import { useCatalogoSala } from '../ganchos/useCatalogoSala.js';
@@ -18,9 +19,11 @@ const OPCIONES_ESTADO = [
 
 const FILTROS_INICIALES = { idSede: '', idTipo: '', idFormato: '', estado: 'activas' };
 
+const claseBoton = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover';
 const claseBarraBusqueda = 'mb-4 w-85 rounded-lg border border-border bg-surface-clear px-4 py-2 text-black placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft';
 
 function Salas() {
+  const navegar = useNavigate();
   const [busqueda, setBusqueda] = useState('');
   const busquedaRetrasada = useDebounce(busqueda, 400);
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
@@ -112,8 +115,19 @@ function Salas() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5">
+        <div className="mb-5 flex items-center gap-27">
           <h1 className="text-4xl font-bold">Salas</h1>
+
+          <button type="button" onClick={() => navegar('/salas/nueva')} className={claseBoton}>
+            Crear sala
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
         </div>
 
         <input

@@ -49,3 +49,23 @@ export async function eliminarSala(idSala) {
 
   return cuerpo;
 }
+
+export function obtenerDistribucionesSala() {
+  return obtenerCatalogo('/api/salas/distribuciones', 'No se pudieron obtener las distribuciones');
+}
+
+export async function crearSala(sala) {
+  const respuesta = await peticionApi('/api/salas', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sala),
+  });
+
+  const cuerpo = await leerCuerpo(respuesta);
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo crear la sala');
+  }
+
+  return cuerpo;
+}

@@ -4,6 +4,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import DisenoGestion from './common/DisenoGestion.jsx'
 import Sedes from './paginas/Sedes.jsx'
 import Salas from './paginas/Salas.jsx'
+import CrearSala from './paginas/CrearSala.jsx'
 import Proyecciones from './paginas/Proyecciones.jsx'
 import Peliculas from './paginas/Peliculas.jsx'
 import FormularioPelicula from './paginas/FormularioPelicula.jsx'
@@ -74,6 +75,7 @@ function App() {
             <Route path="/peliculas/:id/editar" element={<EditarPelicula />} />
             <Route path="/sedes" element={<Sedes />} />
             <Route path="/salas" element={<Salas />} />
+            <Route path="/salas/nueva" element={<CrearSala />} />
             <Route path="/proyecciones" element={<Proyecciones />} />
           </Route>
         </Route>
