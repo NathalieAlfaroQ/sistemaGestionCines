@@ -1,5 +1,5 @@
 const claseEtiqueta = 'mb-2 block text-sm text-text-color';
-const claseSoloLectura = 'flex min-h-[2.625rem] items-center rounded-lg border border-dashed border-border bg-transparent px-3 py-2 text-text-muted';
+const claseSoloLectura = 'flex min-h-[2.625rem] items-center rounded-lg border border-dashed border-border bg-background px-3 py-2 text-text-muted';
 
 function CampoSoloLectura({ id, etiqueta, valor }) {
   return (
