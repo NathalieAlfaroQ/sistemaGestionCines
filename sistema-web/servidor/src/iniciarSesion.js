@@ -17,7 +17,6 @@ router.post('/', async (req, res) => {
   try {
     connection = await getConnection()
 
-    // Buscando el correo en Oracle
     const result = await connection.execute(
       `SELECT ID_CREDENCIAL, CORREO, HASH, SALT, TIPO_USUARIO,
               FECHA_VENCIMIENTO, ID_CLIENTE, ID_EMPLEADO, ID_ADMINISTRADOR
@@ -27,30 +26,20 @@ router.post('/', async (req, res) => {
     )
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Credenciales inválidas' })
+      return res.status(401).json({ error: 'X Credenciales inválidas' })
     }
 
     const row = result.rows[0]
     const [
-      idCredencial,
-      correoDB,
-      hashDB,
-      saltDB,
-      tipoUsuario,
-      fechaVencimiento,
-      idCliente,
-      idEmpleado,
-      idAdministrador
+      idCredencial, correoDB, hashDB, saltDB, tipoUsuario,
+      fechaVencimiento, idCliente, idEmpleado, idAdministrador
     ] = row
-
-    // Compara contraseña
     const coincide = await bcrypt.compare(contrasena, hashDB)
 
     if (!coincide) {
-      return res.status(401).json({ error: 'Credenciales inválidas' })
+      return res.status(401).json({ error: 'X Credenciales inválidas' })
     }
 
-    // Fecha de vencimiento para la contraseña temporal
     const esTemporal = fechaVencimiento !== null && fechaVencimiento !== undefined
 
     if (esTemporal) {
@@ -58,9 +47,7 @@ router.post('/', async (req, res) => {
       const vence = new Date(fechaVencimiento)
 
       if (ahora > vence) {
-        return res.status(403).json({
-          error: 'La contraseña temporal ha expirado. Solicita una nueva.'
-        })
+        return res.status(403).json({ error: 'X Credenciales inválidas' })
       }
     }
 
@@ -68,25 +55,18 @@ router.post('/', async (req, res) => {
     let apellido = ''
 
     if (tipoUsuario === 'CLIENTE') {
-      const r = await connection.execute(
-        'SELECT NOMBRE, APELLIDO FROM CLIENTES WHERE ID_CLIENTE = :id',
-        { id: idCliente }
-      )
-
+      const r = await connection.execute('SELECT NOMBRE, APELLIDO FROM CLIENTES WHERE ID_CLIENTE = :id', { id: idCliente })
+     
       if (r.rows.length > 0) [nombre, apellido] = r.rows[0]
+
     } else if (tipoUsuario === 'EMPLEADO') {
-      const r = await connection.execute(
-        'SELECT NOMBRE_EMPLEADO, APELLIDO_EMPLEADO FROM EMPLEADOS WHERE ID_EMPLEADO = :id',
-        { id: idEmpleado }
-      )
-
+      const r = await connection.execute('SELECT NOMBRE_EMPLEADO, APELLIDO_EMPLEADO FROM EMPLEADOS WHERE ID_EMPLEADO = :id', { id: idEmpleado })
+     
       if (r.rows.length > 0) [nombre, apellido] = r.rows[0]
-    } else if (tipoUsuario === 'ADMINISTRADOR') {
-      const r = await connection.execute(
-        'SELECT NOMBRE, APELLIDO FROM ADMINISTRADORES WHERE ID_ADMINISTRADOR = :id',
-        { id: idAdministrador }
-      )
 
+    } else if (tipoUsuario === 'ADMINISTRADOR') {
+      const r = await connection.execute('SELECT NOMBRE, APELLIDO FROM ADMINISTRADORES WHERE ID_ADMINISTRADOR = :id', { id: idAdministrador })
+     
       if (r.rows.length > 0) [nombre, apellido] = r.rows[0]
     }
 
@@ -96,20 +76,18 @@ router.post('/', async (req, res) => {
       mensaje: 'Inicio de sesión exitoso',
       token,
       usuario: {
-        idCredencial,
-        correo: correoDB,
-        tipoUsuario,
-        nombre,
-        apellido,
+        idCredencial, correo: correoDB, tipoUsuario, nombre, apellido,
         contrasenaTemporal: esTemporal
       }
     })
+
   } catch (error) {
     console.error('Error en /iniciar-sesion:', error)
+    return res.status(500).json({ error: 'Error al cargar la pantalla, intenta luego.' })
 
-    return res.status(500).json({ error: 'Error del servidor' })
   } finally {
     if (connection) await connection.close()
   }
 })
+
 export default router
