@@ -27,7 +27,7 @@ const FILTROS_INICIALES = { idSede: '', idPelicula: '', fecha: '', hora: '', idS
 const claseBoton = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover';
 const claseBarraBusqueda = 'mb-4 w-85 rounded-lg border border-border bg-surface-clear px-4 py-2 text-black placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft';
 
-// function verProyeccion() {}
+function verProyeccion() {}
 
 // La API entrega la fecha como AAAA-MM-DD; se muestra como DD/MM/AAAA
 const formatearFecha = (fecha) => fecha.split('-').reverse().join('/');
