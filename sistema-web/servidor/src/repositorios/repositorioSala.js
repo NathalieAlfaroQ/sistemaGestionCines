@@ -37,6 +37,30 @@ const sqlListarDistribuciones = `
   ORDER BY TOTAL_ASIENTOS
 `;
 
+const sqlObtenerSala = `
+  SELECT sa.ID_SALA,
+    sa.NOMBRE_SALA,
+    se.ID_SEDE,
+    se.NOMBRE_SEDE,
+    t.ID_TIPO,
+    t.NOMBRE_TIPO,
+    f.ID_FORMATO,
+    f.NOMBRE_FORMATO,
+    sa.MONTO,
+    d.ID_DISTRIBUCION,
+    d.NOMBRE_DISTRIBUCION,
+    d.FILAS,
+    d.COLUMNAS,
+    d.TOTAL_ASIENTOS,
+    sa.ESTADO_SALA
+  FROM SALAS sa
+  JOIN SEDES se               ON se.ID_SEDE = sa.ID_SEDE
+  JOIN TIPOS_SALA t           ON t.ID_TIPO = sa.ID_TIPO
+  JOIN FORMATOS f             ON f.ID_FORMATO = sa.ID_FORMATO
+  JOIN DISTRIBUCIONES_SALA d  ON d.ID_DISTRIBUCION = sa.ID_DISTRIBUCION
+  WHERE sa.ID_SALA = :idSala
+`;
+
 const sqlDesactivarSala = `UPDATE SALAS SET ESTADO_SALA = 0 WHERE ID_SALA = :idSala AND ESTADO_SALA = 1`;
 
 export async function listarSalas({
@@ -48,6 +72,11 @@ export async function listarSalas({
 } = {}) {
   const resultado = await ejecutar(sqlListarSalas, { busqueda, idSede, idTipo, idFormato, estado });
   return resultado.rows;
+}
+
+export async function obtenerSala(idSala) {
+  const resultado = await ejecutar(sqlObtenerSala, { idSala });
+  return resultado.rows[0] ?? null;
 }
 
 export async function listarTipos() {

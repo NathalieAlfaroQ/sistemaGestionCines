@@ -51,6 +51,21 @@ export async function listarDistribuciones(req, res) {
   }
 }
 
+export async function verSala(req, res) {
+  try {
+    res.json(await obtenerSala(req.params.id));
+  } catch (error) {
+    if (error instanceof ErrorValidacion) {
+      return res.status(400).json({ mensaje: error.message });
+    }
+    if (error instanceof ErrorNoEncontrado) {
+      return res.status(404).json({ mensaje: error.message });
+    }
+    console.error('Error al obtener la sala:', error);
+    res.status(500).json({ mensaje: 'No se pudo obtener la sala' });
+  }
+}
+
 export async function crearSala(req, res) {
   try {
     const idSala = await registrarSala(req.body);

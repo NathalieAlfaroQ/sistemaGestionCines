@@ -10,6 +10,7 @@ import {
   obtenerDistribucion,
   obtenerPrecioFormato,
   obtenerPrecioTipo,
+  obtenerSala as obtenerSalaEnRepositorio,
 } from '../repositorios/repositorioSala.js';
 import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
@@ -60,7 +61,6 @@ export const NOMBRE_SALA_MAXIMO = 20;
 
 const PATRON_NOMBRE_SALA = /^[\p{L}\d]+(?: [\p{L}\d]+)*$/u;
 
-// Las filas se nombran A, B, ... Z, AA, AB, ...
 export function nombreFila(indice) {
   let numero = indice + 1;
   let nombre = '';
@@ -152,4 +152,19 @@ export async function desactivarSala(idSala) {
   if (!(await desactivarSalaEnRepositorio(id))) {
     throw new ErrorNoEncontrado('La sala no existe o ya fue eliminada');
   }
+}
+
+export async function obtenerSala(idSala) {
+  const id = Number(idSala);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new ErrorValidacion('El identificador de la sala no es válido');
+  }
+
+  const sala = await obtenerSalaEnRepositorio(id);
+  if (!sala) {
+    throw new ErrorNoEncontrado('La sala no existe');
+  }
+
+  return sala;
 }

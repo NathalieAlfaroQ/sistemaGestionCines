@@ -6,42 +6,19 @@ import { POS_CATALOGO_SALA, POS_DISTRIBUCION } from '../constantes/posicionesSal
 import { POS_SEDE } from '../constantes/posicionesSede.js';
 import { generarAsientos } from '../utilidades/asientos.js';
 import { normalizarNombre, NOMBRE_MAXIMO } from '../validaciones/validacionesSala.js';
+import { formatearColones } from '../utilidades/formatearColones.js';
+import CampoSoloLectura from './CampoSoloLectura.jsx';
 import MapaAsientos from './MapaAsientos.jsx';
 import MensajeError from '../common/MensajeError.jsx';
 
 const claseEtiqueta = 'mb-2 block text-sm text-text-color';
 const claseCampo = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
 const claseDesplegable = claseCampo;
-const claseSoloLectura = 'flex min-h-[2.625rem] items-center rounded-lg border border-dashed border-border bg-transparent px-3 py-2 text-text-muted';
 const claseBotonConfirmar = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover disabled:opacity-50';
 const claseBotonCancelar = 'flex items-center gap-2 rounded-lg bg-brand-soft px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-soft-hover disabled:opacity-50';
 
-// Sin decimales si el precio es entero (₡3 000); con dos si no lo es (₡3 000,50)
-function formatearColones(monto) {
-  return new Intl.NumberFormat('es-CR', {
-    style: 'currency',
-    currency: 'CRC',
-    minimumFractionDigits: Number.isInteger(monto) ? 0 : 2,
-    maximumFractionDigits: 2,
-  }).format(monto);
-}
-
 function Asterisco() {
   return <span className="text-danger">*</span>;
-}
-
-// Dato que se muestra pero no se escribe, usado en el precio y la cantidad de asientos
-function CampoSoloLectura({ id, etiqueta, valor }) {
-  return (
-    <div>
-      <label htmlFor={id} className={claseEtiqueta}>
-        {etiqueta}
-      </label>
-      <output id={id} className={claseSoloLectura}>
-        {valor ?? '—'}
-      </output>
-    </div>
-  );
 }
 
 function buscarPorId(lista, id) {
@@ -79,6 +56,7 @@ function FormularioSala({
   const errorFormato = errorVisible('idFormato');
   const errorDistribucion = errorVisible('idDistribucion');
 
+  // El precio no se digita: es el del tipo más el del formato, y aparece cuando se eligen ambos
   const tipo = buscarPorId(tipos, formulario.idTipo);
   const formato = buscarPorId(formatos, formulario.idFormato);
   const precio = tipo && formato ? tipo[POS_CATALOGO_SALA.precio] + formato[POS_CATALOGO_SALA.precio] : null;

@@ -69,3 +69,15 @@ export async function crearSala(sala) {
 
   return cuerpo;
 }
+
+export async function obtenerSala(idSala) {
+  const respuesta = await peticionApi(`/api/salas/${idSala}`);
+
+  const cuerpo = await leerCuerpo(respuesta);
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo obtener la sala');
+  }
+
+  return cuerpo;
+}
