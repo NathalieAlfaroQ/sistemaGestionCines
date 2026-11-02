@@ -10,11 +10,13 @@ import { POS_PELICULA } from '../constantes/posicionesPelicula.js';
 import { POS_SALA } from '../constantes/posicionesSala.js';
 import { POS_SEDE } from '../constantes/posicionesSede.js';
 import { formatearHora } from '../utilidades/fechas.js';
+import { formatearFecha } from '../utilidades/formatearFecha.js';
 import Tabla from '../common/Tabla.jsx';
 import Modal from '../common/Modal.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import CrearProyeccion from '../componentes/CrearProyeccion.jsx';
 import EditarProyeccion from '../componentes/EditarProyeccion.jsx';
+import VerProyeccion from '../componentes/VerProyeccion.jsx';
 
 const OPCIONES_ESTADO = [
   { valor: 'activas', texto: 'Activas' },
@@ -26,11 +28,6 @@ const FILTROS_INICIALES = { idSede: '', idPelicula: '', fecha: '', hora: '', idS
 
 const claseBoton = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover';
 const claseBarraBusqueda = 'mb-4 w-85 rounded-lg border border-border bg-surface-clear px-4 py-2 text-black placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft';
-
-function verProyeccion() {}
-
-// La API entrega la fecha como AAAA-MM-DD; se muestra como DD/MM/AAAA
-const formatearFecha = (fecha) => fecha.split('-').reverse().join('/');
 
 function Proyecciones() {
   const [busqueda, setBusqueda] = useState('');
@@ -51,6 +48,7 @@ function Proyecciones() {
   const { salas, error: errorSalas } = useSalas({ idSede: filtros.idSede, estado: 'activas' });
   const { sedes, error: errorSedes } = useSedes({ estado: 'activas' });
   const errorCatalogo = errorPeliculas || errorSalas || errorSedes;
+  const salasDelCine = filtros.idSede === '' ? [] : salas;
 
   function cambiarFiltros(nuevosFiltros) {
     setFiltros(
@@ -101,7 +99,8 @@ function Proyecciones() {
       filtro: {
         clave: 'idSala',
         tipo: 'seleccion',
-        opciones: salas.map((sala) => ({
+        deshabilitado: filtros.idSede === '',
+        opciones: salasDelCine.map((sala) => ({
           valor: String(sala[POS_SALA.id]),
           texto: sala[POS_SALA.nombre],
         })),
@@ -124,6 +123,7 @@ function Proyecciones() {
 
   const [proyeccionAEliminar, setProyeccionAEliminar] = useState(null);
   const [creando, setCreando] = useState(false);
+  const [proyeccionAVer, setProyeccionAVer] = useState(null);
   const [proyeccionAEditar, setProyeccionAEditar] = useState(null);
   const [resultado, setResultado] = useState(null);
 
@@ -193,7 +193,7 @@ function Proyecciones() {
           filtros={filtros}
           alCambiarFiltros={cambiarFiltros}
           textoVacio={cargando ? '' : textoVacio}
-          onVer={verProyeccion}
+          onVer={setProyeccionAVer}
           onEditar={setProyeccionAEditar}
           onEliminar={setProyeccionAEliminar}
           accionesDeshabilitadas={proyeccionEliminada}
@@ -202,6 +202,10 @@ function Proyecciones() {
 
       {creando && (
         <CrearProyeccion alCancelar={() => setCreando(false)} alCrear={proyeccionCreada} />
+      )}
+
+      {proyeccionAVer && (
+        <VerProyeccion proyeccion={proyeccionAVer} alCerrar={() => setProyeccionAVer(null)} />
       )}
 
       {proyeccionAEditar && (
