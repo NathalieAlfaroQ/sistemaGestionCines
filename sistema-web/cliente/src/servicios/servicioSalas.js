@@ -1,5 +1,3 @@
-import { peticionApi } from './clienteApi.js';
-
 export async function obtenerSalas(filtros = {}) {
   const parametros = new URLSearchParams();
   Object.entries(filtros).forEach(([clave, valor]) => {
@@ -7,7 +5,7 @@ export async function obtenerSalas(filtros = {}) {
   });
 
   const consulta = parametros.toString();
-  const respuesta = await peticionApi(consulta ? `/api/salas?${consulta}` : '/api/salas');
+  const respuesta = await fetch(consulta ? `/api/salas?${consulta}` : '/api/salas');
 
   if (!respuesta.ok) {
     throw new Error('No se pudieron obtener las salas');
@@ -17,7 +15,7 @@ export async function obtenerSalas(filtros = {}) {
 }
 
 async function obtenerCatalogo(url, mensajeError) {
-  const respuesta = await peticionApi(url);
+  const respuesta = await fetch(url);
 
   if (!respuesta.ok) {
     throw new Error(mensajeError);
@@ -39,12 +37,44 @@ async function leerCuerpo(respuesta) {
 }
 
 export async function eliminarSala(idSala) {
-  const respuesta = await peticionApi(`/api/salas/${idSala}`, { method: 'DELETE' });
+  const respuesta = await fetch(`/api/salas/${idSala}`, { method: 'DELETE' });
 
   const cuerpo = await leerCuerpo(respuesta);
 
   if (!respuesta.ok) {
     throw new Error(cuerpo.mensaje ?? 'No se pudo eliminar la sala');
+  }
+
+  return cuerpo;
+}
+
+export function obtenerDistribucionesSala() {
+  return obtenerCatalogo('/api/salas/distribuciones', 'No se pudieron obtener las distribuciones');
+}
+
+export async function crearSala(sala) {
+  const respuesta = await fetch('/api/salas', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sala),
+  });
+
+  const cuerpo = await leerCuerpo(respuesta);
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo crear la sala');
+  }
+
+  return cuerpo;
+}
+
+export async function obtenerSala(idSala) {
+  const respuesta = await fetch(`/api/salas/${idSala}`);
+
+  const cuerpo = await leerCuerpo(respuesta);
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo obtener la sala');
   }
 
   return cuerpo;

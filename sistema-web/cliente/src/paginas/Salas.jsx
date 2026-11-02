@@ -83,7 +83,9 @@ function Salas() {
     ? 'No se encontraron salas con esos criterios'
     : 'No hay salas para mostrar en este momento';
 
-  function verSala() {}
+  function verSala(sala) {
+    navegar(`/salas/${sala[POS_SALA.id]}`);
+  }
 
   function editarSala() {}
 
