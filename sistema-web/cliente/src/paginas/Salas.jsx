@@ -117,7 +117,7 @@ function Salas() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5 flex items-center gap-27">
+        <div className="mb-5 flex items-center gap-31"> 
           <h1 className="text-4xl font-bold">Salas</h1>
 
           <button type="button" onClick={() => navegar('/salas/nueva')} className={claseBoton}>

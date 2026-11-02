@@ -2,6 +2,7 @@ import {
   desactivarSala,
   obtenerDistribuciones,
   obtenerFormatos,
+  obtenerSala,
   obtenerSalas,
   obtenerTipos,
   registrarSala,
