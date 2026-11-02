@@ -23,13 +23,13 @@ function escaparHTML(texto) {
 export async function enviarCorreoContrasena(correo, nombre, contrasena, tipoUsuario, motivo = 'REGISTRO') {
   let asunto = ''
   let cuerpoHTML = ''
-  
   const nombreSeguro = escaparHTML(nombre) 
   // CAMBIAR A ENLACE CORRECTO
   const enlaceLogin = `${process.env.CLIENT_URL || 'http://localhost:5173'}/iniciar-sesion`
 
   if (motivo === 'RECUPERACION') {
     asunto = 'Contraseña temporal'
+
     cuerpoHTML = `
       <h2>Hola ${nombreSeguro},</h2>
       <p>Tu contraseña temporal es: <strong style="font-size:20px">${contrasena}</strong></p>
