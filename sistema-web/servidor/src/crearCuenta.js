@@ -23,6 +23,7 @@ async function insertarCredencial(connection, {
        (:correo, :hash, :salt, :tipoUsuario, :fechaVencimiento,
         :idAdministrador, :idEmpleado, :idCliente)
      RETURNING ID_CREDENCIAL INTO :idCredencial`,
+
     {
       correo,
       hash,
@@ -34,6 +35,7 @@ async function insertarCredencial(connection, {
       idCliente: idCliente || null,
       idCredencial: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
     },
+
     { autoCommit: false }
   )
 
@@ -45,6 +47,7 @@ async function correoExiste(connection, correo) {
     'SELECT 1 FROM CREDENCIALES WHERE CORREO = :correo',
     { correo }
   )
+
   return r.rows.length > 0
 }
 
@@ -52,7 +55,7 @@ router.post('/cliente', async (req, res) => {
   const { nombre, apellido, correo } = req.body
 
   if (!nombre || !apellido || !correo) {
-    return res.status(400).json({ error: 'Error al desplegar, intente luego.' })
+    return res.status(400).json({ error: 'Error al cargar la pantalla, intente luego.' })
   }
 
   let connection
@@ -61,18 +64,20 @@ router.post('/cliente', async (req, res) => {
     connection = await getConnection()
 
     if (await correoExiste(connection, correo)) {
-      return res.status(409).json({ error: 'Correo inválido' }) // El 409 activa el mensaje en el frontend
+      return res.status(409).json({ error: 'X Correo inválido' })
     }
 
     const rCliente = await connection.execute(
       `INSERT INTO CLIENTES (NOMBRE, APELLIDO)
        VALUES (:nombre, :apellido)
        RETURNING ID_CLIENTE INTO :idCliente`,
+
       {
         nombre,
         apellido,
         idCliente: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
       },
+
       { autoCommit: false }
     )
 

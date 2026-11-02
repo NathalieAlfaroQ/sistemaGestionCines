@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../estilos/CrearCuenta.css'
-import { validarNombreOApellido, validarCorreo } from '../utilidades/validaciones'
+import { validarNombreOApellido, validarCorreo } from '../validaciones/validaciones'
 
 const API_URL = ''
 
@@ -9,35 +9,46 @@ export default function CrearCuenta() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ nombre: '', apellido: '', correo: '' })
   const [errores, setErrores] = useState({ nombre: '', apellido: '', correo: '' })
-  // Guarda errores como correo duplicado
+  const [tocado, setTocado] = useState({ nombre: false, apellido: false, correo: false })
   const [errorGlobal, setErrorGlobal] = useState(null)
+  const [mensajeExito, setMensajeExito] = useState(null)
   const [cargando, setCargando] = useState(false)
 
-  // Verificar cuando el usuario digita
   useEffect(() => {
     setErrores({
-      nombre: validarNombreOApellido(form.nombre),
-      apellido: validarNombreOApellido(form.apellido),
-      correo: validarCorreo(form.correo)
+      nombre: tocado.nombre ? validarNombreOApellido(form.nombre) : '',
+      apellido: tocado.apellido ? validarNombreOApellido(form.apellido) : '',
+      correo: tocado.correo ? validarCorreo(form.correo) : ''
     })
-  }, [form])
+  }, [form, tocado])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
-    // Quitar error del usuario digitado
     setErrorGlobal(null)
+    setMensajeExito(null)
+  }
+
+  const handleBlur = (e) => {
+    setTocado({ ...tocado, [e.target.name]: true })
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErrorGlobal(null)
+    setMensajeExito(null)
+    setTocado({ nombre: true, apellido: true, correo: true })
 
-    // Verificamos si hay algún error antes de enviar
-    const hayErrores = Object.values(errores).some((error) => error !== '')
-    const hayVacios = !form.nombre.trim() || !form.apellido.trim() || !form.correo.trim()
+    const hayErroresDeFormato = Object.values(errores).some((error) => error !== '')
+    const hayCamposVacios = !form.nombre.trim() || !form.apellido.trim() || !form.correo.trim()
 
-    if (hayErrores || hayVacios) {
-      if (hayVacios) setErrorGlobal('Espacio obligatorio')
+    if (hayErroresDeFormato || hayCamposVacios) {
+      if (hayCamposVacios) {
+        setErrores({
+          nombre: !form.nombre.trim() ? 'Espacio obligatorio' : errores.nombre,
+          apellido: !form.apellido.trim() ? 'Espacio obligatorio' : errores.apellido,
+          correo: !form.correo.trim() ? 'Espacio obligatorio' : errores.correo
+        })
+      }
       return
     }
 
@@ -54,17 +65,19 @@ export default function CrearCuenta() {
 
       if (!res.ok) {
         if (res.status === 409) {
-          setErrorGlobal('Correo inválido')
+          setErrorGlobal('X Correo inválido')
         } else {
-          setErrorGlobal(data.error || 'Error al desplegar, intente luego.')
+          setErrorGlobal('Error al cargar la pantalla, intenta luego.')
         }
       } else {
+        setMensajeExito('Cuenta creada, revisa tu correo.')
         setForm({ nombre: '', apellido: '', correo: '' })
-        navigate('/iniciar-sesion') 
+        setTocado({ nombre: false, apellido: false, correo: false }) 
       }
+
     } catch (err) {
       console.error(err)
-      setErrorGlobal('Error al desplegar, intente luego.')
+      setErrorGlobal('Error al cargar la pantalla, intenta luego.')
     } finally {
       setCargando(false)
     }
@@ -74,54 +87,74 @@ export default function CrearCuenta() {
     <div className="registro-container">
       <div className="panel-izquierdo">
 
-        <button className="boton-volver" onClick={() => navigate(-1)} aria-label="Volver">
+        <button 
+          type="button"
+          className="boton-volver" 
+          onClick={() => navigate('/iniciar-sesion')} 
+        >
           ←
         </button>
 
-        <h1 className="titulo-app">Cines Aurora</h1>
-        <h2 className="titulo-pantalla">Crear Cuenta</h2>
+        <div className="header-formulario">
+          <h1 className="titulo-app">Cines Aurora</h1>
+          <h2 className="titulo-pantalla">Crear Cuenta</h2>
+        </div>
 
         <form onSubmit={handleSubmit} className="form-registro" noValidate>
-          
           <label className="campo">
             <span>Nombre <span className="asterisco-rojo">*</span></span>
+            
             <input
               type="text"
               name="nombre"
               value={form.nombre}
               onChange={handleChange}
+              onBlur={handleBlur}
               autoComplete="given-name"
             />
-            {errores.nombre && <p className="error-texto">✖ {errores.nombre}</p>}
+
+            {errores.nombre && <p className="error-texto">{errores.nombre}</p>}
           </label>
 
           <label className="campo">
             <span>Apellido <span className="asterisco-rojo">*</span></span>
+           
             <input
               type="text"
               name="apellido"
               value={form.apellido}
               onChange={handleChange}
+              onBlur={handleBlur}
               autoComplete="family-name"
             />
-            {errores.apellido && <p className="error-texto">✖ {errores.apellido}</p>}
+
+            {errores.apellido && <p className="error-texto">{errores.apellido}</p>}
           </label>
 
           <label className="campo">
             <span>Correo <span className="asterisco-rojo">*</span></span>
+            
             <input
               type="email"
               name="correo"
               value={form.correo}
               onChange={handleChange}
+              onBlur={handleBlur}
               autoComplete="email"
             />
-            {errores.correo && <p className="error-texto">✖ {errores.correo}</p>}
+
+            {errores.correo && <p className="error-texto">{errores.correo}</p>}
           </label>
 
           {errorGlobal && (
-            <p className="error-texto" style={{ marginTop: '10px', fontWeight: 'bold' }}>
-              ✖ {errorGlobal}
+            <p className="error-texto">
+              {errorGlobal}
+            </p>
+          )}
+
+          {mensajeExito && (
+            <p className="exito-texto">
+              {mensajeExito}
             </p>
           )}
 
@@ -130,6 +163,7 @@ export default function CrearCuenta() {
           <button type="submit" className="boton-crear" disabled={cargando}>
             {cargando ? 'Creando...' : 'Crear'}
           </button>
+
         </form>
       </div>
       <div className="panel-derecho" />
