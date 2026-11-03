@@ -116,7 +116,7 @@ async function guardarMetodoPagoSinFallar(idCliente, idMetodo, idMetodoPago) {
     });
     return true;
   } catch (error) {
-    console.error(`No se pudo guardar el método de pago del cliente ${idCliente}:`, error);
+    console.error('No se pudo guardar el método de pago del cliente %d:', Number(idCliente), error);
     return false;
   }
 }
