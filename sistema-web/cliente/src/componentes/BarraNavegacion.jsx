@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import logo from '../assets/logo.jpg'
-import Buscador from './Buscador'
 
 const claseEnlace = 'px-3 py-2 md:p-0 block rounded text-text-color text-lg hover:text-brand-soft'
 
@@ -27,7 +26,6 @@ function BarraNavegacion() {
   const esTrabajador = usuario?.tipoUsuario === 'EMPLEADO' || usuario?.tipoUsuario === 'ADMINISTRADOR'
   const modo = modoGuardado || (esTrabajador ? 'trabajo' : 'cliente')
   const mostrarCliente = modo === 'cliente'
-  const mostrarBuscador = mostrarCliente
   const enlaces = mostrarCliente ? enlacesCliente : enlacesTrabajo
   const esTrabajadorEnModoCliente = esTrabajador && mostrarCliente
 
@@ -62,7 +60,7 @@ function BarraNavegacion() {
       <div className="max-w-screen-2xl mx-auto px-8 py-4 flex items-center gap-12 bg-navbar rounded-2xl shadow-lg">
         
         <Link to={mostrarCliente ? '/' : '/peliculas'} className="flex items-center gap-3">
-          <img src={logo} className="h-16 w-16 rounded object-cover" alt="Logo de Cines Aurora" />
+          <img src={logo} className="h-16 w-16 rounded object-cover" alt="Logo de Cine Aurora" />
         </Link>
 
         <ul className="hidden md:flex md:gap-8 flex-col md:flex-row font-medium items-center">
@@ -122,12 +120,6 @@ function BarraNavegacion() {
             )}
           </li>
         </ul>
-
-        {mostrarBuscador && (
-          <div className="ml-auto hidden md:block">
-            <Buscador placeholder="Buscar" />
-          </div>
-        )}
       </div>
     </nav>
   )
