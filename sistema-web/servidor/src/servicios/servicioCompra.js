@@ -1,7 +1,9 @@
+import { createHash } from 'node:crypto';
 import { ejecutarTransaccion } from '../configuracion/baseDatos.js';
 import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoAutenticado } from '../errores/ErrorNoAutenticado.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
+import { ErrorPagoRechazado } from '../errores/ErrorPagoRechazado.js';
 import { ErrorPasarela } from '../errores/ErrorPasarela.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 import {
@@ -16,10 +18,19 @@ import {
 } from '../repositorios/repositorioCompra.js';
 import { ahoraCostaRica } from '../utilidades/fechas.js';
 import { cobrar, obtenerTarjeta, reembolsar } from './pasarelaPago.js';
+import {
+  MENSAJE_PAYPAL_NO_COMPLETADO,
+  capturarOrden,
+  consultarOrden,
+  convertirADolares,
+  crearOrden,
+  reembolsarCaptura,
+} from './pasarelaPayPal.js';
 import { enviarComprobante } from './servicioComprobante.js';
 import { MENSAJE_ASIENTO_NO_DISPONIBLE, validarSeleccion } from './servicioReserva.js';
 
 export const NOMBRE_METODO_TARJETA = 'Tarjeta';
+export const NOMBRE_METODO_PAYPAL = 'PayPal';
 export const MENSAJE_SIN_TARJETA_GUARDADA = 'No tienes una tarjeta guardada';
 export const MENSAJE_TARJETA_VENCIDA = 'Tu tarjeta guardada está vencida. Usa otra tarjeta.';
 
@@ -48,6 +59,8 @@ function estaVencida(vencimiento) {
   return vencimiento < ahoraCostaRica().slice(0, 7);
 }
 
+// Con usarTarjetaGuardada el token sale de la BD, buscado por el cliente de la sesión:
+// nadie puede pagar con la tarjeta guardada de otra persona.
 async function resolverMetodoPago(idCliente, datos) {
   if (datos?.usarTarjetaGuardada !== true) {
     validarIdMetodoPago(datos?.idMetodoPago);
@@ -71,7 +84,7 @@ function esAsientoYaVendido(error) {
 
 // Repartir asientos
 export function asignarBoletos(asientos, boletos, precios) {
-  const tipos = boletos.flatMap(({ idTipoBoleto, cantidad }) => new Array(cantidad).fill(idTipoBoleto));
+  const tipos = boletos.flatMap(({ idTipoBoleto, cantidad }) => Array(cantidad).fill(idTipoBoleto));
   return asientos.map((idAsiento, indice) => ({
     idAsiento,
     idTipoBoleto: tipos[indice],
@@ -81,11 +94,11 @@ export function asignarBoletos(asientos, boletos, precios) {
 
 // Si algo falla después de cobrar, se devuelve el dinero. Si el reembolso también falla, no se
 // puede hacer más desde aquí: queda en el registro para revisarlo a mano en el panel de ONVO.
-async function reembolsarSinFallar(idIntencion, monto) {
+async function reembolsarSinFallar(reembolsarPago, idPago, total) {
   try {
-    await reembolsar(idIntencion, monto);
+    await reembolsarPago(idPago);
   } catch (error) {
-    console.error(`No se pudo reembolsar la intención de pago ${idIntencion} por ₡${monto}:`, error);
+    console.error(`No se pudo reembolsar el pago ${idPago} de una compra por ₡${total}:`, error);
   }
 }
 
@@ -121,24 +134,17 @@ async function guardarMetodoPagoSinFallar(idCliente, idMetodo, idMetodoPago) {
   }
 }
 
-export async function comprarBoletos(usuario, idProyeccion, datos) {
-  const idCliente = obtenerIdCliente(usuario);
-  const idMetodoPago = await resolverMetodoPago(idCliente, datos);
-  const guardarTarjeta = datos?.guardarMetodo === true && datos?.usarTarjetaGuardada !== true;
+// Registro de compra, si falla el pago no se hace el commit
+async function registrarCompra({ idCliente, nombreMetodo, idProyeccion, seleccion, cobrarPago, reembolsarPago }) {
+  const { asientos, boletos, precios, total } = seleccion;
 
-  // Revisa la selección y los asientos libres antes de tocar la pasarela
-  const { asientos, boletos, precios, total } = await validarSeleccion(idProyeccion, datos);
-
-  const [cliente, idMetodo] = await Promise.all([
-    obtenerDatosCliente(idCliente),
-    obtenerIdMetodoPago(NOMBRE_METODO_TARJETA),
-  ]);
+  const [cliente, idMetodo] = await Promise.all([obtenerDatosCliente(idCliente), obtenerIdMetodoPago(nombreMetodo)]);
   if (!cliente) {
     throw new ErrorNoEncontrado('El cliente no existe');
   }
   if (!idMetodo) {
     // Error de configuración de la BD (falta el INSERT en METODOS_PAGO): se responde 500
-    throw new Error(`No existe el método de pago '${NOMBRE_METODO_TARJETA}' en METODOS_PAGO`);
+    throw new Error(`No existe el método de pago '${nombreMetodo}' en METODOS_PAGO`);
   }
 
   const detalles = asignarBoletos(asientos, boletos, precios);
@@ -156,29 +162,111 @@ export async function comprarBoletos(usuario, idProyeccion, datos) {
         throw error;
       }
 
-      cobro = await cobrar({ monto: total, idMetodoPago, descripcion: `Cine Aurora - Factura ${id}` });
-      await registrarIntencionPago(conexion, id, cobro.idIntencion);
+      cobro = await cobrarPago(id);
+      await registrarIntencionPago(conexion, id, cobro.idPago);
       return id;
     });
   } catch (error) {
     if (cobro) {
       // Se cobró pero la compra no se guardó (falló el UPDATE o el commit)
-      await reembolsarSinFallar(cobro.idIntencion, total);
+      await reembolsarSinFallar(reembolsarPago, cobro.idPago, total);
     } else if (error instanceof ErrorPasarela && error.idIntencion) {
-      // No se sabe si ONVO alcanzó a cobrar: por si acaso se pide el reembolso
-      await reembolsarSinFallar(error.idIntencion, total);
+      // No se sabe si la pasarela alcanzó a cobrar: por si acaso se pide el reembolso
+      await reembolsarSinFallar(reembolsarPago, error.idIntencion, total);
     }
     throw error;
   }
 
   // La compra ya está guardada: desde aquí nada debe reembolsar
   const [nombre, , correo] = cliente;
-  const [correoEnviado, metodoGuardado] = await Promise.all([
-    enviarComprobanteSinFallar(idFactura, { idCliente, nombre, correo }),
-    guardarTarjeta ? guardarMetodoPagoSinFallar(idCliente, idMetodo, idMetodoPago) : false,
-  ]);
+  const correoEnviado = await enviarComprobanteSinFallar(idFactura, { idCliente, nombre, correo });
 
-  return { idFactura, total, referencia: cobro.referencia, correoEnviado, metodoGuardado };
+  return { idFactura, idMetodo, total, referencia: cobro.referencia, correoEnviado };
+}
+
+// Compra con tarjeta (ONVO): una nueva, con idMetodoPago, o la guardada, con usarTarjetaGuardada: true.
+export async function comprarBoletos(usuario, idProyeccion, datos) {
+  const idCliente = obtenerIdCliente(usuario);
+  const idMetodoPago = await resolverMetodoPago(idCliente, datos);
+  const guardarTarjeta = datos?.guardarMetodo === true && datos?.usarTarjetaGuardada !== true;
+
+  // Revisa la selección y los asientos libres antes de tocar la pasarela
+  const seleccion = await validarSeleccion(idProyeccion, datos);
+
+  const { idMetodo, ...compra } = await registrarCompra({
+    idCliente,
+    nombreMetodo: NOMBRE_METODO_TARJETA,
+    idProyeccion,
+    seleccion,
+    cobrarPago: async (idFactura) => {
+      const { idIntencion, referencia } = await cobrar({
+        monto: seleccion.total,
+        idMetodoPago,
+        descripcion: `Cine Aurora - Factura ${idFactura}`,
+      });
+      return { idPago: idIntencion, referencia };
+    },
+    reembolsarPago: (idIntencion) => reembolsar(idIntencion, seleccion.total),
+  });
+
+  const metodoGuardado = guardarTarjeta ? await guardarMetodoPagoSinFallar(idCliente, idMetodo, idMetodoPago) : false;
+  return { ...compra, metodoGuardado };
+}
+
+
+// Los ids de orden de PayPal son mayúsculas y números
+const PATRON_ID_ORDEN_PAYPAL = /^[A-Z0-9]{10,30}$/;
+
+
+export function calcularHuella(idCliente, idProyeccion, asientos, boletos) {
+  const contenido = JSON.stringify({
+    cliente: idCliente,
+    funcion: idProyeccion,
+    asientos: [...asientos].sort((a, b) => a - b),
+    boletos: [...boletos].sort((a, b) => a.idTipoBoleto - b.idTipoBoleto).map((b) => [b.idTipoBoleto, b.cantidad]),
+  });
+  return createHash('sha256').update(contenido).digest('hex');
+}
+
+export async function iniciarPagoPayPal(usuario, idProyeccion, datos) {
+  const idCliente = obtenerIdCliente(usuario);
+  const { asientos, boletos, total } = await validarSeleccion(idProyeccion, datos);
+
+  const idOrden = await crearOrden({
+    montoDolares: convertirADolares(total),
+    huella: calcularHuella(idCliente, idProyeccion, asientos, boletos),
+    descripcion: `Cine Aurora - ${asientos.length} ${asientos.length === 1 ? 'boleto' : 'boletos'}`,
+  });
+  return { idOrden };
+}
+
+export async function completarPagoPayPal(usuario, idProyeccion, idOrden, datos) {
+  const idCliente = obtenerIdCliente(usuario);
+  if (typeof idOrden !== 'string' || !PATRON_ID_ORDEN_PAYPAL.test(idOrden)) {
+    throw new ErrorValidacion('La orden de PayPal no es válida');
+  }
+
+  // Si algún asiento se vendió mientras el cliente estaba en PayPal, falla aquí (409) sin capturar
+  const seleccion = await validarSeleccion(idProyeccion, datos);
+
+  const orden = await consultarOrden(idOrden);
+  if (orden.estado !== 'APPROVED') {
+    throw new ErrorPagoRechazado(MENSAJE_PAYPAL_NO_COMPLETADO);
+  }
+  const huellaEsperada = calcularHuella(idCliente, idProyeccion, seleccion.asientos, seleccion.boletos);
+  if (orden.huella !== huellaEsperada || orden.moneda !== 'USD' || orden.montoDolares !== convertirADolares(seleccion.total)) {
+    throw new ErrorValidacion('La orden de PayPal no corresponde a esta compra');
+  }
+
+  const { idMetodo, ...compra } = await registrarCompra({
+    idCliente,
+    nombreMetodo: NOMBRE_METODO_PAYPAL,
+    idProyeccion,
+    seleccion,
+    cobrarPago: () => capturarOrden(idOrden),
+    reembolsarPago: (idCaptura) => reembolsarCaptura(idCaptura),
+  });
+  return compra;
 }
 
 // Tarjeta guardada del cliente para mostrarla en la pantalla de pago (sin el token).
