@@ -18,9 +18,9 @@ async function leerCuerpo(respuesta) {
   return await respuesta.json().catch(() => ({}));
 }
 
-export async function crearProyeccion(proyeccion) {
-  const respuesta = await peticionApi('/api/proyecciones', {
-    method: 'POST',
+async function enviarProyeccion(url, metodo, proyeccion, mensajeError) {
+  const respuesta = await peticionApi(url, {
+    method: metodo,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(proyeccion),
   });
@@ -28,10 +28,14 @@ export async function crearProyeccion(proyeccion) {
   const cuerpo = await leerCuerpo(respuesta);
 
   if (!respuesta.ok) {
-    throw new Error(cuerpo.mensaje ?? 'No se pudo crear la proyección');
+    throw new Error(cuerpo.mensaje ?? mensajeError);
   }
 
   return cuerpo;
+}
+
+export function crearProyeccion(proyeccion) {
+  return enviarProyeccion('/api/proyecciones', 'POST', proyeccion, 'No se pudo crear la proyección');
 }
 
 export async function eliminarProyeccion(idProyeccion) {
@@ -46,18 +50,17 @@ export async function eliminarProyeccion(idProyeccion) {
   return cuerpo;
 }
 
-export async function editarProyeccion(idProyeccion, proyeccion) {
-  const respuesta = await peticionApi(`/api/proyecciones/${idProyeccion}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(proyeccion),
-  });
+export function editarProyeccion(idProyeccion, proyeccion) {
+  return enviarProyeccion(`/api/proyecciones/${idProyeccion}`, 'PUT', proyeccion, 'No se pudo editar la proyección');
+}
 
-  const cuerpo = await leerCuerpo(respuesta);
+export async function obtenerTareas() {
+  return await leerDatos(() => peticionApi('/api/proyecciones/tareas'), 'No se pudieron obtener las tareas');
+}
 
-  if (!respuesta.ok) {
-    throw new Error(cuerpo.mensaje ?? 'No se pudo editar la proyección');
-  }
-
-  return cuerpo;
+export async function obtenerTareasDeProyeccion(idProyeccion) {
+  return await leerDatos(
+    () => peticionApi(`/api/proyecciones/${idProyeccion}/tareas`),
+    'No se pudieron obtener las tareas de la proyección'
+  );
 }

@@ -60,7 +60,11 @@ const sqlDuracionPelicula = `
 const sqlExisteSalaActiva = `SELECT 1 FROM SALAS WHERE ID_SALA = :idSala AND ESTADO_SALA = 1`;
 
 const sqlChoqueDeHorario = `
-  SELECT 1
+  SELECT pe.TITULO,
+         TO_CHAR(pr.FECHA, 'HH24:MI') AS INICIO,
+         TO_CHAR(pr.FECHA + (
+           pe.DURACION + NVL((SELECT SUM(tp.MINUTOS_RESERVADOS) FROM TAREAS_PROYECCION tp WHERE tp.ID_PROYECCION = pr.ID_PROYECCION), 0)
+         ) / 1440, 'HH24:MI') AS FIN
   FROM PROYECCIONES pr
   JOIN PELICULAS pe ON pe.ID_PELICULA = pr.ID_PELICULA
   WHERE pr.ID_SALA = :idSala
@@ -70,6 +74,7 @@ const sqlChoqueDeHorario = `
     AND pr.FECHA + (
       pe.DURACION + NVL((SELECT SUM(tp.MINUTOS_RESERVADOS) FROM TAREAS_PROYECCION tp WHERE tp.ID_PROYECCION = pr.ID_PROYECCION), 0)
     ) / 1440 > TO_DATE(:fechaHora, 'YYYY-MM-DD HH24:MI')
+  ORDER BY pr.FECHA
 `;
 
 const sqlListarTareas = `SELECT ID_TAREA, NOMBRE_TAREA FROM TAREAS ORDER BY NOMBRE_TAREA`;
@@ -101,9 +106,12 @@ export async function existeSalaActiva(idSala) {
   return resultado.rows.length > 0;
 }
 
-export async function hayChoqueDeHorario({ idSala, fechaHora, duracion, idExcluida = null }) {
+export async function buscarChoqueDeHorario({ idSala, fechaHora, duracion, idExcluida = null }) {
   const resultado = await ejecutar(sqlChoqueDeHorario, { idSala, fechaHora, duracion, idExcluida });
-  return resultado.rows.length > 0;
+  if (resultado.rows.length === 0) return null;
+
+  const [titulo, inicio, fin] = resultado.rows[0];
+  return { titulo, inicio, fin };
 }
 
 export async function listarTareas() {
