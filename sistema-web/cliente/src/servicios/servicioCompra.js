@@ -68,6 +68,36 @@ export async function comprar(compra) {
   );
 }
 
+// PayPal. seleccion = { idProyeccion, asientos, boletos }
+export const MENSAJE_PAYPAL_NO_COMPLETADO = 'La transacción fue cancelada o no pudo completarse.';
+
+// Paso 1 (al presionar el botón de PayPal): el servidor crea la orden. Devuelve { idOrden }.
+export async function crearOrdenPayPal(seleccion) {
+  return await pedir(
+    `${URL_BASE}/paypal/ordenes`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(seleccion),
+    },
+    MENSAJE_PAYPAL_NO_COMPLETADO
+  );
+}
+
+// Paso 2 (el cliente aprobó en PayPal): el servidor verifica la orden y hace la compra.
+// Devuelve lo mismo que comprar(): { idFactura, total, referencia, correoEnviado }
+export async function capturarOrdenPayPal(idOrden, seleccion) {
+  return await pedir(
+    `${URL_BASE}/paypal/ordenes/${encodeURIComponent(idOrden)}/captura`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(seleccion),
+    },
+    MENSAJE_PAYPAL_NO_COMPLETADO
+  );
+}
+
 // Tarjeta guardada del cliente: { marca, ultimosDigitos, vencimiento, titular, vencida } o null
 export async function obtenerMetodoPagoGuardado() {
   const { metodoPago } = await pedir(`${URL_BASE}/metodo-pago`, {}, 'No se pudo consultar tu tarjeta guardada');
