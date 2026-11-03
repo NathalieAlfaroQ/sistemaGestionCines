@@ -12,6 +12,7 @@ import { TIPOS_ERROR } from '../servicios/servicioReserva.js';
 import { obtenerUsuario } from '../servicios/sesion.js';
 import { datosTarjeta } from '../validaciones/validacionesTarjeta.js';
 import { temaFormulario } from '../temas/temaFormulario.js';
+import BotonPayPal from '../componentes/BotonPayPal.jsx';
 import EncabezadoPelicula from '../componentes/EncabezadoPelicula.jsx';
 import ResumenCompra from '../componentes/ResumenCompra.jsx';
 import FormularioPago, { METODOS } from '../componentes/FormularioPago.jsx';
@@ -39,7 +40,8 @@ function useAvisoAlSalir(activo) {
 }
 
 // Formulario de pago de una compra en curso
-function PantallaPago({ compraEnCurso, usuario, alTerminar }) {
+// compraHecha: resultado de la compra cuando ya terminó; el modal de éxito se abre sobre esta pantalla
+function PantallaPago({ compraEnCurso, usuario, compraHecha, alTerminar, alVolver }) {
   const navegar = useNavigate();
 
   const idProyeccion = compraEnCurso.idProyeccion;
@@ -64,10 +66,24 @@ function PantallaPago({ compraEnCurso, usuario, alTerminar }) {
   }, [procesando, errorPago]);
 
   // Si tiene una tarjeta guardada vigente, se ofrece primero
-  const metodo = metodoElegido ?? (metodoGuardado && !metodoGuardado.vencida ? METODOS.tarjetaGuardada : METODOS.tarjetaNueva);
+  const metodo =
+    metodoElegido ?? (metodoGuardado && !metodoGuardado.vencida ? METODOS.tarjetaGuardada : METODOS.tarjetaNueva);
+
+  const seleccion = { idProyeccion, asientos: compraEnCurso.asientos, boletos: compraEnCurso.boletos };
+
+  // Asiento vendido mientras se pagaba: modal para elegir otros. Cualquier otro error: aviso arriba.
+  function mostrarError(error) {
+    if (error.tipo === TIPOS_ERROR.conflicto) {
+      setAsientoTomado(error.message);
+    } else {
+      setErrorPago(error);
+    }
+  }
 
   async function pagar(evento) {
     evento.preventDefault();
+    // Con PayPal se paga con su propio botón; Enter en el formulario no debe hacer nada
+    if (metodo === METODOS.paypal) return;
     // El botón se deshabilita, pero un doble clic muy rápido puede llegar antes del re-render
     if (enviando.current) return;
     if (metodo === METODOS.tarjetaNueva && !tarjeta.validarAlEnviar()) return;
@@ -77,7 +93,6 @@ function PantallaPago({ compraEnCurso, usuario, alTerminar }) {
     setProcesando(true);
 
     try {
-      const seleccion = { idProyeccion, asientos: compraEnCurso.asientos, boletos: compraEnCurso.boletos };
       const datosMetodo =
         metodo === METODOS.tarjetaGuardada
           ? { usarTarjetaGuardada: true }
@@ -89,11 +104,7 @@ function PantallaPago({ compraEnCurso, usuario, alTerminar }) {
       const resultado = await comprar({ ...seleccion, ...datosMetodo });
       alTerminar(resultado, metodo === METODOS.tarjetaNueva && tarjeta.guardarTarjeta);
     } catch (error) {
-      if (error.tipo === TIPOS_ERROR.conflicto) {
-        setAsientoTomado(error.message);
-      } else {
-        setErrorPago(error);
-      }
+      mostrarError(error);
     } finally {
       enviando.current = false;
       setProcesando(false);
@@ -132,9 +143,25 @@ function PantallaPago({ compraEnCurso, usuario, alTerminar }) {
               boletos={compraEnCurso.boletos}
               tiposBoleto={mapa.tiposBoleto}
             >
-              <Boton type="submit" form={ID_FORMULARIO} disabled={procesando} className="w-full">
-                {procesando ? 'Procesando pago...' : 'Completar pago'}
-              </Boton>
+              {metodo === METODOS.paypal ? (
+                <BotonPayPal
+                  seleccion={seleccion}
+                  deshabilitado={procesando}
+                  alEmpezarCaptura={() => {
+                    setErrorPago(null);
+                    setProcesando(true);
+                  }}
+                  alTerminar={(resultado) => alTerminar(resultado, false)}
+                  alFallar={(error) => {
+                    setProcesando(false);
+                    mostrarError(error);
+                  }}
+                />
+              ) : (
+                <Boton type="submit" form={ID_FORMULARIO} disabled={procesando} className="w-full">
+                  {procesando ? 'Procesando pago...' : 'Completar pago'}
+                </Boton>
+              )}
             </ResumenCompra>
 
             <FormularioPago
@@ -149,6 +176,15 @@ function PantallaPago({ compraEnCurso, usuario, alTerminar }) {
             />
           </div>
         </ContenedorCliente>
+
+        {compraHecha && (
+          <CompraExitosa
+            compra={compraHecha}
+            correo={usuario?.correo}
+            guardoTarjeta={compraHecha.pidioGuardarTarjeta}
+            alVolver={alVolver}
+          />
+        )}
 
         {asientoTomado && (
           <Modal
@@ -169,41 +205,34 @@ function PantallaPago({ compraEnCurso, usuario, alTerminar }) {
   );
 }
 
-
 function Pago() {
   const navegar = useNavigate();
   const compraEnCurso = useCompraEnCurso();
   const usuario = obtenerUsuario();
-  const [compraHecha, setCompraHecha] = useState(null);
+  const [terminada, setTerminada] = useState(null);
 
   function terminar(resultado, pidioGuardarTarjeta) {
+    setTerminada({ compraEnCurso, resultado: { ...resultado, pidioGuardarTarjeta } });
     terminarCompraEnCurso();
-    setCompraHecha({ ...resultado, pidioGuardarTarjeta });
-    window.scrollTo({ top: 0 });
     // Borra la selección del historial: si se recarga la página no debe volver a ofrecer pagarla
     void navegar('/pago', { replace: true, state: null });
   }
 
-  if (compraHecha) {
-    return (
-      <main className="min-h-screen bg-background py-12">
-        <ContenedorCliente>
-          <CompraExitosa
-            compra={compraHecha}
-            correo={usuario?.correo}
-            guardoTarjeta={compraHecha.pidioGuardarTarjeta}
-          />
-        </ContenedorCliente>
-      </main>
-    );
-  }
+  const compra = terminada?.compraEnCurso ?? compraEnCurso;
 
-  // Sin selección no hay nada que pagar (se entró directo a /pago o la compra ya terminó)
-  if (!compraEnCurso) {
+  if (!compra) {
     return <Navigate to="/" replace />;
   }
 
-  return <PantallaPago compraEnCurso={compraEnCurso} usuario={usuario} alTerminar={terminar} />;
+  return (
+    <PantallaPago
+      compraEnCurso={compra}
+      usuario={usuario}
+      compraHecha={terminada?.resultado ?? null}
+      alTerminar={terminar}
+      alVolver={() => void navegar('/', { replace: true })}
+    />
+  );
 }
 
 export default Pago;
