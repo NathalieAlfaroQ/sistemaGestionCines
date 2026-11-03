@@ -6,12 +6,15 @@ import {
   listarSedes,
 } from '../repositorios/repositorioSede.js';
 
+import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 import { estadoDeFiltro, exigirObjeto, idDeFiltro, idObligatorio } from '../utilidades/validaciones.js';
 
 const NOMBRE_MINIMO = 10;
 const NOMBRE_MAXIMO = 30;
 const PATRON_NOMBRE = /^\p{L}+(?: \p{L}+)*$/u;
+
+const MENSAJE_SEDE_NO_EXISTE = 'La sede no existe o ya fue eliminada';
 
 const ORA_UNICIDAD = 1;
 
@@ -65,11 +68,14 @@ export async function modificarSede(idSede, datos) {
 
   if (!(await existeCanton(idCanton))) throw new ErrorValidacion('El cantón seleccionado no existe');
 
+  let actualizada;
   try {
-    return await actualizarSede({ idSede: id, nombre, idCanton });
+    actualizada = await actualizarSede({ idSede: id, nombre, idCanton });
   } catch (error) {
     throw traducirErrorDeBaseDatos(error);
   }
+
+  if (!actualizada) throw new ErrorNoEncontrado(MENSAJE_SEDE_NO_EXISTE);
 }
 
 const ESTADOS_SEDE = { activas: 1, eliminadas: 0, todas: null };
@@ -87,5 +93,7 @@ export async function obtenerSedes({ busqueda, nombre, idProvincia, idCanton, es
 }
 
 export async function desactivarSede(idSede) {
-  return await desactivarSedeEnRepositorio(validarIdSede(idSede));
+  if (!(await desactivarSedeEnRepositorio(validarIdSede(idSede)))) {
+    throw new ErrorNoEncontrado(MENSAJE_SEDE_NO_EXISTE);
+  }
 }

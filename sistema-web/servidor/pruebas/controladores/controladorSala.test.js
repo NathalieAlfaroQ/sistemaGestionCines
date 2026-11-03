@@ -4,11 +4,23 @@ vi.mock('../../src/servicios/servicioSala.js', () => ({
   obtenerSalas: vi.fn(),
   obtenerTipos: vi.fn(),
   obtenerFormatos: vi.fn(),
+  obtenerDistribuciones: vi.fn(),
+  registrarSala: vi.fn(),
   desactivarSala: vi.fn(),
+  obtenerSala: vi.fn(),
 }))
 
 import * as servicio from '../../src/servicios/servicioSala.js'
-import { eliminarSala, listarFormatos, listarSalas, listarTipos } from '../../src/controladores/controladorSala.js'
+import {
+  crearSala,
+  eliminarSala,
+  listarDistribuciones,
+  listarFormatos,
+  listarSalas,
+  listarTipos,
+  verSala,
+} from '../../src/controladores/controladorSala.js'
+import { ErrorConflicto } from '../../src/errores/ErrorConflicto.js'
 import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
 
@@ -144,5 +156,116 @@ describe('eliminarSala', () => {
     expect(res.status).toHaveBeenCalledWith(500)
     expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudo eliminar la sala' })
     expect(console.error).toHaveBeenCalled()
+  })
+})
+
+describe('listarDistribuciones', () => {
+  it('responde con la lista de distribuciones', async () => {
+    servicio.obtenerDistribuciones.mockResolvedValue([[1, '8x10', 8, 10, 80]])
+    const res = crearRes()
+
+    await listarDistribuciones({}, res)
+
+    expect(res.json).toHaveBeenCalledWith([[1, '8x10', 8, 10, 80]])
+  })
+
+  it('responde 500 genérico ante un error inesperado', async () => {
+    servicio.obtenerDistribuciones.mockRejectedValue(new Error('ORA-03113 detalle interno'))
+    const res = crearRes()
+
+    await listarDistribuciones({}, res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudieron obtener las distribuciones' })
+    expect(console.error).toHaveBeenCalled()
+  })
+})
+
+describe('crearSala', () => {
+  const body = { nombre: 'Sala 1', idSede: 3, idTipo: 2, idFormato: 1, idDistribucion: 4 }
+
+  it('responde 201 con el id de la sala creada', async () => {
+    servicio.registrarSala.mockResolvedValue(55)
+    const res = crearRes()
+
+    await crearSala({ body }, res)
+
+    expect(servicio.registrarSala).toHaveBeenCalledWith(body)
+    expect(res.status).toHaveBeenCalledWith(201)
+    expect(res.json).toHaveBeenCalledWith({ idSala: 55 })
+  })
+
+  it('responde 400 con el mensaje de un ErrorValidacion', async () => {
+    servicio.registrarSala.mockRejectedValue(new ErrorValidacion('El nombre es obligatorio'))
+    const res = crearRes()
+
+    await crearSala({ body: {} }, res)
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'El nombre es obligatorio' })
+  })
+
+  it('responde 409 con el mensaje de un ErrorConflicto', async () => {
+    servicio.registrarSala.mockRejectedValue(new ErrorConflicto('Ya existe una sala con ese nombre en este cine'))
+    const res = crearRes()
+
+    await crearSala({ body }, res)
+
+    expect(res.status).toHaveBeenCalledWith(409)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'Ya existe una sala con ese nombre en este cine' })
+  })
+
+  it('responde 500 genérico ante un error inesperado, sin exponer el detalle', async () => {
+    servicio.registrarSala.mockRejectedValue(new Error('ORA-03113 detalle interno'))
+    const res = crearRes()
+
+    await crearSala({ body }, res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudo crear la sala' })
+    expect(console.error).toHaveBeenCalled()
+  })
+})
+
+describe('verSala', () => {
+  it('responde con la fila de la sala', async () => {
+    const fila = [3, 'Sala 3', 1, 'Escazú', 2, 'Regular', 1, '2D', 500, 1, '8x10', 8, 10, 80, 1]
+    servicio.obtenerSala.mockResolvedValue(fila)
+    const res = crearRes()
+
+    await verSala({ params: { id: '3' } }, res)
+
+    expect(servicio.obtenerSala).toHaveBeenCalledWith('3')
+    expect(res.json).toHaveBeenCalledWith(fila)
+  })
+
+  it('responde 400 si el id no es válido', async () => {
+    servicio.obtenerSala.mockRejectedValue(new ErrorValidacion('El identificador de la sala no es válido'))
+    const res = crearRes()
+
+    await verSala({ params: { id: 'abc' } }, res)
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'El identificador de la sala no es válido' })
+  })
+
+  it('responde 404 si la sala no existe', async () => {
+    servicio.obtenerSala.mockRejectedValue(new ErrorNoEncontrado('La sala no existe'))
+    const res = crearRes()
+
+    await verSala({ params: { id: '9' } }, res)
+
+    expect(res.status).toHaveBeenCalledWith(404)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'La sala no existe' })
+  })
+
+  it('responde 500 con un mensaje genérico ante un error inesperado', async () => {
+    servicio.obtenerSala.mockRejectedValue(new Error('ORA-00942'))
+    const res = crearRes()
+
+    await verSala({ params: { id: '3' } }, res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudo obtener la sala' })
   })
 })
