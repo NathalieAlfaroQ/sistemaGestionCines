@@ -5,13 +5,22 @@ vi.mock('../../src/repositorios/repositorioProyeccion.js', () => ({
   crearProyeccion: vi.fn(),
   desactivarProyeccion: vi.fn(),
   existeSalaActiva: vi.fn(),
-  hayChoqueDeHorario: vi.fn(),
+  buscarChoqueDeHorario: vi.fn(),
   listarProyecciones: vi.fn(),
+  listarTareas: vi.fn(),
   obtenerDuracionPelicula: vi.fn(),
+  obtenerTareasDeProyeccion: vi.fn(),
 }))
 
 import * as repositorio from '../../src/repositorios/repositorioProyeccion.js'
-import { desactivarProyeccion, modificarProyeccion, obtenerProyecciones, registrarProyeccion } from '../../src/servicios/servicioProyeccion.js'
+import {
+  desactivarProyeccion,
+  modificarProyeccion,
+  obtenerProyecciones,
+  obtenerTareas,
+  obtenerTareasDeProyeccion,
+  registrarProyeccion,
+} from '../../src/servicios/servicioProyeccion.js'
 import { ErrorConflicto } from '../../src/errores/ErrorConflicto.js'
 import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
@@ -37,6 +46,8 @@ beforeEach(() => {
   vi.resetAllMocks()
   repositorio.listarProyecciones.mockResolvedValue([])
 })
+
+const CHOQUE = { titulo: 'Dune', inicio: '18:00', fin: '20:45' }
 
 describe('obtenerProyecciones', () => {
   it('devuelve las filas del repositorio', async () => {
@@ -161,7 +172,7 @@ describe('registrarProyeccion', () => {
   beforeEach(() => {
     repositorio.obtenerDuracionPelicula.mockResolvedValue(120)
     repositorio.existeSalaActiva.mockResolvedValue(true)
-    repositorio.hayChoqueDeHorario.mockResolvedValue(false)
+    repositorio.buscarChoqueDeHorario.mockResolvedValue(null)
     repositorio.crearProyeccion.mockResolvedValue(77)
   })
 
@@ -169,7 +180,7 @@ describe('registrarProyeccion', () => {
     const id = await registrarProyeccion(DATOS)
 
     expect(id).toBe(77)
-    expect(repositorio.hayChoqueDeHorario).toHaveBeenCalledWith({
+    expect(repositorio.buscarChoqueDeHorario).toHaveBeenCalledWith({
       idSala: 3,
       fechaHora: '2099-11-05 14:30',
       duracion: 120,
@@ -179,6 +190,7 @@ describe('registrarProyeccion', () => {
       idSala: 3,
       idPelicula: 5,
       fechaHora: '2099-11-05 14:30',
+      tareas: [],
     })
   })
 
@@ -189,6 +201,7 @@ describe('registrarProyeccion', () => {
       idSala: 3,
       idPelicula: 5,
       fechaHora: '2099-11-05 14:30',
+      tareas: [],
     })
   })
 
@@ -276,12 +289,12 @@ describe('registrarProyeccion', () => {
   })
 
   it('lanza ErrorConflicto si la sala ya tiene una proyección en ese horario', async () => {
-    repositorio.hayChoqueDeHorario.mockResolvedValue(true)
+    repositorio.buscarChoqueDeHorario.mockResolvedValue(CHOQUE)
 
     const error = await capturarError(() => registrarProyeccion(DATOS))
 
     expect(error).toBeInstanceOf(ErrorConflicto)
-    expect(error.message).toBe('La sala ya tiene una proyección en ese horario')
+    expect(error.message).toBe('La sala ya tiene una proyección en ese horario: "Dune" de 18:00 a 20:45')
     expect(repositorio.crearProyeccion).not.toHaveBeenCalled()
   })
 
@@ -335,7 +348,7 @@ describe('modificarProyeccion', () => {
   beforeEach(() => {
     repositorio.obtenerDuracionPelicula.mockResolvedValue(120)
     repositorio.existeSalaActiva.mockResolvedValue(true)
-    repositorio.hayChoqueDeHorario.mockResolvedValue(false)
+    repositorio.buscarChoqueDeHorario.mockResolvedValue(null)
     repositorio.actualizarProyeccion.mockResolvedValue(true)
   })
 
@@ -347,13 +360,14 @@ describe('modificarProyeccion', () => {
       idSala: 3,
       idPelicula: 5,
       fechaHora: '2099-11-05 14:30',
+      tareas: [],
     })
   })
 
   it('al revisar el choque de horario excluye la propia proyección', async () => {
     await modificarProyeccion(9, DATOS)
 
-    expect(repositorio.hayChoqueDeHorario).toHaveBeenCalledWith({
+    expect(repositorio.buscarChoqueDeHorario).toHaveBeenCalledWith({
       idSala: 3,
       fechaHora: '2099-11-05 14:30',
       duracion: 120,
@@ -404,12 +418,12 @@ describe('modificarProyeccion', () => {
   })
 
   it('lanza ErrorConflicto si la sala ya tiene otra proyección en ese horario', async () => {
-    repositorio.hayChoqueDeHorario.mockResolvedValue(true)
+    repositorio.buscarChoqueDeHorario.mockResolvedValue(CHOQUE)
 
     const error = await capturarError(() => modificarProyeccion(9, DATOS))
 
     expect(error).toBeInstanceOf(ErrorConflicto)
-    expect(error.message).toBe('La sala ya tiene una proyección en ese horario')
+    expect(error.message).toBe('La sala ya tiene una proyección en ese horario: "Dune" de 18:00 a 20:45')
     expect(repositorio.actualizarProyeccion).not.toHaveBeenCalled()
   })
 
@@ -427,5 +441,166 @@ describe('modificarProyeccion', () => {
     repositorio.actualizarProyeccion.mockRejectedValue(original)
 
     expect(await capturarError(() => modificarProyeccion(9, DATOS))).toBe(original)
+  })
+})
+
+describe('tareas adicionales de una proyección', () => {
+  const DATOS = { idPelicula: 5, idSala: 3, fecha: '2099-11-05', hora: '14:30' }
+  const TAREAS = [{ idTarea: 1, minutos: 10 }, { idTarea: 2, minutos: 15 }]
+
+  beforeEach(() => {
+    repositorio.obtenerDuracionPelicula.mockResolvedValue(120)
+    repositorio.existeSalaActiva.mockResolvedValue(true)
+    repositorio.buscarChoqueDeHorario.mockResolvedValue(null)
+    repositorio.listarTareas.mockResolvedValue([[1, 'Limpieza'], [2, 'Publicidad'], [3, 'Mantenimiento']])
+    repositorio.crearProyeccion.mockResolvedValue(77)
+    repositorio.actualizarProyeccion.mockResolvedValue(true)
+  })
+
+  it('al crear guarda las tareas con la proyección', async () => {
+    await registrarProyeccion({ ...DATOS, tareas: TAREAS })
+
+    expect(repositorio.crearProyeccion).toHaveBeenCalledWith({
+      idSala: 3,
+      idPelicula: 5,
+      fechaHora: '2099-11-05 14:30',
+      tareas: TAREAS,
+    })
+  })
+
+  it('al editar reemplaza las tareas de la proyección', async () => {
+    await modificarProyeccion(9, { ...DATOS, tareas: TAREAS })
+
+    expect(repositorio.actualizarProyeccion).toHaveBeenCalledWith({
+      idProyeccion: 9,
+      idSala: 3,
+      idPelicula: 5,
+      fechaHora: '2099-11-05 14:30',
+      tareas: TAREAS,
+    })
+  })
+
+  it('al editar sin tareas se envía una lista vacía (la proyección queda sin tareas)', async () => {
+    await modificarProyeccion(9, { ...DATOS, tareas: [] })
+
+    expect(repositorio.actualizarProyeccion).toHaveBeenCalledWith(expect.objectContaining({ tareas: [] }))
+  })
+
+  it('el choque de horario usa la duración de la película más los minutos de las tareas', async () => {
+    await registrarProyeccion({ ...DATOS, tareas: TAREAS })
+
+    expect(repositorio.buscarChoqueDeHorario).toHaveBeenCalledWith({
+      idSala: 3,
+      fechaHora: '2099-11-05 14:30',
+      duracion: 145,
+      idExcluida: null,
+    })
+  })
+
+  it('lanza ErrorConflicto si con las tareas la proyección choca con otra', async () => {
+    repositorio.buscarChoqueDeHorario.mockResolvedValue(CHOQUE)
+
+    const error = await capturarError(() => registrarProyeccion({ ...DATOS, tareas: TAREAS }))
+
+    expect(error).toBeInstanceOf(ErrorConflicto)
+    expect(repositorio.crearProyeccion).not.toHaveBeenCalled()
+  })
+
+  it('convierte los valores que llegan como texto', async () => {
+    await registrarProyeccion({ ...DATOS, tareas: [{ idTarea: '1', minutos: '10' }] })
+
+    expect(repositorio.crearProyeccion).toHaveBeenCalledWith(
+      expect.objectContaining({ tareas: [{ idTarea: 1, minutos: 10 }] }),
+    )
+  })
+
+  it('sin tareas no consulta el catálogo', async () => {
+    await registrarProyeccion(DATOS)
+
+    expect(repositorio.listarTareas).toHaveBeenCalledTimes(0)
+  })
+
+  it.each(['texto', 5, {}])('rechaza tareas que no son una lista (%j)', async (tareas) => {
+    const error = await capturarError(() => registrarProyeccion({ ...DATOS, tareas }))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('Las tareas no son válidas')
+    expect(repositorio.crearProyeccion).not.toHaveBeenCalled()
+  })
+
+  it.each([null, 'texto', 5, []])('rechaza una tarea que no es un objeto (%j)', async (tarea) => {
+    const error = await capturarError(() => registrarProyeccion({ ...DATOS, tareas: [tarea] }))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('Las tareas no son válidas')
+  })
+
+  it.each([undefined, null, '', 0, -1, 1.5, 'abc'])('exige una tarea válida (%j)', async (idTarea) => {
+    const error = await capturarError(() => registrarProyeccion({ ...DATOS, tareas: [{ idTarea, minutos: 10 }] }))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('La tarea es obligatoria')
+  })
+
+  it.each([undefined, null, '', 'abc', 1.5])('exige los minutos (%j)', async (minutos) => {
+    const error = await capturarError(() => registrarProyeccion({ ...DATOS, tareas: [{ idTarea: 1, minutos }] }))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('Los minutos de la tarea son obligatorios')
+  })
+
+  it.each([0, -5, 100000])('rechaza %j minutos: debe estar entre 1 y 99999', async (minutos) => {
+    const error = await capturarError(() => registrarProyeccion({ ...DATOS, tareas: [{ idTarea: 1, minutos }] }))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('Los minutos de la tarea deben estar entre 1 y 99999')
+  })
+
+  it.each([1, 240, 99999])('acepta %j minutos', async (minutos) => {
+    await registrarProyeccion({ ...DATOS, tareas: [{ idTarea: 1, minutos }] })
+
+    expect(repositorio.crearProyeccion).toHaveBeenCalled()
+  })
+
+  it('rechaza repetir una tarea', async () => {
+    const error = await capturarError(() =>
+      registrarProyeccion({ ...DATOS, tareas: [{ idTarea: 1, minutos: 10 }, { idTarea: '1', minutos: 5 }] }),
+    )
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('No se puede repetir una tarea')
+    expect(repositorio.crearProyeccion).not.toHaveBeenCalled()
+  })
+
+  it('rechaza una tarea que no existe en el catálogo', async () => {
+    const error = await capturarError(() => registrarProyeccion({ ...DATOS, tareas: [{ idTarea: 99, minutos: 10 }] }))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('Una de las tareas seleccionadas no existe')
+    expect(repositorio.crearProyeccion).not.toHaveBeenCalled()
+  })
+})
+
+describe('obtenerTareas', () => {
+  it('devuelve las tareas del repositorio', async () => {
+    repositorio.listarTareas.mockResolvedValue([[1, 'Limpieza']])
+
+    expect(await obtenerTareas()).toEqual([[1, 'Limpieza']])
+  })
+})
+
+describe('obtenerTareasDeProyeccion', () => {
+  it('devuelve las tareas de la proyección indicada', async () => {
+    repositorio.obtenerTareasDeProyeccion.mockResolvedValue([[1, 10]])
+
+    expect(await obtenerTareasDeProyeccion('9')).toEqual([[1, 10]])
+    expect(repositorio.obtenerTareasDeProyeccion).toHaveBeenCalledWith(9)
+  })
+
+  it.each(['abc', '0', '-1', '1.5', undefined])('rechaza el id inválido %s', async (id) => {
+    const error = await capturarError(() => obtenerTareasDeProyeccion(id))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('El identificador de la proyección no es válido')
   })
 })

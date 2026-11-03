@@ -1,4 +1,11 @@
-import { desactivarProyeccion, modificarProyeccion, obtenerProyecciones, registrarProyeccion } from '../servicios/servicioProyeccion.js';
+import {
+  desactivarProyeccion,
+  modificarProyeccion,
+  obtenerProyecciones,
+  obtenerTareas,
+  obtenerTareasDeProyeccion,
+  registrarProyeccion,
+} from '../servicios/servicioProyeccion.js';
 import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
@@ -14,6 +21,27 @@ export async function listarProyecciones(req, res) {
     }
     console.error('Error al listar proyecciones:', error);
     res.status(500).json({ mensaje: 'No se pudieron obtener las proyecciones' });
+  }
+}
+
+export async function listarTareas(req, res) {
+  try {
+    res.json(await obtenerTareas());
+  } catch (error) {
+    console.error('Error al listar tareas:', error);
+    res.status(500).json({ mensaje: 'No se pudieron obtener las tareas' });
+  }
+}
+
+export async function verTareasProyeccion(req, res) {
+  try {
+    res.json(await obtenerTareasDeProyeccion(req.params.id));
+  } catch (error) {
+    if (error instanceof ErrorValidacion) {
+      return res.status(400).json({ mensaje: error.message });
+    }
+    console.error('Error al obtener las tareas de la proyección:', error);
+    res.status(500).json({ mensaje: 'No se pudieron obtener las tareas de la proyección' });
   }
 }
 

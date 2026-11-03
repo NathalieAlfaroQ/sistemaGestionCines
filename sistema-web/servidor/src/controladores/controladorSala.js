@@ -1,5 +1,6 @@
 import {
   desactivarSala,
+  modificarSala,
   obtenerDistribuciones,
   obtenerFormatos,
   obtenerSala,
@@ -80,6 +81,25 @@ export async function crearSala(req, res) {
     }
     console.error('Error al crear sala:', error);
     res.status(500).json({ mensaje: 'No se pudo crear la sala' });
+  }
+}
+
+export async function editarSala(req, res) {
+  try {
+    await modificarSala(req.params.id, req.body);
+    res.json({ idSala: Number(req.params.id) });
+  } catch (error) {
+    if (error instanceof ErrorValidacion) {
+      return res.status(400).json({ mensaje: error.message });
+    }
+    if (error instanceof ErrorNoEncontrado) {
+      return res.status(404).json({ mensaje: error.message });
+    }
+    if (error instanceof ErrorConflicto) {
+      return res.status(409).json({ mensaje: error.message });
+    }
+    console.error('Error al editar sala:', error);
+    res.status(500).json({ mensaje: 'No se pudo editar la sala' });
   }
 }
 

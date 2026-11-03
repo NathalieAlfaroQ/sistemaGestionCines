@@ -46,9 +46,9 @@ export function obtenerDistribucionesSala() {
   return obtenerCatalogo('/api/salas/distribuciones', 'No se pudieron obtener las distribuciones');
 }
 
-export async function crearSala(sala) {
-  const respuesta = await peticionApi('/api/salas', {
-    method: 'POST',
+async function enviarSala(url, metodo, sala, mensajeError) {
+  const respuesta = await peticionApi(url, {
+    method: metodo,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(sala),
   });
@@ -56,10 +56,19 @@ export async function crearSala(sala) {
   const cuerpo = await leerCuerpo(respuesta);
 
   if (!respuesta.ok) {
-    throw new Error(cuerpo.mensaje ?? 'No se pudo crear la sala');
+    throw new Error(cuerpo.mensaje ?? mensajeError);
   }
 
   return cuerpo;
+}
+
+export function crearSala(sala) {
+  return enviarSala('/api/salas', 'POST', sala, 'No se pudo crear la sala');
+}
+
+// Solo se envían los datos que se pueden cambiar: nombre, tipo y formato
+export function editarSala(idSala, sala) {
+  return enviarSala(`/api/salas/${idSala}`, 'PUT', sala, 'No se pudo editar la sala');
 }
 
 export async function obtenerSala(idSala) {

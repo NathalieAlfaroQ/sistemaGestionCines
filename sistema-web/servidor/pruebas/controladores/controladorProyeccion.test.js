@@ -4,11 +4,20 @@ vi.mock('../../src/servicios/servicioProyeccion.js', () => ({
   desactivarProyeccion: vi.fn(),
   modificarProyeccion: vi.fn(),
   obtenerProyecciones: vi.fn(),
+  obtenerTareas: vi.fn(),
+  obtenerTareasDeProyeccion: vi.fn(),
   registrarProyeccion: vi.fn(),
 }))
 
 import * as servicio from '../../src/servicios/servicioProyeccion.js'
-import { crearProyeccion, editarProyeccion, eliminarProyeccion, listarProyecciones } from '../../src/controladores/controladorProyeccion.js'
+import {
+  crearProyeccion,
+  editarProyeccion,
+  eliminarProyeccion,
+  listarProyecciones,
+  listarTareas,
+  verTareasProyeccion,
+} from '../../src/controladores/controladorProyeccion.js'
 import { ErrorConflicto } from '../../src/errores/ErrorConflicto.js'
 import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
@@ -225,5 +234,59 @@ describe('editarProyeccion', () => {
     expect(res.status).toHaveBeenCalledWith(500)
     expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudo editar la proyección' })
     expect(console.error).toHaveBeenCalled()
+  })
+})
+
+describe('listarTareas', () => {
+  it('responde con las tareas', async () => {
+    servicio.obtenerTareas.mockResolvedValue([[1, 'Limpieza']])
+    const res = crearRes()
+
+    await listarTareas({}, res)
+
+    expect(res.json).toHaveBeenCalledWith([[1, 'Limpieza']])
+  })
+
+  it('responde 500 genérico ante un error inesperado', async () => {
+    servicio.obtenerTareas.mockRejectedValue(new Error('ORA-03113 detalle interno'))
+    const res = crearRes()
+
+    await listarTareas({}, res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudieron obtener las tareas' })
+    expect(console.error).toHaveBeenCalled()
+  })
+})
+
+describe('verTareasProyeccion', () => {
+  it('responde con las tareas de la proyección y pasa el id al servicio', async () => {
+    servicio.obtenerTareasDeProyeccion.mockResolvedValue([[1, 10]])
+    const res = crearRes()
+
+    await verTareasProyeccion({ params: { id: '9' } }, res)
+
+    expect(servicio.obtenerTareasDeProyeccion).toHaveBeenCalledWith('9')
+    expect(res.json).toHaveBeenCalledWith([[1, 10]])
+  })
+
+  it('responde 400 con el mensaje de un ErrorValidacion', async () => {
+    servicio.obtenerTareasDeProyeccion.mockRejectedValue(new ErrorValidacion('El identificador de la proyección no es válido'))
+    const res = crearRes()
+
+    await verTareasProyeccion({ params: { id: 'abc' } }, res)
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'El identificador de la proyección no es válido' })
+  })
+
+  it('responde 500 genérico ante un error inesperado', async () => {
+    servicio.obtenerTareasDeProyeccion.mockRejectedValue(new Error('ORA-03113 detalle interno'))
+    const res = crearRes()
+
+    await verTareasProyeccion({ params: { id: '9' } }, res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudieron obtener las tareas de la proyección' })
   })
 })

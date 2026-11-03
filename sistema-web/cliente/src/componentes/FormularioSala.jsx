@@ -20,6 +20,7 @@ function buscarPorId(lista, id) {
   return lista.find((fila) => String(fila[POS_CATALOGO_SALA.id]) === id);
 }
 
+// edicion: solo se muestran los datos que se pueden cambiar (nombre, tipo y formato); el cine y la distribución no
 function FormularioSala({
   valorInicial,
   textoGuardar = 'Guardar',
@@ -27,6 +28,7 @@ function FormularioSala({
   alCancelar,
   guardando = false,
   error = null,
+  edicion = false,
 }) {
   const { sedes, error: errorSedes, recargar: recargarSedes } = useSedes({ estado: 'activas' });
   const { tipos, formatos, distribuciones, error: errorCatalogo, recargar: recargarCatalogo } = useCatalogoSala();
@@ -86,7 +88,7 @@ function FormularioSala({
     <form onSubmit={manejarEnvio} noValidate className="flex flex-col gap-10">
       <ErrorCarga error={errorSedes || errorCatalogo} alReintentar={reintentarCarga} />
 
-      <div className="grid gap-x-12 gap-y-6 md:grid-cols-2">
+      <div className={`grid gap-x-12 gap-y-6 ${edicion ? '' : 'md:grid-cols-2'}`}>
         <div className="flex flex-col gap-6">
           <div>
             <Etiqueta id="nombre">Nombre</Etiqueta>
@@ -142,62 +144,66 @@ function FormularioSala({
           <CampoSoloLectura id="precio" etiqueta="Precio" valor={precio === null ? null : formatearColones(precio)} />
         </div>
 
-        <div className="flex flex-col gap-6">
-          <div>
-            <Etiqueta id="sede">Cine</Etiqueta>
-            <select
-              id="sede"
-              className={claseDesplegable}
-              aria-invalid={errorSede !== null}
-              aria-describedby={errorSede ? 'error-sede' : undefined}
-              {...enlazar('idSede')}
-            >
-              <option value="" />
-              {sedes.map((sede) => (
-                <option key={sede[POS_SEDE.id]} value={sede[POS_SEDE.id]}>
-                  {sede[POS_SEDE.nombre]}
-                </option>
-              ))}
-            </select>
-            <MensajeError id="error-sede" mensaje={errorSede} />
-          </div>
+        {!edicion && (
+          <div className="flex flex-col gap-6">
+            <div>
+              <Etiqueta id="sede">Cine</Etiqueta>
+              <select
+                id="sede"
+                className={claseDesplegable}
+                aria-invalid={errorSede !== null}
+                aria-describedby={errorSede ? 'error-sede' : undefined}
+                {...enlazar('idSede')}
+              >
+                <option value="" />
+                {sedes.map((sede) => (
+                  <option key={sede[POS_SEDE.id]} value={sede[POS_SEDE.id]}>
+                    {sede[POS_SEDE.nombre]}
+                  </option>
+                ))}
+              </select>
+              <MensajeError id="error-sede" mensaje={errorSede} />
+            </div>
 
-          <div>
-            <Etiqueta id="distribucion">Distribución</Etiqueta>
-            <select
-              id="distribucion"
-              className={claseDesplegable}
-              aria-invalid={errorDistribucion !== null}
-              aria-describedby={errorDistribucion ? 'error-distribucion' : undefined}
-              {...enlazar('idDistribucion')}
-            >
-              <option value="" />
-              {distribuciones.map((fila) => (
-                <option key={fila[POS_DISTRIBUCION.id]} value={fila[POS_DISTRIBUCION.id]}>
-                  {fila[POS_DISTRIBUCION.nombre]}
-                </option>
-              ))}
-            </select>
-            <MensajeError id="error-distribucion" mensaje={errorDistribucion} />
-          </div>
+            <div>
+              <Etiqueta id="distribucion">Distribución</Etiqueta>
+              <select
+                id="distribucion"
+                className={claseDesplegable}
+                aria-invalid={errorDistribucion !== null}
+                aria-describedby={errorDistribucion ? 'error-distribucion' : undefined}
+                {...enlazar('idDistribucion')}
+              >
+                <option value="" />
+                {distribuciones.map((fila) => (
+                  <option key={fila[POS_DISTRIBUCION.id]} value={fila[POS_DISTRIBUCION.id]}>
+                    {fila[POS_DISTRIBUCION.nombre]}
+                  </option>
+                ))}
+              </select>
+              <MensajeError id="error-distribucion" mensaje={errorDistribucion} />
+            </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <CampoSoloLectura id="filas" etiqueta="Filas" valor={filas} />
-            <CampoSoloLectura id="columnas" etiqueta="Columnas" valor={columnas} />
-            <CampoSoloLectura id="total" etiqueta="Total de asientos" valor={distribucion?.[POS_DISTRIBUCION.total]} />
+            <div className="grid grid-cols-3 gap-4">
+              <CampoSoloLectura id="filas" etiqueta="Filas" valor={filas} />
+              <CampoSoloLectura id="columnas" etiqueta="Columnas" valor={columnas} />
+              <CampoSoloLectura id="total" etiqueta="Total de asientos" valor={distribucion?.[POS_DISTRIBUCION.total]} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      <section aria-label="Vista de la distribución" className="rounded-lg border border-border bg-surface px-6 py-8">
-        {asientos.length > 0 ? (
-          <MapaAsientos asientos={asientos} soloVista />
-        ) : (
-          <p className="text-center text-text-muted">
-            Elija una distribución para ver cómo quedarán los asientos de la sala.
-          </p>
-        )}
-      </section>
+      {!edicion && (
+        <section aria-label="Vista de la distribución" className="rounded-lg border border-border bg-surface px-6 py-8">
+          {asientos.length > 0 ? (
+            <MapaAsientos asientos={asientos} soloVista />
+          ) : (
+            <p className="text-center text-text-muted">
+              Elija una distribución para ver cómo quedarán los asientos de la sala.
+            </p>
+          )}
+        </section>
+      )}
 
       <PieFormulario
           error={error}

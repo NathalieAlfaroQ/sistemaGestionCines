@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('../../src/repositorios/repositorioSala.js', () => ({
+  actualizarSala: vi.fn(),
   crearSalaConAsientos: vi.fn(),
   existeNombreSala: vi.fn(),
   existeSedeActiva: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock('../../src/repositorios/repositorioSala.js', () => ({
 import * as repositorio from '../../src/repositorios/repositorioSala.js'
 import {
   desactivarSala,
+  modificarSala,
   generarAsientos,
   nombreFila,
   obtenerDistribuciones,
@@ -417,5 +419,145 @@ describe('obtenerSala', () => {
     expect(error).toBeInstanceOf(ErrorValidacion)
     expect(error.message).toBe('El identificador de la sala no es válido')
     expect(repositorio.obtenerSala).not.toHaveBeenCalled()
+  })
+})
+
+describe('modificarSala', () => {
+  // Fila que devuelve obtenerSala: el cine está en la posición 2 y el estado en la 14
+  const FILA_SALA = [7, 'Sala 1', 3, 'Escazú', 1, 'Regular', 1, '2D', 1500, 4, '8x10', 8, 10, 80, 1]
+  const DATOS = { nombre: 'Sala VIP 2', idTipo: 2, idFormato: 1 }
+
+  beforeEach(() => {
+    repositorio.obtenerSala.mockResolvedValue(FILA_SALA)
+    repositorio.obtenerPrecioTipo.mockResolvedValue(2500)
+    repositorio.obtenerPrecioFormato.mockResolvedValue(500)
+    repositorio.existeNombreSala.mockResolvedValue(false)
+    repositorio.actualizarSala.mockResolvedValue(true)
+  })
+
+  it('actualiza nombre, tipo y formato con el monto recalculado', async () => {
+    expect(await modificarSala(7, DATOS)).toBeUndefined()
+
+    expect(repositorio.actualizarSala).toHaveBeenCalledWith({
+      idSala: 7,
+      nombre: 'Sala VIP 2',
+      idTipo: 2,
+      idFormato: 1,
+      monto: 3000,
+    })
+  })
+
+  it('normaliza el nombre y acepta ids como texto', async () => {
+    await modificarSala('7', { nombre: '  Sala   VIP 2 ', idTipo: '2', idFormato: '1' })
+
+    expect(repositorio.actualizarSala).toHaveBeenCalledWith(
+      expect.objectContaining({ idSala: 7, nombre: 'Sala VIP 2', idTipo: 2, idFormato: 1 }),
+    )
+  })
+
+  it('ignora el cine, la distribución y el monto que mande el cliente', async () => {
+    await modificarSala(7, { ...DATOS, idSede: 99, idDistribucion: 99, monto: 1 })
+
+    expect(repositorio.actualizarSala).toHaveBeenCalledWith({
+      idSala: 7,
+      nombre: 'Sala VIP 2',
+      idTipo: 2,
+      idFormato: 1,
+      monto: 3000,
+    })
+    expect(repositorio.existeNombreSala).toHaveBeenCalledWith({ idSede: 3, nombre: 'Sala VIP 2', idSalaExcluida: 7 })
+  })
+
+  it('valida el nombre de repetido en el cine de la sala, sin contar la propia sala', async () => {
+    await modificarSala(7, DATOS)
+
+    expect(repositorio.existeNombreSala).toHaveBeenCalledWith({ idSede: 3, nombre: 'Sala VIP 2', idSalaExcluida: 7 })
+  })
+
+  it('lanza ErrorConflicto si otra sala del cine ya tiene ese nombre', async () => {
+    repositorio.existeNombreSala.mockResolvedValue(true)
+
+    const error = await capturarError(() => modificarSala(7, DATOS))
+
+    expect(error).toBeInstanceOf(ErrorConflicto)
+    expect(error.message).toBe('Ya existe una sala con ese nombre en este cine')
+    expect(repositorio.actualizarSala).not.toHaveBeenCalled()
+  })
+
+  it.each([0, -1, 'abc', 1.5, ''])('rechaza el id %j', async (id) => {
+    const error = await capturarError(() => modificarSala(id, DATOS))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('El identificador de la sala no es válido')
+    expect(repositorio.actualizarSala).not.toHaveBeenCalled()
+  })
+
+  it.each([null, undefined, 'texto', 5, []])('rechaza los datos %j', async (datos) => {
+    const error = await capturarError(() => modificarSala(7, datos))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe('Los datos de la sala no son válidos')
+  })
+
+  it.each([
+    ['vacío', '', 'El nombre es obligatorio'],
+    ['con caracteres especiales', 'Sala #2', 'El nombre solo admite letras y números'],
+    ['demasiado corto', 'Sala', 'El nombre debe tener al menos 5 caracteres'],
+    ['demasiado largo', 'A'.repeat(21), 'El nombre no puede superar los 20 caracteres'],
+  ])('rechaza un nombre %s', async (_descripcion, nombre, mensaje) => {
+    const error = await capturarError(() => modificarSala(7, { ...DATOS, nombre }))
+
+    expect(error).toBeInstanceOf(ErrorValidacion)
+    expect(error.message).toBe(mensaje)
+    expect(repositorio.actualizarSala).not.toHaveBeenCalled()
+  })
+
+  it('exige el tipo y el formato', async () => {
+    const sinTipo = await capturarError(() => modificarSala(7, { ...DATOS, idTipo: '' }))
+    const sinFormato = await capturarError(() => modificarSala(7, { ...DATOS, idFormato: undefined }))
+
+    expect(sinTipo.message).toBe('El tipo es obligatorio')
+    expect(sinFormato.message).toBe('El formato es obligatorio')
+  })
+
+  it('rechaza un tipo o un formato que no existen', async () => {
+    repositorio.obtenerPrecioTipo.mockResolvedValue(null)
+    const sinTipo = await capturarError(() => modificarSala(7, DATOS))
+
+    repositorio.obtenerPrecioTipo.mockResolvedValue(2500)
+    repositorio.obtenerPrecioFormato.mockResolvedValue(null)
+    const sinFormato = await capturarError(() => modificarSala(7, DATOS))
+
+    expect(sinTipo).toBeInstanceOf(ErrorValidacion)
+    expect(sinTipo.message).toBe('El tipo de sala seleccionado no existe')
+    expect(sinFormato).toBeInstanceOf(ErrorValidacion)
+    expect(sinFormato.message).toBe('El formato seleccionado no existe')
+  })
+
+  it('lanza ErrorNoEncontrado si la sala no existe', async () => {
+    repositorio.obtenerSala.mockResolvedValue(null)
+
+    const error = await capturarError(() => modificarSala(7, DATOS))
+
+    expect(error).toBeInstanceOf(ErrorNoEncontrado)
+    expect(error.message).toBe('La sala no existe o ya fue eliminada')
+    expect(repositorio.actualizarSala).not.toHaveBeenCalled()
+  })
+
+  it('lanza ErrorNoEncontrado si la sala ya está eliminada', async () => {
+    repositorio.obtenerSala.mockResolvedValue([...FILA_SALA.slice(0, 14), 0])
+
+    const error = await capturarError(() => modificarSala(7, DATOS))
+
+    expect(error).toBeInstanceOf(ErrorNoEncontrado)
+    expect(repositorio.actualizarSala).not.toHaveBeenCalled()
+  })
+
+  it('lanza ErrorNoEncontrado si la sala se eliminó justo antes de actualizar', async () => {
+    repositorio.actualizarSala.mockResolvedValue(false)
+
+    const error = await capturarError(() => modificarSala(7, DATOS))
+
+    expect(error).toBeInstanceOf(ErrorNoEncontrado)
   })
 })

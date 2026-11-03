@@ -1,5 +1,5 @@
 import oracledb from 'oracledb';
-import { ejecutar } from '../configuracion/baseDatos.js';
+import { ejecutar, ejecutarTransaccion } from '../configuracion/baseDatos.js';
 
 const sqlListarProyecciones = `
   SELECT pr.ID_PROYECCION,
@@ -52,24 +52,43 @@ export async function listarProyecciones({
   return resultado.rows;
 }
 
+// La duración de la película está en minutos. Solo se programan películas activas.
 const sqlDuracionPelicula = `
   SELECT DURACION FROM PELICULAS WHERE ID_PELICULA = :idPelicula AND ESTADO_PELICULA = 1
 `;
 
 const sqlExisteSalaActiva = `SELECT 1 FROM SALAS WHERE ID_SALA = :idSala AND ESTADO_SALA = 1`;
 
-// Hay choque si otra proyección activa de la sala empieza antes de que termine la nueva
-// y termina después de que empiece la nueva
 const sqlChoqueDeHorario = `
-  SELECT 1
+  SELECT pe.TITULO,
+         TO_CHAR(pr.FECHA, 'HH24:MI') AS INICIO,
+         TO_CHAR(pr.FECHA + (
+           pe.DURACION + NVL((SELECT SUM(tp.MINUTOS_RESERVADOS) FROM TAREAS_PROYECCION tp WHERE tp.ID_PROYECCION = pr.ID_PROYECCION), 0)
+         ) / 1440, 'HH24:MI') AS FIN
   FROM PROYECCIONES pr
   JOIN PELICULAS pe ON pe.ID_PELICULA = pr.ID_PELICULA
   WHERE pr.ID_SALA = :idSala
     AND pr.ESTADO_PROYECCION = 1
     AND (:idExcluida IS NULL OR pr.ID_PROYECCION <> :idExcluida)
     AND pr.FECHA < TO_DATE(:fechaHora, 'YYYY-MM-DD HH24:MI') + :duracion / 1440
-    AND pr.FECHA + pe.DURACION / 1440 > TO_DATE(:fechaHora, 'YYYY-MM-DD HH24:MI')
+    AND pr.FECHA + (
+      pe.DURACION + NVL((SELECT SUM(tp.MINUTOS_RESERVADOS) FROM TAREAS_PROYECCION tp WHERE tp.ID_PROYECCION = pr.ID_PROYECCION), 0)
+    ) / 1440 > TO_DATE(:fechaHora, 'YYYY-MM-DD HH24:MI')
+  ORDER BY pr.FECHA
 `;
+
+const sqlListarTareas = `SELECT ID_TAREA, NOMBRE_TAREA FROM TAREAS ORDER BY NOMBRE_TAREA`;
+
+const sqlTareasDeProyeccion = `
+  SELECT ID_TAREA, MINUTOS_RESERVADOS FROM TAREAS_PROYECCION WHERE ID_PROYECCION = :idProyeccion ORDER BY ID_TAREA
+`;
+
+const sqlCrearTareaProyeccion = `
+  INSERT INTO TAREAS_PROYECCION (ID_PROYECCION, ID_TAREA, MINUTOS_RESERVADOS)
+  VALUES (:idProyeccion, :idTarea, :minutos)
+`;
+
+const sqlBorrarTareasProyeccion = `DELETE FROM TAREAS_PROYECCION WHERE ID_PROYECCION = :idProyeccion`;
 
 const sqlCrearProyeccion = `
   INSERT INTO PROYECCIONES (ID_SALA, ID_PELICULA, FECHA, ESTADO_PROYECCION)
@@ -87,20 +106,54 @@ export async function existeSalaActiva(idSala) {
   return resultado.rows.length > 0;
 }
 
-export async function hayChoqueDeHorario({ idSala, fechaHora, duracion, idExcluida = null }) {
+export async function buscarChoqueDeHorario({ idSala, fechaHora, duracion, idExcluida = null }) {
   const resultado = await ejecutar(sqlChoqueDeHorario, { idSala, fechaHora, duracion, idExcluida });
-  return resultado.rows.length > 0;
+  if (resultado.rows.length === 0) return null;
+
+  const [titulo, inicio, fin] = resultado.rows[0];
+  return { titulo, inicio, fin };
 }
 
-export async function crearProyeccion({ idSala, idPelicula, fechaHora }) {
-  const resultado = await ejecutar(sqlCrearProyeccion, {
-    idSala,
-    idPelicula,
-    fechaHora,
-    idProyeccion: { type: oracledb.NUMBER, dir: oracledb.BIND_OUT },
-  });
+export async function listarTareas() {
+  const resultado = await ejecutar(sqlListarTareas);
+  return resultado.rows;
+}
 
-  return resultado.outBinds.idProyeccion[0];
+export async function obtenerTareasDeProyeccion(idProyeccion) {
+  const resultado = await ejecutar(sqlTareasDeProyeccion, { idProyeccion });
+  return resultado.rows;
+}
+
+async function insertarTareas(conexion, idProyeccion, tareas) {
+  if (tareas.length === 0) return;
+
+  await conexion.executeMany(
+    sqlCrearTareaProyeccion,
+    tareas.map(({ idTarea, minutos }) => ({ idProyeccion, idTarea, minutos })),
+    {
+      bindDefs: {
+        idProyeccion: { type: oracledb.NUMBER },
+        idTarea: { type: oracledb.NUMBER },
+        minutos: { type: oracledb.NUMBER },
+      },
+    },
+  );
+}
+
+export async function crearProyeccion({ idSala, idPelicula, fechaHora, tareas = [] }) {
+  return await ejecutarTransaccion(async (conexion) => {
+    const resultado = await conexion.execute(sqlCrearProyeccion, {
+      idSala,
+      idPelicula,
+      fechaHora,
+      idProyeccion: { type: oracledb.NUMBER, dir: oracledb.BIND_OUT },
+    });
+    const idProyeccion = resultado.outBinds.idProyeccion[0];
+
+    await insertarTareas(conexion, idProyeccion, tareas);
+
+    return idProyeccion;
+  });
 }
 
 const sqlDesactivarProyeccion = `
@@ -121,7 +174,14 @@ const sqlActualizarProyeccion = `
   WHERE ID_PROYECCION = :idProyeccion AND ESTADO_PROYECCION = 1
 `;
 
-export async function actualizarProyeccion({ idProyeccion, idSala, idPelicula, fechaHora }) {
-  const resultado = await ejecutar(sqlActualizarProyeccion, { idProyeccion, idSala, idPelicula, fechaHora });
-  return resultado.rowsAffected > 0;
+export async function actualizarProyeccion({ idProyeccion, idSala, idPelicula, fechaHora, tareas = [] }) {
+  return await ejecutarTransaccion(async (conexion) => {
+    const resultado = await conexion.execute(sqlActualizarProyeccion, { idProyeccion, idSala, idPelicula, fechaHora });
+    if (resultado.rowsAffected === 0) return false;
+
+    await conexion.execute(sqlBorrarTareasProyeccion, { idProyeccion });
+    await insertarTareas(conexion, idProyeccion, tareas);
+
+    return true;
+  });
 }
