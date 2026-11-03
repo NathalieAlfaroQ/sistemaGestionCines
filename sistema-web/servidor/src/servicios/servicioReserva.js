@@ -96,21 +96,38 @@ function validarBoletos(boletos) {
   return conCantidad;
 }
 
-export function calcularPrecios(tiposBoleto) {
-  return new Map(tiposBoleto.map(([idTipoBoleto, , precio]) => [idTipoBoleto, { monto: precio, descuento: 0 }]));
+// Precio de cada tipo de boleto en una sala: el monto de la sala menos el descuento del tipo,
+// redondeado al colón. [[id, nombre, descuento %]] → [[id, nombre, precio]] (lo que recibe el cliente)
+export function calcularPrecios(tiposBoleto, montoSala) {
+  return tiposBoleto.map(([idTipoBoleto, nombre, descuento]) => [
+    idTipoBoleto,
+    nombre,
+    Math.round((montoSala * (100 - descuento)) / 100),
+  ]);
+}
+
+// Los mismos precios por id, para la compra: monto a cobrar y descuento en colones
+// (lo que va en MONTO y DESCUENTO de DETALLES_FACTURA). monto + descuento = monto de la sala.
+export function mapaPrecios(tiposBoleto, montoSala) {
+  return new Map(
+    calcularPrecios(tiposBoleto, montoSala).map(([idTipoBoleto, , precio]) => [
+      idTipoBoleto,
+      { monto: precio, descuento: montoSala - precio },
+    ])
+  );
 }
 
 // Encabezado de la película que comparten las dos pantallas
 export async function consultarPelicula(idPelicula) {
   validarId(idPelicula, 'la película');
-  
+
   const detalle = await obtenerPelicula(idPelicula, ahoraCostaRica());
   if (!detalle) {
     throw new ErrorNoEncontrado('La película no existe');
   }
-  
+
   const [id, titulo, duracion, clasificacion, sinopsis, clavePoster, claveBanner] = detalle.fila;
-  
+
   return {
     pelicula: [
       id,
@@ -130,30 +147,22 @@ export async function consultarPelicula(idPelicula) {
 // Horarios vigentes de la película en un día
 export async function consultarHorarios(idPelicula, fecha) {
   validarId(idPelicula, 'la película');
-  
+
   const ahora = ahoraCostaRica();
   const dia = validarFecha(fecha, ahora.slice(0, 10));
-  
+
   return await listarHorarios(idPelicula, dia, ahora);
 }
 
-export function calcularPrecios(tiposBoleto, montoSala) {
-  return tiposBoleto.map(([idTipoBoleto, nombre, descuento]) => [
-    idTipoBoleto,
-    nombre,
-    Math.round((montoSala * (100 - descuento)) / 100),
-  ]);
-}
-
-// Datos de la función, mapa de asientos y tipos de boleto
+// Datos de la función, mapa de asientos y tipos de boleto con su precio en esa sala
 export async function consultarAsientos(idProyeccion) {
   validarId(idProyeccion, 'la función');
-  
+
   const proyeccion = await obtenerProyeccionVigente(idProyeccion, ahoraCostaRica());
   if (!proyeccion) {
     throw new ErrorNoEncontrado('La función no existe o ya no está disponible');
   }
-  
+
   const [asientos, tiposBoleto] = await Promise.all([listarAsientos(idProyeccion), listarTiposBoleto()]);
 
   return { proyeccion, asientos, tiposBoleto: calcularPrecios(tiposBoleto, proyeccion[POSICION_MONTO_SALA]) };
@@ -179,8 +188,7 @@ export async function validarSeleccion(idProyeccion, datos) {
     throw new ErrorNoEncontrado('La función no existe o ya no está disponible');
   }
 
-  const tiposBoleto = calcularPrecios(await listarTiposBoleto(), proyeccion[POSICION_MONTO_SALA]);
-  const precios = new Map(tiposBoleto.map(([idTipoBoleto, , precio]) => [idTipoBoleto, precio]));
+  const precios = mapaPrecios(await listarTiposBoleto(), proyeccion[POSICION_MONTO_SALA]);
   if (!boletos.every(({ idTipoBoleto }) => precios.has(idTipoBoleto))) {
     throw new ErrorValidacion('El tipo de boleto no es válido');
   }

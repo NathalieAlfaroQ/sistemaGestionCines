@@ -25,6 +25,7 @@ const {
   consultarHorarios,
   consultarPelicula,
   calcularPrecios,
+  mapaPrecios,
   verificarSeleccion,
 } = await import('../../src/servicios/servicioReserva.js');
 
@@ -156,6 +157,14 @@ describe('SCRUM-93 servicioReserva: calcularPrecios', () => {
       [1, 'Adulto', 3333],
       [2, 'Niño', 2666],
     ]);
+  });
+});
+
+describe('SCRUM-93 servicioReserva: mapaPrecios', () => {
+  it('da por id el monto a cobrar y el descuento en colones', () => {
+    const precios = mapaPrecios([[1, 'Adulto', 0], [2, 'Niño', 20]], 3300);
+    expect(precios.get(1)).toEqual({ monto: 3300, descuento: 0 });
+    expect(precios.get(2)).toEqual({ monto: 2640, descuento: 660 });
   });
 });
 
