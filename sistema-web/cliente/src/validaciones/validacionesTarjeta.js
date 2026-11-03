@@ -1,12 +1,15 @@
 import { hoyCostaRica } from '../utilidades/fechas.js';
 import { MENSAJE_OBLIGATORIO } from './validacionesPelicula.js';
 
-// Validaciones del formulario de tarjeta. Son las mismas que ONVO revisa antes de registrar
+// Validaciones del formulario de tarjeta. Son las mismas que ONVO revisa
 
 // Solo letras sin tilde, mayúsculas o minúsculas, la ñ y espacios entre palabras
 const PATRON_TITULAR = /^[A-Za-zÑñ ]+$/;
 const PATRON_VENCIMIENTO = /^(\d{2})\/(\d{2})$/;
-const LARGO_MAXIMO_TITULAR = 100;
+
+// Largos máximos de los campos del formulario de tarjeta, según base de datos
+export const LARGOS_TARJETA = { titular: 26, numero: 23, vencimiento: 5, cvv: 4 };
+const LARGO_MAXIMO_TITULAR = LARGOS_TARJETA.titular;
 
 // Amex empieza con 34 o 37 y usa CVV de 4 dígitos; las demás marcas, de 3
 function esAmex(numero) {
@@ -64,7 +67,7 @@ function validarVencimiento(vencimiento) {
 function validarCvv(cvv, numero) {
   if (cvv === '') return MENSAJE_OBLIGATORIO;
   const largo = esAmex(soloDigitos(numero)) ? 4 : 3;
-  if (!new RegExp(String.raw`\^\d{${largo}}\$`).test(cvv)) return `El CVV debe tener ${largo} dígitos`;
+  if (!new RegExp(String.raw`^\d{${largo}}$`).test(cvv)) return `El CVV debe tener ${largo} dígitos`;
   return null;
 }
 
@@ -92,7 +95,6 @@ export function datosTarjeta(formulario) {
   };
 }
 
-// Formatos mientras se escribe: '4242424242424242' -> '4242 4242 4242 4242', '1230' -> '12/30'
 export function formatearNumeroTarjeta(texto) {
   return soloDigitos(texto)
     .slice(0, 19)
