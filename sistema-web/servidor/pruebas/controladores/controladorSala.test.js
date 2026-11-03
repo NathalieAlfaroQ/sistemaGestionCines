@@ -7,12 +7,14 @@ vi.mock('../../src/servicios/servicioSala.js', () => ({
   obtenerDistribuciones: vi.fn(),
   registrarSala: vi.fn(),
   desactivarSala: vi.fn(),
+  modificarSala: vi.fn(),
   obtenerSala: vi.fn(),
 }))
 
 import * as servicio from '../../src/servicios/servicioSala.js'
 import {
   crearSala,
+  editarSala,
   eliminarSala,
   listarDistribuciones,
   listarFormatos,
@@ -267,5 +269,44 @@ describe('verSala', () => {
 
     expect(res.status).toHaveBeenCalledWith(500)
     expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudo obtener la sala' })
+  })
+})
+
+describe('editarSala', () => {
+  const body = { nombre: 'Sala VIP 2', idTipo: 2, idFormato: 1 }
+
+  it('responde con el id de la sala editada y pasa el id y los datos al servicio', async () => {
+    servicio.modificarSala.mockResolvedValue(undefined)
+    const res = crearRes()
+
+    await editarSala({ params: { id: '7' }, body }, res)
+
+    expect(servicio.modificarSala).toHaveBeenCalledWith('7', body)
+    expect(res.json).toHaveBeenCalledWith({ idSala: 7 })
+  })
+
+  it.each([
+    ['ErrorValidacion', new ErrorValidacion('El nombre es obligatorio'), 400, 'El nombre es obligatorio'],
+    ['ErrorNoEncontrado', new ErrorNoEncontrado('La sala no existe o ya fue eliminada'), 404, 'La sala no existe o ya fue eliminada'],
+    ['ErrorConflicto', new ErrorConflicto('Ya existe una sala con ese nombre en este cine'), 409, 'Ya existe una sala con ese nombre en este cine'],
+  ])('responde con el código de un %s', async (_nombre, error, codigo, mensaje) => {
+    servicio.modificarSala.mockRejectedValue(error)
+    const res = crearRes()
+
+    await editarSala({ params: { id: '7' }, body }, res)
+
+    expect(res.status).toHaveBeenCalledWith(codigo)
+    expect(res.json).toHaveBeenCalledWith({ mensaje })
+  })
+
+  it('responde 500 genérico ante un error inesperado, sin exponer el detalle', async () => {
+    servicio.modificarSala.mockRejectedValue(new Error('ORA-03113 detalle interno'))
+    const res = crearRes()
+
+    await editarSala({ params: { id: '7' }, body }, res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(res.json).toHaveBeenCalledWith({ mensaje: 'No se pudo editar la sala' })
+    expect(console.error).toHaveBeenCalled()
   })
 })

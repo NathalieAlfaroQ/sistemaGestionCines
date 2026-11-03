@@ -7,6 +7,7 @@ import { ejecutar, ejecutarTransaccion } from '../../src/configuracion/baseDatos
 import {
   crearSalaConAsientos,
   desactivarSala,
+  actualizarSala,
   existeNombreSala,
   existeSedeActiva,
   listarDistribuciones,
@@ -185,10 +186,43 @@ describe('consultas para crear una sala', () => {
     const [sql, parametros] = ejecutar.mock.calls[0]
     expect(sql).toContain('ESTADO_SALA = 1')
     expect(sql).toContain('UPPER(NOMBRE_SALA) = UPPER(:nombre)')
-    expect(parametros).toEqual({ idSede: 3, nombre: 'Sala 1' })
+    expect(parametros).toEqual({ idSede: 3, nombre: 'Sala 1', idSalaExcluida: null })
 
     ejecutar.mockResolvedValue({ rows: [] })
     expect(await existeNombreSala({ idSede: 3, nombre: 'Sala 2' })).toBe(false)
+  })
+})
+
+describe('existeNombreSala al editar', () => {
+  it('no cuenta la propia sala: envía su id para excluirla', async () => {
+    ejecutar.mockResolvedValue({ rows: [] })
+
+    expect(await existeNombreSala({ idSede: 3, nombre: 'Sala 1', idSalaExcluida: 7 })).toBe(false)
+    const [sql, parametros] = ejecutar.mock.calls[0]
+    expect(sql).toContain('ID_SALA <> :idSalaExcluida')
+    expect(parametros).toEqual({ idSede: 3, nombre: 'Sala 1', idSalaExcluida: 7 })
+  })
+})
+
+describe('actualizarSala', () => {
+  const datos = { idSala: 7, nombre: 'Sala Nueva', idTipo: 2, idFormato: 1, monto: 3000 }
+
+  it('actualiza solo nombre, tipo, formato y monto de una sala activa', async () => {
+    ejecutar.mockResolvedValue({ rowsAffected: 1 })
+
+    expect(await actualizarSala(datos)).toBe(true)
+    const [sql, parametros] = ejecutar.mock.calls[0]
+    expect(sql).toContain('UPDATE SALAS')
+    expect(sql).toContain('ESTADO_SALA = 1')
+    expect(sql).not.toContain('ID_SEDE')
+    expect(sql).not.toContain('ID_DISTRIBUCION')
+    expect(parametros).toEqual(datos)
+  })
+
+  it('devuelve false si la sala no existe o está eliminada', async () => {
+    ejecutar.mockResolvedValue({ rowsAffected: 0 })
+
+    expect(await actualizarSala(datos)).toBe(false)
   })
 })
 
