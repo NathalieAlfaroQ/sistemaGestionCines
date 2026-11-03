@@ -17,6 +17,7 @@ import { manejadorErrores } from './middlewares/manejadorErrores.js'
 import { verificarAutenticacion } from './middlewares/autenticacion.js'
 import { autorizarRoles } from './middlewares/autorizacion.js'
 import rutasGoogle from './rutas/rutasGoogle.js'
+import rutasCompra from './rutas/rutasCompra.js'
 
 dotenv.config()
 
@@ -51,6 +52,7 @@ app.use('/api/ubicaciones', verificarAutenticacion, autorizarRoles('ADMINISTRADO
 app.use('/api/catalogo', verificarAutenticacion, soloPersonal, rutasCatalogo);
 app.use('/api/peliculas',verificarAutenticacion, soloPersonal ,rutasPelicula);
 app.use('/api/reserva', rutasReserva);
+app.use('/api/compras', verificarAutenticacion, autorizarRoles('CLIENTE'), rutasCompra);
 app.use('/api/crear-cuenta', crearCuenta)
 app.use('/api/iniciar-sesion', iniciarSesion)
 app.use('/api/recuperar-contrasena', recuperarContrasena)
