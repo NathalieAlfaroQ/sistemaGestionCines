@@ -18,7 +18,19 @@ export function validarCorreo(valor) {
   return '';
 }
 
+export const validarContrasenaFuerte = (valor) => {  
+  // Mínimo 12 caracteres, 1 mayúscula, 1 minúscula, 1 número, 1 especial
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#*?\-$%_])[A-Za-z\d@#*?\-$%_]{12,}$/;
+  
+  if (!regex.test(valor)) {
+    return 'Requisitos mínimos: 12 caracteres, una mayúscula, una minúscula, un número y un carácter especial (@, #, *, ?, -, $, %, _)';
+  }
+
+  return '';
+};
+
 export const MENSAJES_ERROR = {
   CREDENCIALES: 'X Credenciales inválidas',
   SERVIDOR: 'Error al cargar la pantalla, intenta luego.',
+  NO_COINCIDEN: 'Contraseñas no coinciden'
 };

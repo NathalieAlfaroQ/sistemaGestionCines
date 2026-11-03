@@ -40,14 +40,25 @@ router.post('/', async (req, res) => {
       return res.status(401).json({ error: 'X Credenciales inválidas' })
     }
 
-    const esTemporal = fechaVencimiento !== null && fechaVencimiento !== undefined
 
-    if (esTemporal) {
+    // Lógica de vencimiento
+    let esTemporal = false
+
+    if (fechaVencimiento) {
       const ahora = new Date()
       const vence = new Date(fechaVencimiento)
-
+      
       if (ahora > vence) {
-        return res.status(403).json({ error: 'X Credenciales inválidas' })
+        return res.status(403).json({ error: 'Credenciales inválidas' })
+      }
+
+      // Calculamos la diferencia en minutos
+      const diferenciaMinutos = (vence.getTime() - ahora.getTime()) / 1000 / 60
+
+      // Si la fecha de vencimiento es en menos de 25 minutos, es temporal.
+      // Si es mayor (ej. 90 días), es una contraseña personalizada.
+      if (diferenciaMinutos <= 25) {
+        esTemporal = true
       }
     }
 

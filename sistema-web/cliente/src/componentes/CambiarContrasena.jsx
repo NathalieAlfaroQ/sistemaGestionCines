@@ -1,55 +1,81 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import aurora from '../assets/aurora.jpg'
 import '../estilos/CambiarContrasena.css'
+import { validarContrasenaFuerte, MENSAJES_ERROR } from '../validaciones/validaciones'
 
 export default function CambiarContrasena() {
   const navigate = useNavigate()
   const usuarioGuardado = JSON.parse(sessionStorage.getItem('usuario') || 'null')
   const correoInicial = usuarioGuardado?.correo || ''
-  const esTemporal = usuarioGuardado?.contrasenaTemporal === true
-
   const [form, setForm] = useState({
-    contrasenaTemporal: '',
     contrasenaNueva: '',
     confirmar: ''
   })
-
+  
+  const [verNueva, setVerNueva] = useState(false)
+  const [verConfirmar, setVerConfirmar] = useState(false)
+  const [errores, setErrores] = useState({ contrasenaNueva: '', confirmar: '' })
+  const [tocado, setTocado] = useState({ contrasenaNueva: false, confirmar: false })
+  const [errorGlobal, setErrorGlobal] = useState(null)
+  const [mensajeExito, setMensajeExito] = useState(null)
   const [cargando, setCargando] = useState(false)
-  const [mensaje, setMensaje] = useState(null)
+
+  useEffect(() => {
+    let errNueva = ''
+    if (tocado.contrasenaNueva) {
+      errNueva = validarContrasenaFuerte(form.contrasenaNueva)
+    }
+
+    let errConf = ''
+    if (tocado.confirmar) {
+      if (!form.confirmar) {
+        errConf = MENSAJES_ERROR.ESPACIO
+      } else if (form.confirmar !== form.contrasenaNueva) {
+        errConf = MENSAJES_ERROR.NO_COINCIDEN
+      }
+    }
+
+    setErrores({ contrasenaNueva: errNueva, confirmar: errConf })
+  }, [form, tocado])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
+    setErrorGlobal(null)
+    setMensajeExito(null)
+  }
+
+  const handleBlur = (e) => {
+    setTocado({ ...tocado, [e.target.name]: true })
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setMensaje(null)
+    setErrorGlobal(null)
+    setMensajeExito(null)
 
-    if (!form.contrasenaTemporal || !form.contrasenaNueva || !form.confirmar) {
-      setMensaje({ tipo: 'error', texto: 'Todos los campos son obligatorios' })
-      return
-    }
+    setTocado({ contrasenaNueva: true, confirmar: true })
 
-    if (form.contrasenaNueva !== form.confirmar) {
-      setMensaje({ tipo: 'error', texto: 'Las contraseñas nuevas no coinciden' })
-      return
-    }
+    const hayErrores = Object.values(errores).some((error) => error !== '')
+    const hayVacios = !form.contrasenaNueva || !form.confirmar
 
-    if (form.contrasenaNueva.length < 6) {
-      setMensaje({ tipo: 'error', texto: 'La nueva contraseña debe tener al menos 6 caracteres' })
+    if (hayErrores || hayVacios) {
+      if (hayVacios) {
+        setErrores({
+          contrasenaNueva: !form.contrasenaNueva ? MENSAJES_ERROR.ESPACIO : errores.contrasenaNueva,
+          confirmar: !form.confirmar ? MENSAJES_ERROR.ESPACIO : errores.confirmar
+        })
+      }
       return
     }
 
     setCargando(true)
-
     try {
       const res = await fetch('/api/cambiar-contrasena', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           correo: correoInicial,
-          contrasenaTemporal: form.contrasenaTemporal,
           contrasenaNueva: form.contrasenaNueva
         })
       })
@@ -57,33 +83,27 @@ export default function CambiarContrasena() {
       const data = await res.json()
 
       if (!res.ok) {
-        setMensaje({ tipo: 'error', texto: data.error || 'Error al cambiar la contraseña' })
+        setErrorGlobal(data.error || MENSAJES_ERROR.SERVIDOR)
         return
       }
 
-      setMensaje({ tipo: 'ok', texto: 'Contraseña actualizada. Redirigiendo...' })
-
+      setMensajeExito('Contraseña actualizada')
+      
       if (usuarioGuardado) {
         usuarioGuardado.contrasenaTemporal = false
         sessionStorage.setItem('usuario', JSON.stringify(usuarioGuardado))
       }
 
       setTimeout(() => {
-        if (esTemporal) {
-          // Primera vez inicia sesion
-          const tipo = usuarioGuardado?.tipoUsuario
-
-          if (tipo === 'ADMINISTRADOR' || tipo === 'EMPLEADO') 
-            navigate('/peliculas')
-          else 
-            navigate('/')
-
+        if (usuarioGuardado?.tipoUsuario === 'ADMINISTRADOR' || usuarioGuardado?.tipoUsuario === 'EMPLEADO') {
+          navigate('/peliculas')
         } else {
-          navigate('/perfil')
+          navigate('/')
         }
       }, 1500)
+      
     } catch {
-      setMensaje({ tipo: 'error', texto: 'No se pudo conectar con el servidor' })
+      setErrorGlobal(MENSAJES_ERROR.SERVIDOR)
     } finally {
       setCargando(false)
     }
@@ -92,63 +112,71 @@ export default function CambiarContrasena() {
   return (
     <div className="cambiar-container">
       <div className="panel-izquierdo">
-
-        <h1 className="titulo-app">Cines Aurora</h1>
-        <h2 className="titulo-pantalla">Cambiar Contraseña</h2>
+        
+        <div className="header-formulario">
+          <h1 className="titulo-app">Cines Aurora</h1>
+          <h2 className="titulo-pantalla">Cambiar Contraseña</h2>
+        </div>
 
         <form onSubmit={handleSubmit} className="form-cambiar" noValidate>
-         
+          
           <label className="campo">
-            <span>
-              {esTemporal ? 'Contraseña temporal' : 'Contraseña actual'}
-            </span>
-
-            <input
-              type="password"
-              name="contrasenaTemporal"
-              value={form.contrasenaTemporal}
-              onChange={handleChange}
-              autoComplete="current-password"
-            />
+            <span>Contraseña nueva <span className="asterisco-rojo">*</span></span>
+            <div className="input-con-icono">
+              <input
+                type={verNueva ? "text" : "password"}
+                name="contrasenaNueva"
+                value={form.contrasenaNueva}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                autoComplete="new-password"
+              />
+              <button type="button" className="boton-ojo" onClick={() => setVerNueva(!verNueva)} tabIndex="-1">
+                {verNueva ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
+            {errores.contrasenaNueva && <p className="error-texto">{errores.contrasenaNueva}</p>}
           </label>
 
           <label className="campo">
-            <span>Contraseña nueva</span>
-
-            <input
-              type="password"
-              name="contrasenaNueva"
-              value={form.contrasenaNueva}
-              onChange={handleChange}
-              autoComplete="new-password"
-            />
+            <span>Confirmar contraseña <span className="asterisco-rojo">*</span></span>
+            <div className="input-con-icono">
+              <input
+                type={verConfirmar ? "text" : "password"}
+                name="confirmar"
+                value={form.confirmar}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                autoComplete="new-password"
+              />
+              <button type="button" className="boton-ojo" onClick={() => setVerConfirmar(!verConfirmar)} tabIndex="-1">
+                {verConfirmar ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
+            {errores.confirmar && <p className="error-texto">{errores.confirmar}</p>}
           </label>
 
-          <label className="campo">
-            <span>Confirmar contraseña</span>
+          {errorGlobal && (
+            <p className="error-texto" style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '8px' }}>
+              {errorGlobal}
+            </p>
+          )}
 
-            <input
-              type="password"
-              name="confirmar"
-              value={form.confirmar}
-              onChange={handleChange}
-              autoComplete="new-password"
-            />
-          </label>
+          {mensajeExito && (
+            <p className="exito-texto">
+              {mensajeExito}
+            </p>
+          )}
+
+          <p className="obligatorio-texto">* Espacio obligatorio</p>
 
           <button type="submit" className="boton-guardar" disabled={cargando}>
-            {cargando ? 'Guardando...' : 'Guardar'}
+            {cargando ? 'Guardando...' : 'Cambiar'}
           </button>
-
-          {mensaje && (
-            <p className={`mensaje ${mensaje.tipo}`}>{mensaje.texto}</p>
-          )}
         </form>
       </div>
-      <div
-        className="panel-derecho"
-        style={{ backgroundImage: `url(${aurora})` }}
-      />
+
+      <div className="panel-derecho" style={{ backgroundImage: `url(${aurora})` }} />
     </div>
   )
 }
