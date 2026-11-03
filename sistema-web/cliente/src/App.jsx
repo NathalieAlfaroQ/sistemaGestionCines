@@ -25,6 +25,7 @@ import Perfil from './componentes/Perfil'
 // Compra de boletos (SCRUM-93)
 import HorariosPelicula from './paginas/HorariosPelicula.jsx'
 import SeleccionAsientos from './paginas/SeleccionAsientos.jsx'
+import Pago from './paginas/Pago.jsx'
 // Barra de navegación y pie de página comunes
 import BarraCliente from './common/BarraCliente.jsx'
 import PiePagina from './common/PiePagina.jsx'
@@ -67,6 +68,11 @@ function App() {
           <Route path="/cambiar-contrasena" element={<CambiarContrasena />} />
         </Route>
 
+        {/* Pago de boletos: solo clientes */}
+        <Route element={<RutaProtegida rolesPermitidos={['CLIENTE']} />}>
+          <Route path="/pago" element={<Pago />} />
+        </Route>
+
         {/* Rutas de trabajo: solo personal */}
         <Route element={<RutaProtegida rolesPermitidos={['EMPLEADO', 'ADMINISTRADOR']} />}>
           <Route element={<DisenoGestion />}>
@@ -88,7 +94,6 @@ function App() {
         <Route path="/cartelera" element={<div>Cartelera</div>} />
         <Route path="/cartelera/:idPelicula" element={<HorariosPelicula />} />
         <Route path="/funciones/:idProyeccion/asientos" element={<SeleccionAsientos />} />
-        <Route path="/pago" element={<div>Pago</div>} />
         <Route path="/terminos" element={<TerminosCondiciones />} />
 
         {/* Rutas de trabajo que aún no tienen componente, quedan como placeholder */}
