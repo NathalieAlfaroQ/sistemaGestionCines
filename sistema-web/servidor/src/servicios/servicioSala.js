@@ -15,24 +15,12 @@ import {
 import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
+import { estadoDeFiltro, exigirObjeto, idDeFiltro, idObligatorio } from '../utilidades/validaciones.js';
 
 const ESTADOS_SALA = { activas: 1, eliminadas: 0, todas: null };
 
-function idDeFiltro(valor, nombreCampo) {
-  if (valor === undefined || valor === null || valor === '') return null;
-
-  const id = Number(valor);
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new ErrorValidacion(`El filtro de ${nombreCampo} no es válido`);
-  }
-  return id;
-}
-
 export async function obtenerSalas({ busqueda, idSede, idTipo, idFormato, estado = 'activas' } = {}) {
-  if (!Object.hasOwn(ESTADOS_SALA, estado)) {
-    throw new ErrorValidacion('El filtro de estado no es válido');
-  }
-
+  const idEstado = estadoDeFiltro(estado, ESTADOS_SALA);
   const texto = typeof busqueda === 'string' ? busqueda.trim() : '';
 
   return await listarSalas({
@@ -40,7 +28,7 @@ export async function obtenerSalas({ busqueda, idSede, idTipo, idFormato, estado
     idSede: idDeFiltro(idSede, 'cine'),
     idTipo: idDeFiltro(idTipo, 'tipo'),
     idFormato: idDeFiltro(idFormato, 'formato'),
-    estado: ESTADOS_SALA[estado],
+    estado: idEstado,
   });
 }
 
@@ -82,18 +70,8 @@ export function generarAsientos(filas, columnas) {
   return asientos;
 }
 
-function idObligatorio(valor, mensaje) {
-  const id = Number(valor);
-  if (valor === undefined || valor === null || valor === '' || !Number.isInteger(id) || id <= 0) {
-    throw new ErrorValidacion(mensaje);
-  }
-  return id;
-}
-
 function validarDatosSala(datos) {
-  if (datos === null || typeof datos !== 'object' || Array.isArray(datos)) {
-    throw new ErrorValidacion('Los datos de la sala no son válidos');
-  }
+  exigirObjeto(datos, 'Los datos de la sala no son válidos');
 
   const nombre = typeof datos.nombre === 'string' ? datos.nombre.trim().replaceAll(/\s+/g, ' ') : '';
   if (nombre === '') throw new ErrorValidacion('El nombre es obligatorio');
@@ -114,7 +92,7 @@ function validarDatosSala(datos) {
   };
 }
 
-// El monto de la sala no lo digita el usuario, se calcula con el del tipo más el del formato
+// El monto de la sala no lo digita el usuario: es el precio del tipo más el del formato
 export async function registrarSala(datos) {
   const sala = validarDatosSala(datos);
 
@@ -143,11 +121,7 @@ export async function registrarSala(datos) {
 }
 
 export async function desactivarSala(idSala) {
-  const id = Number(idSala);
-
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new ErrorValidacion('El identificador de la sala no es válido');
-  }
+  const id = idObligatorio(idSala, 'El identificador de la sala no es válido');
 
   if (!(await desactivarSalaEnRepositorio(id))) {
     throw new ErrorNoEncontrado('La sala no existe o ya fue eliminada');
@@ -155,11 +129,7 @@ export async function desactivarSala(idSala) {
 }
 
 export async function obtenerSala(idSala) {
-  const id = Number(idSala);
-
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new ErrorValidacion('El identificador de la sala no es válido');
-  }
+  const id = idObligatorio(idSala, 'El identificador de la sala no es válido');
 
   const sala = await obtenerSalaEnRepositorio(id);
   if (!sala) {

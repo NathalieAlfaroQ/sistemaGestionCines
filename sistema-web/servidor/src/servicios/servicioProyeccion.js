@@ -10,21 +10,12 @@ import {
 import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
+import { estadoDeFiltro, exigirObjeto, idDeFiltro, idObligatorio } from '../utilidades/validaciones.js';
 
 const ESTADOS_PROYECCION = { activas: 1, eliminadas: 0, todas: null };
 
 const PATRON_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
 const PATRON_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-function idDeFiltro(valor, nombreCampo) {
-  if (valor === undefined || valor === null || valor === '') return null;
-
-  const id = Number(valor);
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new ErrorValidacion(`El filtro de ${nombreCampo} no es válido`);
-  }
-  return id;
-}
 
 // Acepta solo AAAA-MM-DD y que el día exista (rechaza 2026-02-30)
 function esFechaReal(valor) {
@@ -59,10 +50,7 @@ export async function obtenerProyecciones({
   hora,
   estado = 'activas',
 } = {}) {
-  if (!Object.hasOwn(ESTADOS_PROYECCION, estado)) {
-    throw new ErrorValidacion('El filtro de estado no es válido');
-  }
-
+  const idEstado = estadoDeFiltro(estado, ESTADOS_PROYECCION);
   const texto = typeof busqueda === 'string' ? busqueda.trim() : '';
 
   return await listarProyecciones({
@@ -72,7 +60,7 @@ export async function obtenerProyecciones({
     idSede: idDeFiltro(idSede, 'cine'),
     fecha: fechaDeFiltro(fecha),
     hora: horaDeFiltro(hora),
-    estado: ESTADOS_PROYECCION[estado],
+    estado: idEstado,
   });
 }
 
@@ -87,18 +75,8 @@ const formateadorCostaRica = new Intl.DateTimeFormat('sv-SE', {
   hourCycle: 'h23',
 });
 
-function idObligatorio(valor, mensaje) {
-  const id = Number(valor);
-  if (valor === undefined || valor === null || valor === '' || !Number.isInteger(id) || id <= 0) {
-    throw new ErrorValidacion(mensaje);
-  }
-  return id;
-}
-
 function validarDatosProyeccion(datos) {
-  if (datos === null || typeof datos !== 'object' || Array.isArray(datos)) {
-    throw new ErrorValidacion('Los datos de la proyección no son válidos');
-  }
+  exigirObjeto(datos, 'Los datos de la proyección no son válidos');
 
   const idPelicula = idObligatorio(datos.idPelicula, 'La película es obligatoria');
   const idSala = idObligatorio(datos.idSala, 'La sala es obligatoria');
@@ -113,13 +91,7 @@ function validarDatosProyeccion(datos) {
 }
 
 function validarIdProyeccion(idProyeccion) {
-  const id = Number(idProyeccion);
-
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new ErrorValidacion('El identificador de la proyección no es válido');
-  }
-
-  return id;
+  return idObligatorio(idProyeccion, 'El identificador de la proyección no es válido');
 }
 
 async function validarProgramacion({ idPelicula, idSala, fechaHora }, idExcluida = null) {

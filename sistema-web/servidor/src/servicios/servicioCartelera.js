@@ -1,5 +1,5 @@
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
-import { ErrorValidacion } from '../errores/ErrorValidacion.js';
+import { idObligatorio } from '../utilidades/validaciones.js';
 import { existeSedeActiva, listarCartelera, listarSedesActivas } from '../repositorios/repositorioCartelera.js';
 import { obtenerUrlImagen } from './almacenamientoImagenes.js';
 
@@ -21,11 +21,7 @@ export async function consultarSedes() {
 }
 
 export async function consultarCartelera(idSede, ahora = ahoraCostaRica()) {
-  const id = Number(idSede);
-
-  if (idSede === undefined || idSede === null || idSede === '' || !Number.isInteger(id) || id <= 0) {
-    throw new ErrorValidacion('El id de sede no es válido');
-  }
+  const id = idObligatorio(idSede, 'El id de sede no es válido');
 
   if (!(await existeSedeActiva(id))) {
     throw new ErrorNoEncontrado('La sede no existe');
