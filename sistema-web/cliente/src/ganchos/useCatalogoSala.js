@@ -7,9 +7,12 @@ export function useCatalogoSala() {
   const [formatos, setFormatos] = useState([]);
   const [distribuciones, setDistribuciones] = useState([]);
   const [error, setError] = useState(null);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     async function cargar() {
+      setError(null);
+
       try {
         const [listaTipos, listaFormatos, listaDistribuciones] = await Promise.all([
           obtenerTiposSala(),
@@ -21,12 +24,16 @@ export function useCatalogoSala() {
         setDistribuciones(listaDistribuciones);
       } catch (error) {
         console.error('No se pudieron cargar los catálogos de sala:', error);
-        setError(error.message);
+        setError(error);
       }
     }
 
     void cargar();
-  }, []);
+  }, [version]);
 
-  return { tipos, formatos, distribuciones, error };
+  function recargar() {
+    setVersion((anterior) => anterior + 1);
+  }
+
+  return { tipos, formatos, distribuciones, error, recargar };
 }

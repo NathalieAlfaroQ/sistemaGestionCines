@@ -6,14 +6,14 @@ import { generarAsientos } from '../utilidades/asientos.js';
 import { formatearColones } from '../utilidades/formatearColones.js';
 import CampoSoloLectura from '../componentes/CampoSoloLectura.jsx';
 import MapaAsientos from '../componentes/MapaAsientos.jsx';
-import MensajeError from '../common/MensajeError.jsx';
+import ErrorCarga from '../componentes/ErrorCarga.jsx';
 
 const claseBotonVolver = 'flex items-center gap-2 rounded-lg bg-brand-soft px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-soft-hover';
 
 function VerSala() {
   const navegar = useNavigate();
   const { id } = useParams();
-  const { sala, cargando, error } = useSala(id);
+  const { sala, cargando, error, recargar } = useSala(id);
 
   const filas = sala?.[POS.filas];
   const columnas = sala?.[POS.columnas];
@@ -30,7 +30,7 @@ function VerSala() {
         <h1 className="mb-8 text-4xl font-bold">Ver sala</h1>
 
         {cargando && <p className="text-text-muted">Cargando sala...</p>}
-        <MensajeError mensaje={error} className="mt-0 mb-6" />
+        <ErrorCarga error={error} alReintentar={recargar} className="mb-6" />
 
         {sala && (
           <div className="flex flex-col gap-10">

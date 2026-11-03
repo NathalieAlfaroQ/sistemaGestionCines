@@ -32,7 +32,7 @@ function useCarga(consultar) {
 
     consultar()
       .then((datos) => vigente && setEstado({ datos, cargando: false, error: null }))
-      .catch((error) => vigente && setEstado({ datos: SIN_DATOS, cargando: false, error: error.message }));
+      .catch((error) => vigente && setEstado({ datos: SIN_DATOS, cargando: false, error }));
 
     return () => {
       vigente = false;

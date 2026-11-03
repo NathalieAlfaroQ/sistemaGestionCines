@@ -5,6 +5,7 @@ import { POS_SEDE, ESTADO_SEDE } from '../constantes/posicionesSede.js';
 import { useUbicaciones } from '../ganchos/useUbicaciones.js';
 import { POS_PROVINCIA, POS_CANTON } from '../constantes/posicionesUbicacion.js';
 import Tabla from '../common/Tabla.jsx';
+import ErrorCarga from '../componentes/ErrorCarga.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import CrearSede from '../componentes/CrearSede.jsx';
 import EditarSede from '../componentes/EditarSede.jsx';
@@ -136,7 +137,7 @@ function Sedes() {
         />
 
         {cargando && <p className="mb-4 text-text-muted">Cargando sedes...</p>}
-        {error && <p className="mb-4 text-danger">{error}</p>}
+        <ErrorCarga error={error} alReintentar={recargar} className="mb-4" />
 
         {/* */}
         <Tabla

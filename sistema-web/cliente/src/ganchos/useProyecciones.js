@@ -26,7 +26,7 @@ export function useProyecciones({
         const datos = await obtenerProyecciones({ busqueda, idPelicula, idSala, idSede, fecha, hora, estado });
         if (!cancelado) setProyecciones(datos);
       } catch (error) {
-        if (!cancelado) setError(error.message);
+        if (!cancelado) setError(error);
       } finally {
         if (!cancelado) setCargando(false);
       }

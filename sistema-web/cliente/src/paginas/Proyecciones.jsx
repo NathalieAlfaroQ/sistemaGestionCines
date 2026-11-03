@@ -12,6 +12,7 @@ import { POS_SEDE } from '../constantes/posicionesSede.js';
 import { formatearHora } from '../utilidades/fechas.js';
 import { formatearFecha } from '../utilidades/formatearFecha.js';
 import Tabla from '../common/Tabla.jsx';
+import ErrorCarga from '../componentes/ErrorCarga.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import CrearProyeccion from '../componentes/CrearProyeccion.jsx';
 import EditarProyeccion from '../componentes/EditarProyeccion.jsx';
@@ -44,12 +45,17 @@ function Proyecciones() {
     estado: filtros.estado,
   });
 
-  const { peliculas, error: errorPeliculas } = usePeliculas();
-  const { salas, error: errorSalas } = useSalas({ idSede: filtros.idSede, estado: 'activas' });
-  const { sedes, error: errorSedes } = useSedes({ estado: 'activas' });
+  const { peliculas, error: errorPeliculas, recargar: recargarPeliculas } = usePeliculas();
+  const { salas, error: errorSalas, recargar: recargarSalas } = useSalas({ idSede: filtros.idSede, estado: 'activas' });
+  const { sedes, error: errorSedes, recargar: recargarSedes } = useSedes({ estado: 'activas' });
   const errorCatalogo = errorPeliculas || errorSalas || errorSedes;
   const notificaciones = useNotificaciones();
 
+  function recargarCatalogo() {
+    if (errorPeliculas) recargarPeliculas();
+    if (errorSalas) recargarSalas();
+    if (errorSedes) recargarSedes();
+  }
   const salasDelCine = filtros.idSede === '' ? [] : salas;
 
   function cambiarFiltros(nuevosFiltros) {
@@ -182,8 +188,8 @@ function Proyecciones() {
         />
 
         {cargando && <p className="mb-4 text-text-muted">Cargando proyecciones...</p>}
-        {error && <p className="mb-4 text-warning">{error}</p>}
-        {errorCatalogo && <p className="mb-4 text-warning">{errorCatalogo}</p>}
+        <ErrorCarga error={error} alReintentar={recargar} className="mb-4" />
+        <ErrorCarga error={errorCatalogo} alReintentar={recargarCatalogo} className="mb-4" />
 
         <Tabla
           columnas={columnas}

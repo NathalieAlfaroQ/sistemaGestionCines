@@ -3,9 +3,9 @@ import { POS_PELICULA_CARTELERA as POS_PELICULA, POS_SEDE_CARTELERA as POS_SEDE 
 import CarruselPeliculas from '../componentes/CarruselPeliculas.jsx';
 import TarjetaPelicula from '../componentes/TarjetaPelicula.jsx';
 import ContenedorCliente from '../componentes/ContenedorCliente.jsx';
+import ErrorCarga from '../componentes/ErrorCarga.jsx';
 
 const claseSelector = 'rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-color focus:border-brand-soft focus:ring-brand-soft';
-const claseReintentar = 'rounded-md bg-brand px-4 py-2 text-sm text-text-color hover:bg-brand-hover';
 
 function Eslogan() {
   return (
@@ -24,14 +24,7 @@ function Inicio() {
 
   function contenidoCartelera() {
     if (error) {
-      return (
-        <div role="alert" className="flex flex-wrap items-center gap-4 rounded-lg border border-danger bg-surface px-6 py-4">
-          <p className="flex-1 text-danger">{error}</p>
-          <button type="button" onClick={recargar} className={claseReintentar}>
-            Reintentar
-          </button>
-        </div>
-      );
+      return <ErrorCarga error={error} alReintentar={recargar} />;
     }
     if (cargando) return <p className="text-text-color">Cargando cartelera...</p>;
     if (sedes.length === 0) return <p className="text-text-color">No hay cines disponibles por el momento.</p>;

@@ -7,6 +7,7 @@ import { useDebounce } from '../ganchos/useDebounce.js';
 import { POS_SALA, POS_CATALOGO_SALA, ESTADO_SALA } from '../constantes/posicionesSala.js';
 import { POS_SEDE } from '../constantes/posicionesSede.js';
 import Tabla from '../common/Tabla.jsx';
+import ErrorCarga from '../componentes/ErrorCarga.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import { eliminarSala } from '../servicios/servicioSalas.js';
 import { useNotificaciones } from '../ganchos/useNotificaciones.js';
@@ -36,7 +37,7 @@ function Salas() {
     estado: filtros.estado,
   });
   const { sedes } = useSedes({ estado: 'activas' });
-  const { tipos, formatos, error: errorCatalogo } = useCatalogoSala();
+  const { tipos, formatos, error: errorCatalogo, recargar: recargarCatalogo } = useCatalogoSala();
   const notificaciones = useNotificaciones();
 
   const opcionesDe = (lista) =>
@@ -136,8 +137,8 @@ function Salas() {
         />
 
         {cargando && <p className="mb-4 text-text-muted">Cargando salas...</p>}
-        {error && <p className="mb-4 text-warning">{error}</p>}
-        {errorCatalogo && <p className="mb-4 text-warning">{errorCatalogo}</p>}
+        <ErrorCarga error={error} alReintentar={recargar} className="mb-4" />
+        <ErrorCarga error={errorCatalogo} alReintentar={recargarCatalogo} className="mb-4" />
 
         <Tabla
           columnas={columnas}

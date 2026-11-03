@@ -10,6 +10,7 @@ import { formatearColones } from '../utilidades/formatearColones.js';
 import CampoSoloLectura from './CampoSoloLectura.jsx';
 import MapaAsientos from './MapaAsientos.jsx';
 import MensajeError from '../common/MensajeError.jsx';
+import ErrorCarga from './ErrorCarga.jsx';
 
 const claseEtiqueta = 'mb-2 block text-sm text-text-color';
 const claseCampo = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
@@ -33,8 +34,13 @@ function FormularioSala({
   guardando = false,
   error = null,
 }) {
-  const { sedes, error: errorSedes } = useSedes({ estado: 'activas' });
-  const { tipos, formatos, distribuciones, error: errorCatalogo } = useCatalogoSala();
+  const { sedes, error: errorSedes, recargar: recargarSedes } = useSedes({ estado: 'activas' });
+  const { tipos, formatos, distribuciones, error: errorCatalogo, recargar: recargarCatalogo } = useCatalogoSala();
+
+  function reintentarCarga() {
+    if (errorSedes) recargarSedes();
+    if (errorCatalogo) recargarCatalogo();
+  }
 
   const {
     formulario,
@@ -84,7 +90,7 @@ function FormularioSala({
 
   return (
     <form onSubmit={manejarEnvio} noValidate className="flex flex-col gap-10">
-      {(errorSedes || errorCatalogo) && <p className="text-warning">{errorSedes || errorCatalogo}</p>}
+      <ErrorCarga error={errorSedes || errorCatalogo} alReintentar={reintentarCarga} />
 
       <div className="grid gap-x-12 gap-y-6 md:grid-cols-2">
         <div className="flex flex-col gap-6">

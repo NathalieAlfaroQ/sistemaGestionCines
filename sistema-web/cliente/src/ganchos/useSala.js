@@ -5,6 +5,7 @@ export function useSala(idSala) {
   const [sala, setSala] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let vigente = true;
@@ -17,7 +18,7 @@ export function useSala(idSala) {
         const datos = await obtenerSala(idSala);
         if (vigente) setSala(datos);
       } catch (error) {
-        if (vigente) setError(error.message);
+        if (vigente) setError(error);
       } finally {
         if (vigente) setCargando(false);
       }
@@ -28,7 +29,11 @@ export function useSala(idSala) {
     return () => {
       vigente = false;
     };
-  }, [idSala]);
+  }, [idSala, version]);
 
-  return { sala, cargando, error };
+  function recargar() {
+    setVersion((anterior) => anterior + 1);
+  }
+
+  return { sala, cargando, error, recargar };
 }

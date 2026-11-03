@@ -9,6 +9,7 @@ import { POS_SEDE } from '../constantes/posicionesSede.js';
 import { HORAS, MINUTOS, fechaATexto, hoyParaCalendario, horaATexto } from '../validaciones/validacionesProyeccion.js';
 import { temaCalendario } from '../temas/temaCalendario.js';
 import MensajeError from '../common/MensajeError.jsx';
+import ErrorCarga from './ErrorCarga.jsx';
 
 const claseEtiqueta = 'mb-2 block text-sm text-text-color';
 const claseDesplegable = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
@@ -42,9 +43,16 @@ function FormularioProyeccion({
   } = useFormularioProyeccion(valorInicial);
 
   // Solo se pueden programar películas, cines y salas activos
-  const { peliculas } = usePeliculas();
-  const { sedes } = useSedes({ estado: 'activas' });
-  const { salas } = useSalas({ idSede: formulario.idSede, estado: 'activas' });
+  const { peliculas, error: errorPeliculas, recargar: recargarPeliculas } = usePeliculas();
+  const { sedes, error: errorSedes, recargar: recargarSedes } = useSedes({ estado: 'activas' });
+  const { salas, error: errorSalas, recargar: recargarSalas } = useSalas({ idSede: formulario.idSede, estado: 'activas' });
+  const errorCarga = errorPeliculas || errorSedes || errorSalas;
+
+  function reintentarCarga() {
+    if (errorPeliculas) recargarPeliculas();
+    if (errorSedes) recargarSedes();
+    if (errorSalas) recargarSalas();
+  }
   const salasDisponibles = formulario.idSede === '' ? [] : salas;
 
   const errorPelicula = errorVisible('idPelicula');
@@ -67,6 +75,12 @@ function FormularioProyeccion({
 
   return (
     <form onSubmit={manejarEnvio} className="grid grid-cols-2 gap-x-4 gap-y-6">
+      {errorCarga && (
+        <div className="col-span-2">
+          <ErrorCarga error={errorCarga} alReintentar={reintentarCarga} />
+        </div>
+      )}
+
       <div className="col-span-2">
         <label htmlFor="pelicula" className={claseEtiqueta}>
           Película <Asterisco />
