@@ -21,6 +21,8 @@ const PATRON_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 // Regla de negocio: toda película en un idioma distinto del español se proyecta subtitulada al español.
 const IDIOMA_LOCAL = 'Español';
 
+const POSICION_MONTO_SALA = 6;
+
 function esSubtitulada(idiomas) {
   return idiomas.some((nombre) => nombre !== IDIOMA_LOCAL);
 }
@@ -112,14 +114,14 @@ function validarBoletos(boletos) {
 // Encabezado de la película que comparten las dos pantallas
 export async function consultarPelicula(idPelicula) {
   validarId(idPelicula, 'la película');
-
+  
   const detalle = await obtenerPelicula(idPelicula, ahoraCostaRica());
   if (!detalle) {
     throw new ErrorNoEncontrado('La película no existe');
   }
-
+  
   const [id, titulo, duracion, clasificacion, sinopsis, clavePoster, claveBanner] = detalle.fila;
-
+  
   return {
     pelicula: [
       id,
@@ -139,25 +141,33 @@ export async function consultarPelicula(idPelicula) {
 // Horarios vigentes de la película en un día
 export async function consultarHorarios(idPelicula, fecha) {
   validarId(idPelicula, 'la película');
-
+  
   const ahora = ahoraCostaRica();
   const dia = validarFecha(fecha, ahora.slice(0, 10));
-
+  
   return await listarHorarios(idPelicula, dia, ahora);
+}
+
+export function calcularPrecios(tiposBoleto, montoSala) {
+  return tiposBoleto.map(([idTipoBoleto, nombre, descuento]) => [
+    idTipoBoleto,
+    nombre,
+    Math.round((montoSala * (100 - descuento)) / 100),
+  ]);
 }
 
 // Datos de la función, mapa de asientos y tipos de boleto
 export async function consultarAsientos(idProyeccion) {
   validarId(idProyeccion, 'la función');
-
+  
   const proyeccion = await obtenerProyeccionVigente(idProyeccion, ahoraCostaRica());
   if (!proyeccion) {
     throw new ErrorNoEncontrado('La función no existe o ya no está disponible');
   }
-
+  
   const [asientos, tiposBoleto] = await Promise.all([listarAsientos(idProyeccion), listarTiposBoleto()]);
 
-  return { proyeccion, asientos, tiposBoleto };
+  return { proyeccion, asientos, tiposBoleto: calcularPrecios(tiposBoleto, proyeccion[POSICION_MONTO_SALA]) };
 }
 
 // Confirma que la selección se puede comprar en este momento.
@@ -181,7 +191,7 @@ export async function verificarSeleccion(idProyeccion, datos) {
     throw new ErrorNoEncontrado('La función no existe o ya no está disponible');
   }
 
-  const tiposBoleto = await listarTiposBoleto();
+  const tiposBoleto = calcularPrecios(await listarTiposBoleto(), proyeccion[POSICION_MONTO_SALA]);
   const precios = new Map(tiposBoleto.map(([idTipoBoleto, , precio]) => [idTipoBoleto, precio]));
   if (!boletos.every(({ idTipoBoleto }) => precios.has(idTipoBoleto))) {
     throw new ErrorValidacion('El tipo de boleto no es válido');

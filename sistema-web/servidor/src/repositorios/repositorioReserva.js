@@ -108,7 +108,7 @@ export async function listarHorarios(idPelicula, fecha, ahora) {
 
 const sqlProyeccionVigente = `
   SELECT p.ID_PROYECCION, p.ID_PELICULA, TO_CHAR(p.FECHA, 'YYYY-MM-DD HH24:MI') AS FECHA,
-    se.NOMBRE_SEDE, s.NOMBRE_SALA, f.NOMBRE_FORMATO
+    se.NOMBRE_SEDE, s.NOMBRE_SALA, f.NOMBRE_FORMATO, s.MONTO
   ${desdeProyeccion}
   WHERE p.ID_PROYECCION = :idProyeccion AND ${condicionesVigente}
 `;
