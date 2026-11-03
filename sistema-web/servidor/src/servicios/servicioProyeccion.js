@@ -5,7 +5,9 @@ import {
   existeSalaActiva,
   hayChoqueDeHorario,
   listarProyecciones,
+  listarTareas,
   obtenerDuracionPelicula,
+  obtenerTareasDeProyeccion as obtenerTareasDeProyeccionEnRepositorio,
 } from '../repositorios/repositorioProyeccion.js';
 import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
@@ -16,6 +18,8 @@ const ESTADOS_PROYECCION = { activas: 1, eliminadas: 0, todas: null };
 
 const PATRON_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
 const PATRON_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const MINUTOS_TAREA_MAXIMO = 99999;
 
 // Acepta solo AAAA-MM-DD y que el día exista (rechaza 2026-02-30)
 function esFechaReal(valor) {
@@ -87,14 +91,48 @@ function validarDatosProyeccion(datos) {
   if (typeof datos.hora !== 'string' || datos.hora === '') throw new ErrorValidacion('La hora es obligatoria');
   if (!PATRON_HORA.test(datos.hora)) throw new ErrorValidacion('La hora no es válida');
 
-  return { idPelicula, idSala, fechaHora: `${datos.fecha} ${datos.hora}` };
+  return { idPelicula, idSala, fechaHora: `${datos.fecha} ${datos.hora}`, tareas: validarTareas(datos.tareas) };
+}
+
+function validarTareas(tareas) {
+  if (tareas === undefined || tareas === null) return [];
+  if (!Array.isArray(tareas)) throw new ErrorValidacion('Las tareas no son válidas');
+
+  const idsVistos = new Set();
+
+  return tareas.map((tarea) => {
+    exigirObjeto(tarea, 'Las tareas no son válidas');
+
+    const idTarea = idObligatorio(tarea.idTarea, 'La tarea es obligatoria');
+    const minutos = Number(tarea.minutos);
+
+    if (tarea.minutos === undefined || tarea.minutos === null || tarea.minutos === '' || !Number.isInteger(minutos)) {
+      throw new ErrorValidacion('Los minutos de la tarea son obligatorios');
+    }
+    if (minutos < 1 || minutos > MINUTOS_TAREA_MAXIMO) {
+      throw new ErrorValidacion(`Los minutos de la tarea deben estar entre 1 y ${MINUTOS_TAREA_MAXIMO}`);
+    }
+    if (idsVistos.has(idTarea)) throw new ErrorValidacion('No se puede repetir una tarea');
+    idsVistos.add(idTarea);
+
+    return { idTarea, minutos };
+  });
 }
 
 function validarIdProyeccion(idProyeccion) {
   return idObligatorio(idProyeccion, 'El identificador de la proyección no es válido');
 }
 
-async function validarProgramacion({ idPelicula, idSala, fechaHora }, idExcluida = null) {
+async function validarQueExistanLasTareas(tareas) {
+  if (tareas.length === 0) return;
+
+  const existentes = new Set((await listarTareas()).map((fila) => fila[0]));
+  if (tareas.some((tarea) => !existentes.has(tarea.idTarea))) {
+    throw new ErrorValidacion('Una de las tareas seleccionadas no existe');
+  }
+}
+
+async function validarProgramacion({ idPelicula, idSala, fechaHora, tareas }, idExcluida = null) {
   if (fechaHora <= formateadorCostaRica.format(new Date())) {
     throw new ErrorValidacion('La proyección debe ser posterior a la fecha y hora actuales');
   }
@@ -104,7 +142,11 @@ async function validarProgramacion({ idPelicula, idSala, fechaHora }, idExcluida
 
   if (!(await existeSalaActiva(idSala))) throw new ErrorValidacion('La sala seleccionada no existe');
 
-  if (await hayChoqueDeHorario({ idSala, fechaHora, duracion, idExcluida })) {
+  await validarQueExistanLasTareas(tareas);
+
+  const minutosDeTareas = tareas.reduce((total, tarea) => total + tarea.minutos, 0);
+
+  if (await hayChoqueDeHorario({ idSala, fechaHora, duracion: duracion + minutosDeTareas, idExcluida })) {
     throw new ErrorConflicto('La sala ya tiene una proyección en ese horario');
   }
 }
@@ -134,4 +176,12 @@ export async function desactivarProyeccion(idProyeccion) {
   if (!(await desactivarProyeccionEnRepositorio(id))) {
     throw new ErrorNoEncontrado('La proyección no existe o ya fue eliminada');
   }
+}
+
+export async function obtenerTareas() {
+  return await listarTareas();
+}
+
+export async function obtenerTareasDeProyeccion(idProyeccion) {
+  return await obtenerTareasDeProyeccionEnRepositorio(validarIdProyeccion(idProyeccion));
 }
