@@ -18,7 +18,7 @@ export function useSalas({ busqueda = '', idSede = '', idTipo = '', idFormato = 
         const datos = await obtenerSalas({ busqueda, idSede, idTipo, idFormato, estado });
         if (!cancelado) setSalas(datos);
       } catch (error) {
-        if (!cancelado) setError(error.message);
+        if (!cancelado) setError(error);
       } finally {
         if (!cancelado) setCargando(false);
       }

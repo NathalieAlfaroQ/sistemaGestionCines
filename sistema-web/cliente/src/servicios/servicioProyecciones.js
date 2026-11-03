@@ -1,4 +1,5 @@
 import { peticionApi } from './clienteApi.js';
+import { leerDatos } from './leerDatos.js';
 
 export async function obtenerProyecciones(filtros = {}) {
   const parametros = new URLSearchParams();
@@ -7,13 +8,10 @@ export async function obtenerProyecciones(filtros = {}) {
   });
 
   const consulta = parametros.toString();
-  const respuesta = await peticionApi(consulta ? `/api/proyecciones?${consulta}` : '/api/proyecciones');
-
-  if (!respuesta.ok) {
-    throw new Error('No se pudieron obtener las proyecciones');
-  }
-
-  return await respuesta.json();
+  return await leerDatos(
+    () => peticionApi(consulta ? `/api/proyecciones?${consulta}` : '/api/proyecciones'),
+    'No se pudieron obtener las proyecciones'
+  );
 }
 
 async function leerCuerpo(respuesta) {

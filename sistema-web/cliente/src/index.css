@@ -38,6 +38,12 @@
   --color-warning-hover: #e9b07c;
 }
 
+@layer base {
+  body {
+    background-color: var(--color-background);
+  }
+}
+
 
 input:-webkit-autofill,
 input:-webkit-autofill:hover,

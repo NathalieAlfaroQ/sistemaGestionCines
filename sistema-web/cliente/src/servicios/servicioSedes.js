@@ -1,4 +1,5 @@
 import { peticionApi } from './clienteApi.js';
+import { leerDatos } from './leerDatos.js';
 
 async function leerCuerpo(respuesta) {
   return await respuesta.json().catch(() => ({}));
@@ -11,13 +12,10 @@ export async function obtenerSedes(filtros = {}) {
   });
 
   const consulta = parametros.toString();
-  const respuesta = await fetch(consulta ? `/api/sedes?${consulta}` : '/api/sedes');
-
-  if (!respuesta.ok) {
-    throw new Error('No se pudieron obtener las sedes');
-  }
-
-  return await respuesta.json();
+  return await leerDatos(
+    () => peticionApi(consulta ? `/api/sedes?${consulta}` : '/api/sedes'),
+    'No se pudieron obtener las sedes'
+  );
 }
 
 export async function obtenerUbicaciones() {
@@ -47,7 +45,7 @@ export async function crearSede(sede) {
 }
 
 export async function editarSede(idSede, sede) {
-  const respuesta = await fetch(`/api/sedes/${idSede}`, {
+  const respuesta = await peticionApi(`/api/sedes/${idSede}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(sede),

@@ -4,6 +4,8 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import DisenoGestion from './common/DisenoGestion.jsx'
 import Sedes from './paginas/Sedes.jsx'
 import Salas from './paginas/Salas.jsx'
+import CrearSala from './paginas/CrearSala.jsx'
+import VerSala from './paginas/VerSala.jsx'
 import Proyecciones from './paginas/Proyecciones.jsx'
 import Peliculas from './paginas/Peliculas.jsx'
 import FormularioPelicula from './paginas/FormularioPelicula.jsx'
@@ -28,7 +30,7 @@ import BarraCliente from './common/BarraCliente.jsx'
 import PiePagina from './common/PiePagina.jsx'
 
 // Pantallas de cliente
-import Hero from './componentes/Hero'
+import Inicio from './paginas/Inicio.jsx'
 
 // Rutas que NO llevan navbar ni footer (pantallas públicas de auth)
 const rutasPublicas = [
@@ -74,6 +76,8 @@ function App() {
             <Route path="/peliculas/:id/editar" element={<EditarPelicula />} />
             <Route path="/sedes" element={<Sedes />} />
             <Route path="/salas" element={<Salas />} />
+            <Route path="/salas/nueva" element={<CrearSala />} />
+            <Route path="/salas/:id" element={<VerSala />} />
             <Route path="/proyecciones" element={<Proyecciones />} />
           </Route>
         </Route>
@@ -90,8 +94,8 @@ function App() {
         {/* Rutas de trabajo que aún no tienen componente, quedan como placeholder */}
         <Route path="/empleados" element={<div>Empleados</div>} />
 
-        {/* --- Home --- */}
-        <Route path="/" element={<Hero />} />
+        {/* --- Inicio y cartelera --- */}
+        <Route path="/" element={<Inicio />} />
       </Routes>
 
       {mostrarNavbarYFooter && <PiePagina />}

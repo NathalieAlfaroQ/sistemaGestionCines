@@ -10,11 +10,14 @@ import { POS_PELICULA } from '../constantes/posicionesPelicula.js';
 import { POS_SALA } from '../constantes/posicionesSala.js';
 import { POS_SEDE } from '../constantes/posicionesSede.js';
 import { formatearHora } from '../utilidades/fechas.js';
+import { formatearFecha } from '../utilidades/formatearFecha.js';
 import Tabla from '../common/Tabla.jsx';
-import Modal from '../common/Modal.jsx';
+import ErrorCarga from '../componentes/ErrorCarga.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import CrearProyeccion from '../componentes/CrearProyeccion.jsx';
 import EditarProyeccion from '../componentes/EditarProyeccion.jsx';
+import VerProyeccion from '../componentes/VerProyeccion.jsx';
+import { useNotificaciones } from '../ganchos/useNotificaciones.js';
 
 const OPCIONES_ESTADO = [
   { valor: 'activas', texto: 'Activas' },
@@ -26,13 +29,6 @@ const FILTROS_INICIALES = { idSede: '', idPelicula: '', fecha: '', hora: '', idS
 
 const claseBoton = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover';
 const claseBarraBusqueda = 'mb-4 w-85 rounded-lg border border-border bg-surface-clear px-4 py-2 text-black placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft';
-
-function verProyeccion() {
-  
-}
-
-// La API entrega la fecha como AAAA-MM-DD; se muestra como DD/MM/AAAA
-const formatearFecha = (fecha) => fecha.split('-').reverse().join('/');
 
 function Proyecciones() {
   const [busqueda, setBusqueda] = useState('');
@@ -49,10 +45,18 @@ function Proyecciones() {
     estado: filtros.estado,
   });
 
-  const { peliculas, error: errorPeliculas } = usePeliculas();
-  const { salas, error: errorSalas } = useSalas({ idSede: filtros.idSede, estado: 'activas' });
-  const { sedes, error: errorSedes } = useSedes({ estado: 'activas' });
+  const { peliculas, error: errorPeliculas, recargar: recargarPeliculas } = usePeliculas();
+  const { salas, error: errorSalas, recargar: recargarSalas } = useSalas({ idSede: filtros.idSede, estado: 'activas' });
+  const { sedes, error: errorSedes, recargar: recargarSedes } = useSedes({ estado: 'activas' });
   const errorCatalogo = errorPeliculas || errorSalas || errorSedes;
+  const notificaciones = useNotificaciones();
+
+  function recargarCatalogo() {
+    if (errorPeliculas) recargarPeliculas();
+    if (errorSalas) recargarSalas();
+    if (errorSedes) recargarSedes();
+  }
+  const salasDelCine = filtros.idSede === '' ? [] : salas;
 
   function cambiarFiltros(nuevosFiltros) {
     setFiltros(
@@ -95,7 +99,8 @@ function Proyecciones() {
       titulo: 'Hora',
       posicion: POS_PROYECCION.hora,
       formato: formatearHora,
-      filtro: { clave: 'hora', tipo: 'hora' },
+      // TODO: Filtro por hora, incompleto
+      // filtro: { clave: 'hora', tipo: 'hora' },
     },
     {
       titulo: 'Sala',
@@ -103,7 +108,8 @@ function Proyecciones() {
       filtro: {
         clave: 'idSala',
         tipo: 'seleccion',
-        opciones: salas.map((sala) => ({
+        deshabilitado: filtros.idSede === '',
+        opciones: salasDelCine.map((sala) => ({
           valor: String(sala[POS_SALA.id]),
           texto: sala[POS_SALA.nombre],
         })),
@@ -126,22 +132,18 @@ function Proyecciones() {
 
   const [proyeccionAEliminar, setProyeccionAEliminar] = useState(null);
   const [creando, setCreando] = useState(false);
+  const [proyeccionAVer, setProyeccionAVer] = useState(null);
   const [proyeccionAEditar, setProyeccionAEditar] = useState(null);
-  const [resultado, setResultado] = useState(null);
-
   function proyeccionCreada() {
     setCreando(false);
-    setResultado({ mensaje: 'Proyección creada con éxito', textoBoton: 'Continuar' });
-  }
-
-  function cerrarResultado() {
-    setResultado(null);
+    notificaciones.exito('Proyección creada con éxito');
     recargar();
   }
 
   function proyeccionEditada() {
     setProyeccionAEditar(null);
-    setResultado({ mensaje: 'Proyección modificada con éxito', textoBoton: 'Continuar' });
+    notificaciones.exito('Proyección modificada con éxito');
+    recargar();
   }
 
   async function confirmarEliminacion() {
@@ -150,10 +152,11 @@ function Proyecciones() {
 
     try {
       await eliminarProyeccion(proyeccion[POS_PROYECCION.id]);
-      setResultado({ mensaje: 'Proyección eliminada con éxito', textoBoton: 'Continuar' });
+      notificaciones.exito('Proyección eliminada con éxito');
     } catch (error) {
-      setResultado({ mensaje: error.message, textoBoton: 'Cerrar' });
+      notificaciones.error(error.message);
     }
+    recargar();
   }
 
   const proyeccionEliminada = (proyeccion) => proyeccion[POS_PROYECCION.estado] !== ESTADO_PROYECCION.activa;
@@ -161,11 +164,11 @@ function Proyecciones() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5 flex items-center gap-27">
+        <div className="mb-5 flex items-center gap-4">
           <h1 className="text-4xl font-bold">Proyecciones</h1>
 
           <button type="button" onClick={() => setCreando(true)} className={claseBoton}>
-            Crear proyección
+            Crear
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path
                 fillRule="evenodd"
@@ -185,8 +188,8 @@ function Proyecciones() {
         />
 
         {cargando && <p className="mb-4 text-text-muted">Cargando proyecciones...</p>}
-        {error && <p className="mb-4 text-warning">{error}</p>}
-        {errorCatalogo && <p className="mb-4 text-warning">{errorCatalogo}</p>}
+        <ErrorCarga error={error} alReintentar={recargar} className="mb-4" />
+        <ErrorCarga error={errorCatalogo} alReintentar={recargarCatalogo} className="mb-4" />
 
         <Tabla
           columnas={columnas}
@@ -195,7 +198,7 @@ function Proyecciones() {
           filtros={filtros}
           alCambiarFiltros={cambiarFiltros}
           textoVacio={cargando ? '' : textoVacio}
-          onVer={verProyeccion}
+          onVer={setProyeccionAVer}
           onEditar={setProyeccionAEditar}
           onEliminar={setProyeccionAEliminar}
           accionesDeshabilitadas={proyeccionEliminada}
@@ -204,6 +207,10 @@ function Proyecciones() {
 
       {creando && (
         <CrearProyeccion alCancelar={() => setCreando(false)} alCrear={proyeccionCreada} />
+      )}
+
+      {proyeccionAVer && (
+        <VerProyeccion proyeccion={proyeccionAVer} alCerrar={() => setProyeccionAVer(null)} />
       )}
 
       {proyeccionAEditar && (
@@ -222,13 +229,6 @@ function Proyecciones() {
           textoConfirmar="Eliminar"
           alConfirmar={confirmarEliminacion}
           alCancelar={() => setProyeccionAEliminar(null)}
-        />
-      )}
-
-      {resultado && (
-        <Modal
-          mensaje={resultado.mensaje}
-          botones={[{ texto: resultado.textoBoton, alPulsar: cerrarResultado }]}
         />
       )}
     </main>
