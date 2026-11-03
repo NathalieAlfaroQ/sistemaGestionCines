@@ -104,9 +104,18 @@ const sqlPrecioFormato = `SELECT PRECIO FROM FORMATOS WHERE ID_FORMATO = :idForm
 const sqlDistribucion = `SELECT FILAS, COLUMNAS FROM DISTRIBUCIONES_SALA WHERE ID_DISTRIBUCION = :idDistribucion`;
 const sqlExisteSedeActiva = `SELECT 1 FROM SEDES WHERE ID_SEDE = :idSede AND ESTADO_SEDE = 1`;
 
+// El nombre no se repite entre las salas activas del mismo cine (al editar, sin contar la propia sala)
 const sqlExisteNombreSala = `
   SELECT 1 FROM SALAS
   WHERE ID_SEDE = :idSede AND ESTADO_SALA = 1 AND UPPER(NOMBRE_SALA) = UPPER(:nombre)
+    AND (:idSalaExcluida IS NULL OR ID_SALA <> :idSalaExcluida)
+`;
+
+// Solo se pueden cambiar el nombre, el tipo y el formato (y con ellos el monto); el cine y la distribución no
+const sqlActualizarSala = `
+  UPDATE SALAS
+  SET NOMBRE_SALA = :nombre, ID_TIPO = :idTipo, ID_FORMATO = :idFormato, MONTO = :monto
+  WHERE ID_SALA = :idSala AND ESTADO_SALA = 1
 `;
 
 const sqlCrearSala = `
@@ -117,16 +126,19 @@ const sqlCrearSala = `
 
 const sqlCrearAsiento = `INSERT INTO ASIENTOS (ID_SALA, FILA, NUMERO) VALUES (:idSala, :fila, :numero)`;
 
+// Devuelve el precio, o null si el tipo no existe
 export async function obtenerPrecioTipo(idTipo) {
   const resultado = await ejecutar(sqlPrecioTipo, { idTipo });
   return resultado.rows[0]?.[0] ?? null;
 }
 
+// Devuelve el precio, o null si el formato no existe
 export async function obtenerPrecioFormato(idFormato) {
   const resultado = await ejecutar(sqlPrecioFormato, { idFormato });
   return resultado.rows[0]?.[0] ?? null;
 }
 
+// Devuelve [filas, columnas], o null si la distribución no existe
 export async function obtenerDistribucion(idDistribucion) {
   const resultado = await ejecutar(sqlDistribucion, { idDistribucion });
   return resultado.rows[0] ?? null;
@@ -137,11 +149,18 @@ export async function existeSedeActiva(idSede) {
   return resultado.rows.length > 0;
 }
 
-export async function existeNombreSala({ idSede, nombre }) {
-  const resultado = await ejecutar(sqlExisteNombreSala, { idSede, nombre });
+export async function existeNombreSala({ idSede, nombre, idSalaExcluida = null }) {
+  const resultado = await ejecutar(sqlExisteNombreSala, { idSede, nombre, idSalaExcluida });
   return resultado.rows.length > 0;
 }
 
+// Devuelve true si se actualizó una sala activa, o false si no existe o está eliminada
+export async function actualizarSala({ idSala, nombre, idTipo, idFormato, monto }) {
+  const resultado = await ejecutar(sqlActualizarSala, { idSala, nombre, idTipo, idFormato, monto });
+  return resultado.rowsAffected > 0;
+}
+
+// Crea la sala y todos sus asientos en una sola transacción: si algo falla, no queda nada a medias
 export async function crearSalaConAsientos({ idSede, idTipo, idFormato, idDistribucion, nombre, monto, asientos }) {
   return await ejecutarTransaccion(async (conexion) => {
     const resultado = await conexion.execute(sqlCrearSala, {

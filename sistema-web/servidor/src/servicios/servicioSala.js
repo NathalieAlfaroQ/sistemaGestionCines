@@ -1,4 +1,5 @@
 import {
+  actualizarSala,
   crearSalaConAsientos,
   desactivarSala as desactivarSalaEnRepositorio,
   existeNombreSala,
@@ -16,6 +17,14 @@ import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 import { estadoDeFiltro, exigirObjeto, idDeFiltro, idObligatorio } from '../utilidades/validaciones.js';
+
+const MENSAJE_NOMBRE_REPETIDO = 'Ya existe una sala con ese nombre en este cine';
+const MENSAJE_SALA_NO_EXISTE = 'La sala no existe o ya fue eliminada';
+
+// Posiciones en la fila que devuelve obtenerSala (ver sqlObtenerSala)
+const POS_ID_SEDE = 2;
+const POS_ESTADO_SALA = 14;
+const ESTADO_SALA_ACTIVA = 1;
 
 const ESTADOS_SALA = { activas: 1, eliminadas: 0, todas: null };
 
@@ -49,6 +58,7 @@ export const NOMBRE_SALA_MAXIMO = 20;
 
 const PATRON_NOMBRE_SALA = /^[\p{L}\d]+(?: [\p{L}\d]+)*$/u;
 
+// Las filas se nombran A, B, ... Z, AA, AB, ...
 export function nombreFila(indice) {
   let numero = indice + 1;
   let nombre = '';
@@ -60,6 +70,7 @@ export function nombreFila(indice) {
   return nombre;
 }
 
+// Asientos de una sala rectangular: filas A, B, ... con los números 1, 2, ... en cada una
 export function generarAsientos(filas, columnas) {
   const asientos = [];
   for (let fila = 0; fila < filas; fila++) {
@@ -70,7 +81,8 @@ export function generarAsientos(filas, columnas) {
   return asientos;
 }
 
-function validarDatosSala(datos) {
+// Nombre, tipo y formato: los datos que se piden al crear y que también se pueden editar
+function validarDatosEditables(datos) {
   exigirObjeto(datos, 'Los datos de la sala no son válidos');
 
   const nombre = typeof datos.nombre === 'string' ? datos.nombre.trim().replaceAll(/\s+/g, ' ') : '';
@@ -85,46 +97,79 @@ function validarDatosSala(datos) {
 
   return {
     nombre,
-    idSede: idObligatorio(datos.idSede, 'El cine es obligatorio'),
     idTipo: idObligatorio(datos.idTipo, 'El tipo es obligatorio'),
     idFormato: idObligatorio(datos.idFormato, 'El formato es obligatorio'),
+  };
+}
+
+function validarDatosSala(datos) {
+  const editables = validarDatosEditables(datos);
+
+  return {
+    ...editables,
+    idSede: idObligatorio(datos.idSede, 'El cine es obligatorio'),
     idDistribucion: idObligatorio(datos.idDistribucion, 'La distribución es obligatoria'),
   };
 }
 
 // El monto de la sala no lo digita el usuario: es el precio del tipo más el del formato
+async function calcularMonto(idTipo, idFormato) {
+  const precioTipo = await obtenerPrecioTipo(idTipo);
+  if (precioTipo === null) throw new ErrorValidacion('El tipo de sala seleccionado no existe');
+
+  const precioFormato = await obtenerPrecioFormato(idFormato);
+  if (precioFormato === null) throw new ErrorValidacion('El formato seleccionado no existe');
+
+  return precioTipo + precioFormato;
+}
+
 export async function registrarSala(datos) {
   const sala = validarDatosSala(datos);
 
   if (!(await existeSedeActiva(sala.idSede))) throw new ErrorValidacion('El cine seleccionado no existe');
 
-  const precioTipo = await obtenerPrecioTipo(sala.idTipo);
-  if (precioTipo === null) throw new ErrorValidacion('El tipo de sala seleccionado no existe');
-
-  const precioFormato = await obtenerPrecioFormato(sala.idFormato);
-  if (precioFormato === null) throw new ErrorValidacion('El formato seleccionado no existe');
+  const monto = await calcularMonto(sala.idTipo, sala.idFormato);
 
   const distribucion = await obtenerDistribucion(sala.idDistribucion);
   if (distribucion === null) throw new ErrorValidacion('La distribución seleccionada no existe');
 
   if (await existeNombreSala({ idSede: sala.idSede, nombre: sala.nombre })) {
-    throw new ErrorConflicto('Ya existe una sala con ese nombre en este cine');
+    throw new ErrorConflicto(MENSAJE_NOMBRE_REPETIDO);
   }
 
   const [filas, columnas] = distribucion;
 
   return await crearSalaConAsientos({
     ...sala,
-    monto: precioTipo + precioFormato,
+    monto,
     asientos: generarAsientos(filas, columnas),
   });
+}
+
+// Solo se editan el nombre, el tipo y el formato; el cine y la distribución se quedan como estaban
+export async function modificarSala(idSala, datos) {
+  const id = idObligatorio(idSala, 'El identificador de la sala no es válido');
+  const { nombre, idTipo, idFormato } = validarDatosEditables(datos);
+
+  const sala = await obtenerSalaEnRepositorio(id);
+  if (!sala || sala[POS_ESTADO_SALA] !== ESTADO_SALA_ACTIVA) throw new ErrorNoEncontrado(MENSAJE_SALA_NO_EXISTE);
+
+  const monto = await calcularMonto(idTipo, idFormato);
+
+  if (await existeNombreSala({ idSede: sala[POS_ID_SEDE], nombre, idSalaExcluida: id })) {
+    throw new ErrorConflicto(MENSAJE_NOMBRE_REPETIDO);
+  }
+
+  if (!(await actualizarSala({ idSala: id, nombre, idTipo, idFormato, monto }))) {
+    throw new ErrorNoEncontrado(MENSAJE_SALA_NO_EXISTE);
+  }
 }
 
 export async function desactivarSala(idSala) {
   const id = idObligatorio(idSala, 'El identificador de la sala no es válido');
 
   if (!(await desactivarSalaEnRepositorio(id))) {
-    throw new ErrorNoEncontrado('La sala no existe o ya fue eliminada');
+    throw new ErrorNoEncontrado(MENSAJE_SALA_NO_EXISTE);
   }
 }
 
