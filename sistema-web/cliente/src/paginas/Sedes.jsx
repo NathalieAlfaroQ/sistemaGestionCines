@@ -5,11 +5,11 @@ import { POS_SEDE, ESTADO_SEDE } from '../constantes/posicionesSede.js';
 import { useUbicaciones } from '../ganchos/useUbicaciones.js';
 import { POS_PROVINCIA, POS_CANTON } from '../constantes/posicionesUbicacion.js';
 import Tabla from '../common/Tabla.jsx';
-import Modal from '../common/Modal.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import CrearSede from '../componentes/CrearSede.jsx';
 import EditarSede from '../componentes/EditarSede.jsx';
 import { eliminarSede } from '../servicios/servicioSedes.js';
+import { useNotificaciones } from '../ganchos/useNotificaciones.js';
 
 const OPCIONES_ESTADO = [
   { valor: 'activas', texto: 'Activas' },
@@ -82,7 +82,7 @@ function Sedes() {
   const [sedeAEliminar, setSedeAEliminar] = useState(null);
   const [creando, setCreando] = useState(false);
   const [sedeAEditar, setSedeAEditar] = useState(null);
-  const [resultado, setResultado] = useState(null);
+  const notificaciones = useNotificaciones();
 
   async function confirmarEliminacion() {
     const sede = sedeAEliminar;
@@ -90,24 +90,22 @@ function Sedes() {
 
     try {
       await eliminarSede(sede[POS_SEDE.id]);
-      setResultado({ mensaje: 'Sede eliminada con éxito', textoBoton: 'Continuar' });
+      notificaciones.exito('Sede eliminada con éxito');
     } catch (error) {
-      setResultado({ mensaje: error.message, textoBoton: 'Cerrar' });
+      notificaciones.error(error.message);
     }
+    recargar();
   }
 
   function sedeCreada() {
     setCreando(false);
-    setResultado({ mensaje: 'Sede creada con éxito', textoBoton: 'Continuar' });
+    notificaciones.exito('Sede creada con éxito');
+    recargar();
   }
 
   function sedeEditada() {
     setSedeAEditar(null);
-    setResultado({ mensaje: 'Sede modificada con éxito', textoBoton: 'Continuar' });
-  }
-
-  function cerrarResultado() {
-    setResultado(null);
+    notificaciones.exito('Sede modificada con éxito');
     recargar();
   }
 
@@ -174,13 +172,6 @@ function Sedes() {
           textoConfirmar="Eliminar"
           alConfirmar={confirmarEliminacion}
           alCancelar={() => setSedeAEliminar(null)}
-        />
-      )}
-
-      {resultado && (
-        <Modal
-          mensaje={resultado.mensaje}
-          botones={[{ texto: resultado.textoBoton, alPulsar: cerrarResultado }]}
         />
       )}
     </main>

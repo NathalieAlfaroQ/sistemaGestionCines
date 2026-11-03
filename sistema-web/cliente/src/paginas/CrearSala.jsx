@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { crearSala } from '../servicios/servicioSalas.js';
 import FormularioSala from '../componentes/FormularioSala.jsx';
-import Modal from '../common/Modal.jsx';
+import { useNotificaciones } from '../ganchos/useNotificaciones.js';
 
 function CrearSala() {
   const navegar = useNavigate();
+  const { exito } = useNotificaciones();
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
-  const [creada, setCreada] = useState(false);
 
   async function guardar(sala) {
     setGuardando(true);
@@ -16,7 +16,8 @@ function CrearSala() {
 
     try {
       await crearSala(sala);
-      setCreada(true);
+      exito('Sala creada con éxito');
+      navegar('/salas');
     } catch (error) {
       setError(error.message);
     } finally {
@@ -38,13 +39,6 @@ function CrearSala() {
           error={error}
         />
       </div>
-
-      {creada && (
-        <Modal
-          mensaje="Sala creada con éxito"
-          botones={[{ texto: 'Continuar', alPulsar: volverALista }]}
-        />
-      )}
     </main>
   );
 }

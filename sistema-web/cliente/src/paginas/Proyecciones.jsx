@@ -12,11 +12,11 @@ import { POS_SEDE } from '../constantes/posicionesSede.js';
 import { formatearHora } from '../utilidades/fechas.js';
 import { formatearFecha } from '../utilidades/formatearFecha.js';
 import Tabla from '../common/Tabla.jsx';
-import Modal from '../common/Modal.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import CrearProyeccion from '../componentes/CrearProyeccion.jsx';
 import EditarProyeccion from '../componentes/EditarProyeccion.jsx';
 import VerProyeccion from '../componentes/VerProyeccion.jsx';
+import { useNotificaciones } from '../ganchos/useNotificaciones.js';
 
 const OPCIONES_ESTADO = [
   { valor: 'activas', texto: 'Activas' },
@@ -48,6 +48,8 @@ function Proyecciones() {
   const { salas, error: errorSalas } = useSalas({ idSede: filtros.idSede, estado: 'activas' });
   const { sedes, error: errorSedes } = useSedes({ estado: 'activas' });
   const errorCatalogo = errorPeliculas || errorSalas || errorSedes;
+  const notificaciones = useNotificaciones();
+
   const salasDelCine = filtros.idSede === '' ? [] : salas;
 
   function cambiarFiltros(nuevosFiltros) {
@@ -126,21 +128,16 @@ function Proyecciones() {
   const [creando, setCreando] = useState(false);
   const [proyeccionAVer, setProyeccionAVer] = useState(null);
   const [proyeccionAEditar, setProyeccionAEditar] = useState(null);
-  const [resultado, setResultado] = useState(null);
-
   function proyeccionCreada() {
     setCreando(false);
-    setResultado({ mensaje: 'Proyección creada con éxito', textoBoton: 'Continuar' });
-  }
-
-  function cerrarResultado() {
-    setResultado(null);
+    notificaciones.exito('Proyección creada con éxito');
     recargar();
   }
 
   function proyeccionEditada() {
     setProyeccionAEditar(null);
-    setResultado({ mensaje: 'Proyección modificada con éxito', textoBoton: 'Continuar' });
+    notificaciones.exito('Proyección modificada con éxito');
+    recargar();
   }
 
   async function confirmarEliminacion() {
@@ -149,10 +146,11 @@ function Proyecciones() {
 
     try {
       await eliminarProyeccion(proyeccion[POS_PROYECCION.id]);
-      setResultado({ mensaje: 'Proyección eliminada con éxito', textoBoton: 'Continuar' });
+      notificaciones.exito('Proyección eliminada con éxito');
     } catch (error) {
-      setResultado({ mensaje: error.message, textoBoton: 'Cerrar' });
+      notificaciones.error(error.message);
     }
+    recargar();
   }
 
   const proyeccionEliminada = (proyeccion) => proyeccion[POS_PROYECCION.estado] !== ESTADO_PROYECCION.activa;
@@ -160,11 +158,11 @@ function Proyecciones() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5 flex items-center gap-27">
+        <div className="mb-5 flex items-center gap-4">
           <h1 className="text-4xl font-bold">Proyecciones</h1>
 
           <button type="button" onClick={() => setCreando(true)} className={claseBoton}>
-            Crear proyección
+            Crear
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path
                 fillRule="evenodd"
@@ -225,13 +223,6 @@ function Proyecciones() {
           textoConfirmar="Eliminar"
           alConfirmar={confirmarEliminacion}
           alCancelar={() => setProyeccionAEliminar(null)}
-        />
-      )}
-
-      {resultado && (
-        <Modal
-          mensaje={resultado.mensaje}
-          botones={[{ texto: resultado.textoBoton, alPulsar: cerrarResultado }]}
         />
       )}
     </main>

@@ -7,9 +7,9 @@ import { useDebounce } from '../ganchos/useDebounce.js';
 import { POS_SALA, POS_CATALOGO_SALA, ESTADO_SALA } from '../constantes/posicionesSala.js';
 import { POS_SEDE } from '../constantes/posicionesSede.js';
 import Tabla from '../common/Tabla.jsx';
-import Modal from '../common/Modal.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import { eliminarSala } from '../servicios/servicioSalas.js';
+import { useNotificaciones } from '../ganchos/useNotificaciones.js';
 
 const OPCIONES_ESTADO = [
   { valor: 'activas', texto: 'Activas' },
@@ -37,6 +37,7 @@ function Salas() {
   });
   const { sedes } = useSedes({ estado: 'activas' });
   const { tipos, formatos, error: errorCatalogo } = useCatalogoSala();
+  const notificaciones = useNotificaciones();
 
   const opcionesDe = (lista) =>
     lista.map((fila) => ({
@@ -93,22 +94,16 @@ function Salas() {
   function editarSala() {}
 
   const [salaAEliminar, setSalaAEliminar] = useState(null);
-  const [resultado, setResultado] = useState(null);
-
   async function confirmarEliminacion() {
     const sala = salaAEliminar;
     setSalaAEliminar(null);
 
     try {
       await eliminarSala(sala[POS_SALA.id]);
-      setResultado({ mensaje: 'Sala eliminada con éxito', textoBoton: 'Continuar' });
+      notificaciones.exito('Sala eliminada con éxito');
     } catch (error) {
-      setResultado({ mensaje: error.message, textoBoton: 'Cerrar' });
+      notificaciones.error(error.message);
     }
-  }
-
-  function cerrarResultado() {
-    setResultado(null);
     recargar();
   }
 
@@ -117,7 +112,7 @@ function Salas() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5 flex items-center gap-38"> 
+        <div className="mb-5 flex items-center gap-38">
           <h1 className="text-4xl font-bold">Salas</h1>
 
           <button type="button" onClick={() => navegar('/salas/nueva')} className={claseBoton}>
@@ -166,13 +161,6 @@ function Salas() {
           textoConfirmar="Eliminar"
           alConfirmar={confirmarEliminacion}
           alCancelar={() => setSalaAEliminar(null)}
-        />
-      )}
-
-      {resultado && (
-        <Modal
-          mensaje={resultado.mensaje}
-          botones={[{ texto: resultado.textoBoton, alPulsar: cerrarResultado }]}
         />
       )}
     </main>
