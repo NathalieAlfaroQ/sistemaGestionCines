@@ -1,36 +1,39 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-export function useConsulta(consultar) {
-  const [datos, setDatos] = useState(null);
+export function useConsulta(pedir, dependencias, valorInicial) {
+  const [datos, setDatos] = useState(valorInicial);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
-    let cancelado = false;
+    let vigente = true;
 
     async function cargar() {
       setCargando(true);
       setError(null);
 
       try {
-        const resultado = await consultar();
-        if (!cancelado) setDatos(resultado);
-      } catch (error_) {
-        if (!cancelado) setError(error_);
+        const respuesta = await pedir();
+        if (vigente) setDatos(respuesta);
+      } catch (error) {
+        if (vigente) setError(error);
       } finally {
-        if (!cancelado) setCargando(false);
+        if (vigente) setCargando(false);
       }
     }
 
     void cargar();
 
     return () => {
-      cancelado = true;
+      vigente = false;
     };
-  }, [consultar, version]);
 
-  const recargar = useCallback(() => setVersion((anterior) => anterior + 1), []);
+  }, [...dependencias, version]);
+
+  function recargar() {
+    setVersion((anterior) => anterior + 1);
+  }
 
   return { datos, cargando, error, recargar };
 }

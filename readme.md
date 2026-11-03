@@ -55,10 +55,9 @@ sistema-web/
 
 - Un usuario y esquema propio en la base de datos Oracle del proyecto.
 - El Wallet de la base de datos, junto con la contraseña con la que fue descargado.
-
-- La Wallet de la base de datos junto con la contraseña con la que fue descargado.
-
 - Proyecto de google para autenticación de terceros
+- Llaves de prueba de la cuenta de ONVO del equipo (pago con tarjeta).
+- Datos de una cuenta de correo SMTP para enviar correos (contraseña temporal y comprobantes de compra).
 
 
 ## Configuración de la base de datos
@@ -71,6 +70,8 @@ Cada integrante desarrolla sobre su propio esquema, para que las pruebas y los e
 
 3. Los ID's se generan automáticamente (`IDENTITY`), por lo que **no** se envían en los `INSERT`. Las únicas excepciones son `PROVINCIAS` y `CANTONES`, donde el ID puede indicarse manualmente.
 El script solo crea la estructura, no incluye datos.
+
+4. Ejecuta `sistema-web/servidor/baseDatos/cambios_pago.sql` (ver [Pago con tarjeta](#pago-con-tarjeta-onvo)). Se puede ejecutar varias veces: solo aplica lo que falta.
 
 
 
@@ -178,10 +179,98 @@ Google solo acepta como origen autorizado `http://localhost` o un dominio con HT
 | `401` | La credencial no es válida, expiró, es de otra aplicación o el correo no está verificado. |
 
 
-### Nunca subir al repositorio
+## Pago con tarjeta (ONVO)
+
+Los clientes pagan sus boletos con tarjeta de crédito o débito a través de [ONVO](https://docs.onvopay.com), una pasarela de pagos costarricense. El proyecto usa la cuenta del equipo en **modo de prueba**: los pagos son reales a nivel técnico, pero no se mueve dinero.
+
+El flujo de una compra es:
+
+1. El navegador registra la tarjeta **directo en ONVO** con la llave publicable y recibe un id de método de pago. El número y el CVV **nunca** pasan por nuestro servidor.
+2. El cliente envía ese id al servidor (`POST /api/compras`), que vuelve a validar la selección y calcula el total.
+3. El servidor guarda la factura y sus boletos **sin confirmar** la transacción, cobra en ONVO y solo entonces confirma. Si el asiento ya se vendió, la compra se detiene **antes** de cobrar. Si algo falla después de cobrar, se reembolsa.
+4. Con la compra guardada, se envía el comprobante por correo: un PDF con un código QR por boleto. Si el correo falla, la compra sigue siendo válida y el cliente puede descargar los boletos en pantalla.
+
+Solo los **clientes** pueden comprar. Si el cliente lo pide, la tarjeta se guarda para compras futuras (en `METODOS_PAGO_CLIENTE` se guarda el id que da ONVO, la marca y los últimos 4 dígitos, nunca el número completo).
+
+### Configuración local del pago (cada integrante)
+
+1. **Llaves de ONVO.** Pídelas al equipo por un canal privado. Usa solo llaves de prueba (empiezan con `onvo_test_`); nunca las `onvo_live_`.
+
+2. **Correo.** El servidor necesita las variables `SMTP_*` para enviar los comprobantes (son las mismas del correo de la contraseña temporal).
+
+3. **Variables de entorno** (los modelos están en los `.env.example`):
+
+```env
+   # servidor/.env
+   ONVO_LLAVE_SECRETA=onvo_test_secret_key_...
+   SMTP_HOST=<servidor SMTP>
+   SMTP_PORT=587
+   SMTP_USER=<usuario>
+   SMTP_PASS=<contraseña>
+   SMTP_FROM="Cines Aurora <correo@ejemplo.com>"
+
+   # cliente/.env
+   VITE_ONVO_LLAVE_PUBLICA=onvo_test_publishable_key_...
+```
+
+   La llave **secreta** solo va en el servidor: con ella se puede cobrar y reembolsar. La **publicable** puede ir en el cliente.
+
+   Al arrancar, si falta `ONVO_LLAVE_SECRETA` o alguna `SMTP_*`, el servidor se detiene con un mensaje que dice cuál. Después de cambiar `cliente/.env` hay que **reiniciar** `npm run dev`.
+
+5. **Dependencias.** El servidor usa `qrcode`, `pdfkit` y `dejavu-fonts-ttf` (la fuente del PDF, porque las fuentes estándar no tienen el símbolo ₡). Se instalan con `npm run instalar-todo`.
+
+6. **Probar.** Inicia sesión con una cuenta de **cliente** (si ya tenías sesión abierta, cierra sesión y vuelve a entrar), elige una función, selecciona asientos y boletos, y paga con una tarjeta de prueba.
+
+### Tarjetas de prueba
+
+Cualquier nombre, cualquier fecha de vencimiento futura y cualquier CVV válido para la marca (3 dígitos; 4 en Amex).
+
+| Número | Marca | Resultado |
+|---|---|---|
+| `4242 4242 4242 4242` | Visa | Pago aprobado |
+| `5555 5555 5555 4444` | Mastercard | Pago aprobado |
+| `3782 822463 10005` | American Express | Pago aprobado |
+| `4000 0000 0000 0002` | Visa | Pago rechazado |
+| `4000 0000 0000 0127` | Visa | ONVO rechaza la tarjeta al registrarla |
+| `4000 0000 0000 0119` | Visa | Error del procesador |
+| `4000 0000 0000 3220` | Visa | Pide autenticación 3DS (se trata como rechazada) |
+
+Los pagos aparecen en el panel de ONVO, en modo de prueba.
+
+### Rutas
+
+Todas exigen sesión con rol `CLIENTE`.
+
+| Ruta | Qué hace |
+|---|---|
+| `POST /api/compras` | Compra los boletos. Recibe `{ idProyeccion, asientos, boletos }` y además `{ idMetodoPago, guardarMetodo }` para una tarjeta nueva, o `{ usarTarjetaGuardada: true }`. |
+| `GET /api/compras/metodo-pago` | Tarjeta guardada del cliente (`{ metodoPago: null }` si no tiene). |
+| `GET /api/compras/:idFactura/boletos` | PDF de los boletos de una compra del cliente. |
+
+| Código | Cuándo |
+|---|---|
+| `201` | Compra realizada. Devuelve `{ idFactura, total, referencia, correoEnviado, metodoGuardado }`. |
+| `400` | Datos inválidos, no hay tarjeta guardada o la tarjeta guardada está vencida. |
+| `401` | Sin sesión, o la sesión se inició antes de este cambio (vuelve a iniciar sesión). |
+| `402` | La tarjeta fue rechazada. |
+| `403` | La cuenta no es de cliente. |
+| `404` | La función o la compra no existe, o la compra es de otro cliente. |
+| `409` | Algún asiento ya se vendió. No se cobra nada. |
+| `502` | No se pudo comunicar con ONVO. |
+
+### Problemas comunes
+
+- **El pago falla sin llegar al servidor.** Revisa `VITE_ONVO_LLAVE_PUBLICA` y reinicia `npm run dev`. En las herramientas del navegador (pestaña *Network*), la petición a `api.onvopay.com` debe responder `200`.
+- **`401` de ONVO.** La llave está mal copiada o es de modo en vivo.
+- **"Tu sesión no es válida para comprar".** El token es anterior al cambio que agregó `idCliente`: cierra sesión y vuelve a entrar.
+- **La compra se hace, pero no llega el correo.** Revisa las variables `SMTP_*` y la terminal del servidor. La compra igual es válida y los boletos se descargan en pantalla.
+
+
+## Nunca subir al repositorio
 
 - La llave privada (`.pem`) y `~/.oci/config`.
 - El ID del proyecto de Google
+- Las llaves de ONVO.
 - Imágenes de prueba.
 
 

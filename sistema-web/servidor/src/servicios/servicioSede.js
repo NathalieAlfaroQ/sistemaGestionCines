@@ -6,11 +6,15 @@ import {
   listarSedes,
 } from '../repositorios/repositorioSede.js';
 
+import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
+import { estadoDeFiltro, exigirObjeto, idDeFiltro, idObligatorio } from '../utilidades/validaciones.js';
 
 const NOMBRE_MINIMO = 10;
 const NOMBRE_MAXIMO = 30;
 const PATRON_NOMBRE = /^\p{L}+(?: \p{L}+)*$/u;
+
+const MENSAJE_SEDE_NO_EXISTE = 'La sede no existe o ya fue eliminada';
 
 const ORA_UNICIDAD = 1;
 
@@ -18,9 +22,7 @@ const ORA_NOMBRE_MAX = 12899;
 
 
 function validarDatosSede(datos) {
-  if (datos === null || typeof datos !== 'object' || Array.isArray(datos)) {
-    throw new ErrorValidacion('Los datos de la sede no son válidos');
-  }
+  exigirObjeto(datos, 'Los datos de la sede no son válidos');
 
   if (typeof datos.nombre !== 'string') throw new ErrorValidacion('El nombre es obligatorio');
 
@@ -45,12 +47,7 @@ function traducirErrorDeBaseDatos(error) {
 }
 
 function validarIdSede(idSede) {
-  const id = Number(idSede);
-
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new ErrorValidacion('El identificador de la sede no es válido');
-  }
-  return id;
+  return idObligatorio(idSede, 'El identificador de la sede no es válido');
 }
 
 export async function registrarSede(datos) {
@@ -71,39 +68,32 @@ export async function modificarSede(idSede, datos) {
 
   if (!(await existeCanton(idCanton))) throw new ErrorValidacion('El cantón seleccionado no existe');
 
+  let actualizada;
   try {
-    return await actualizarSede({ idSede: id, nombre, idCanton });
+    actualizada = await actualizarSede({ idSede: id, nombre, idCanton });
   } catch (error) {
     throw traducirErrorDeBaseDatos(error);
   }
+
+  if (!actualizada) throw new ErrorNoEncontrado(MENSAJE_SEDE_NO_EXISTE);
 }
 
 const ESTADOS_SEDE = { activas: 1, eliminadas: 0, todas: null };
 
-function idDeFiltro(valor, nombreCampo) {
-  if (valor === undefined || valor === null || valor === '') return null;
-
-  const id = Number(valor);
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new ErrorValidacion(`El filtro de ${nombreCampo} no es válido`);
-  }
-  return id;
-}
-
 export async function obtenerSedes({ busqueda, nombre, idProvincia, idCanton, estado = 'activas' } = {}) {
-  if (!Object.hasOwn(ESTADOS_SEDE, estado)) {
-    throw new ErrorValidacion('El filtro de estado no es válido');
-  }
+  const idEstado = estadoDeFiltro(estado, ESTADOS_SEDE);
 
   return await listarSedes({
     busqueda: busqueda || null,
     nombre: nombre || null,
     idProvincia: idDeFiltro(idProvincia, 'provincia'),
     idCanton: idDeFiltro(idCanton, 'cantón'),
-    estado: ESTADOS_SEDE[estado],
+    estado: idEstado,
   });
 }
 
 export async function desactivarSede(idSede) {
-  return await desactivarSedeEnRepositorio(validarIdSede(idSede));
+  if (!(await desactivarSedeEnRepositorio(validarIdSede(idSede)))) {
+    throw new ErrorNoEncontrado(MENSAJE_SEDE_NO_EXISTE);
+  }
 }

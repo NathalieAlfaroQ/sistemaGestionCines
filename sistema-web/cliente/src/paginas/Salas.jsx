@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSalas } from '../ganchos/useSalas.js';
 import { useSedes } from '../ganchos/useSedes.js';
 import { useCatalogoSala } from '../ganchos/useCatalogoSala.js';
@@ -6,9 +7,11 @@ import { useDebounce } from '../ganchos/useDebounce.js';
 import { POS_SALA, POS_CATALOGO_SALA, ESTADO_SALA } from '../constantes/posicionesSala.js';
 import { POS_SEDE } from '../constantes/posicionesSede.js';
 import Tabla from '../common/Tabla.jsx';
-import Modal from '../common/Modal.jsx';
+import ErrorCarga from '../componentes/ErrorCarga.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
+import EditarSala from '../componentes/EditarSala.jsx';
 import { eliminarSala } from '../servicios/servicioSalas.js';
+import { useNotificaciones } from '../ganchos/useNotificaciones.js';
 
 const OPCIONES_ESTADO = [
   { valor: 'activas', texto: 'Activas' },
@@ -18,9 +21,11 @@ const OPCIONES_ESTADO = [
 
 const FILTROS_INICIALES = { idSede: '', idTipo: '', idFormato: '', estado: 'activas' };
 
+const claseBoton = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover';
 const claseBarraBusqueda = 'mb-4 w-85 rounded-lg border border-border bg-surface-clear px-4 py-2 text-black placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft';
 
 function Salas() {
+  const navegar = useNavigate();
   const [busqueda, setBusqueda] = useState('');
   const busquedaRetrasada = useDebounce(busqueda, 400);
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
@@ -33,7 +38,8 @@ function Salas() {
     estado: filtros.estado,
   });
   const { sedes } = useSedes({ estado: 'activas' });
-  const { tipos, formatos, error: errorCatalogo } = useCatalogoSala();
+  const { tipos, formatos, error: errorCatalogo, recargar: recargarCatalogo } = useCatalogoSala();
+  const notificaciones = useNotificaciones();
 
   const opcionesDe = (lista) =>
     lista.map((fila) => ({
@@ -83,27 +89,28 @@ function Salas() {
     ? 'No se encontraron salas con esos criterios'
     : 'No hay salas para mostrar en este momento';
 
-  function verSala() {}
+  function verSala(sala) {
+    navegar(`/salas/${sala[POS_SALA.id]}`);
+  }
 
-  function editarSala() {}
+  const [salaAEditar, setSalaAEditar] = useState(null);
+  function salaEditada() {
+    setSalaAEditar(null);
+    notificaciones.exito('Sala modificada con éxito');
+    recargar();
+  }
 
   const [salaAEliminar, setSalaAEliminar] = useState(null);
-  const [resultado, setResultado] = useState(null);
-
   async function confirmarEliminacion() {
     const sala = salaAEliminar;
     setSalaAEliminar(null);
 
     try {
       await eliminarSala(sala[POS_SALA.id]);
-      setResultado({ mensaje: 'Sala eliminada con éxito', textoBoton: 'Continuar' });
+      notificaciones.exito('Sala eliminada con éxito');
     } catch (error) {
-      setResultado({ mensaje: error.message, textoBoton: 'Cerrar' });
+      notificaciones.error(error.message);
     }
-  }
-
-  function cerrarResultado() {
-    setResultado(null);
     recargar();
   }
 
@@ -112,8 +119,19 @@ function Salas() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5">
+        <div className="mb-5 flex items-center gap-31">
           <h1 className="text-4xl font-bold">Salas</h1>
+
+          <button type="button" onClick={() => navegar('/salas/nueva')} className={claseBoton}>
+            Crear sala
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
         </div>
 
         <input
@@ -125,8 +143,8 @@ function Salas() {
         />
 
         {cargando && <p className="mb-4 text-text-muted">Cargando salas...</p>}
-        {error && <p className="mb-4 text-warning">{error}</p>}
-        {errorCatalogo && <p className="mb-4 text-warning">{errorCatalogo}</p>}
+        <ErrorCarga error={error} alReintentar={recargar} className="mb-4" />
+        <ErrorCarga error={errorCatalogo} alReintentar={recargarCatalogo} className="mb-4" />
 
         <Tabla
           columnas={columnas}
@@ -136,11 +154,19 @@ function Salas() {
           alCambiarFiltros={setFiltros}
           textoVacio={cargando ? '' : textoVacio}
           onVer={verSala}
-          onEditar={editarSala}
+          onEditar={setSalaAEditar}
           onEliminar={setSalaAEliminar}
           accionesDeshabilitadas={salaEliminada}
         />
       </div>
+
+      {salaAEditar && (
+        <EditarSala
+          sala={salaAEditar}
+          alCancelar={() => setSalaAEditar(null)}
+          alEditar={salaEditada}
+        />
+      )}
 
       {salaAEliminar && (
         <ModalConfirmacion
@@ -150,13 +176,6 @@ function Salas() {
           textoConfirmar="Eliminar"
           alConfirmar={confirmarEliminacion}
           alCancelar={() => setSalaAEliminar(null)}
-        />
-      )}
-
-      {resultado && (
-        <Modal
-          mensaje={resultado.mensaje}
-          botones={[{ texto: resultado.textoBoton, alPulsar: cerrarResultado }]}
         />
       )}
     </main>

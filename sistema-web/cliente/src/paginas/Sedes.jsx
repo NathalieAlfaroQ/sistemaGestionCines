@@ -5,11 +5,12 @@ import { POS_SEDE, ESTADO_SEDE } from '../constantes/posicionesSede.js';
 import { useUbicaciones } from '../ganchos/useUbicaciones.js';
 import { POS_PROVINCIA, POS_CANTON } from '../constantes/posicionesUbicacion.js';
 import Tabla from '../common/Tabla.jsx';
-import Modal from '../common/Modal.jsx';
+import ErrorCarga from '../componentes/ErrorCarga.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import CrearSede from '../componentes/CrearSede.jsx';
 import EditarSede from '../componentes/EditarSede.jsx';
 import { eliminarSede } from '../servicios/servicioSedes.js';
+import { useNotificaciones } from '../ganchos/useNotificaciones.js';
 
 const OPCIONES_ESTADO = [
   { valor: 'activas', texto: 'Activas' },
@@ -82,7 +83,7 @@ function Sedes() {
   const [sedeAEliminar, setSedeAEliminar] = useState(null);
   const [creando, setCreando] = useState(false);
   const [sedeAEditar, setSedeAEditar] = useState(null);
-  const [resultado, setResultado] = useState(null);
+  const notificaciones = useNotificaciones();
 
   async function confirmarEliminacion() {
     const sede = sedeAEliminar;
@@ -90,35 +91,33 @@ function Sedes() {
 
     try {
       await eliminarSede(sede[POS_SEDE.id]);
-      setResultado({ mensaje: 'Sede eliminada con éxito', textoBoton: 'Continuar' });
+      notificaciones.exito('Sede eliminada con éxito');
     } catch (error) {
-      setResultado({ mensaje: error.message, textoBoton: 'Cerrar' });
+      notificaciones.error(error.message);
     }
+    recargar();
   }
 
   function sedeCreada() {
     setCreando(false);
-    setResultado({ mensaje: 'Sede creada con éxito', textoBoton: 'Continuar' });
+    notificaciones.exito('Sede creada con éxito');
+    recargar();
   }
 
   function sedeEditada() {
     setSedeAEditar(null);
-    setResultado({ mensaje: 'Sede modificada con éxito', textoBoton: 'Continuar' });
-  }
-
-  function cerrarResultado() {
-    setResultado(null);
+    notificaciones.exito('Sede modificada con éxito');
     recargar();
   }
 
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5 flex items-center gap-27">
+        <div className="mb-5 flex items-center gap-35">
           <h1 className="text-4xl font-bold">Sedes</h1>
 
           <button type="button" onClick={() => setCreando(true)} className={claseBoton}>
-            Crear sede
+            Crear
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path
                 fillRule="evenodd"
@@ -138,7 +137,7 @@ function Sedes() {
         />
 
         {cargando && <p className="mb-4 text-text-muted">Cargando sedes...</p>}
-        {error && <p className="mb-4 text-danger">{error}</p>}
+        <ErrorCarga error={error} alReintentar={recargar} className="mb-4" />
 
         {/* */}
         <Tabla
@@ -174,13 +173,6 @@ function Sedes() {
           textoConfirmar="Eliminar"
           alConfirmar={confirmarEliminacion}
           alCancelar={() => setSedeAEliminar(null)}
-        />
-      )}
-
-      {resultado && (
-        <Modal
-          mensaje={resultado.mensaje}
-          botones={[{ texto: resultado.textoBoton, alPulsar: cerrarResultado }]}
         />
       )}
     </main>

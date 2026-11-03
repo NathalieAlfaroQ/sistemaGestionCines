@@ -6,7 +6,7 @@ import { useSeleccionAsientos } from '../ganchos/useSeleccionAsientos.js';
 import { useVolver } from '../ganchos/useVolver.js';
 import { POS_PROYECCION } from '../constantes/posicionesReserva.js';
 import { TIPOS_ERROR, verificarSeleccion } from '../servicios/servicioReserva.js';
-import { obtenerToken } from '../servicios/sesion.js';
+import { obtenerToken, obtenerUsuario } from '../servicios/sesion.js';
 import { formatearFechaFuncion } from '../utilidades/fechas.js';
 import EncabezadoPelicula from '../componentes/EncabezadoPelicula.jsx';
 import MapaAsientos from '../componentes/MapaAsientos.jsx';
@@ -28,6 +28,7 @@ function SeleccionAsientos() {
   const [verificando, setVerificando] = useState(false);
   const [errorVerificacion, setErrorVerificacion] = useState(null);
   const [pedirSesion, setPedirSesion] = useState(false);
+  const [soloClientes, setSoloClientes] = useState(false);
 
   async function continuar() {
     setErrorVerificacion(null);
@@ -41,12 +42,17 @@ function SeleccionAsientos() {
       setPedirSesion(true);
       return;
     }
+    // El personal del cine puede ver el mapa, pero solo los clientes compran
+    if (obtenerUsuario()?.tipoUsuario !== 'CLIENTE') {
+      setSoloClientes(true);
+      return;
+    }
 
     setVerificando(true);
     const datos = seleccion.datosVerificacion();
     try {
       const { total } = await verificarSeleccion(idProyeccion, datos);
-      // La pantalla de pago (otra historia) recibe la selección por el estado de la navegación
+      // La pantalla de pago recibe la selección por el estado de la navegación
       void navegar('/pago', {
         state: { idProyeccion: Number(idProyeccion), ...datos, etiquetas: seleccion.etiquetasSeleccionados, total },
       });
@@ -122,6 +128,15 @@ function SeleccionAsientos() {
             { texto: 'Iniciar sesión', enfocar: true, alPulsar: () => void navegar('/iniciar-sesion') },
             { texto: 'Cerrar', variante: 'secundario', alPulsar: () => setPedirSesion(false) },
           ]}
+        />
+      )}
+
+      {soloClientes && (
+        <Modal
+          titulo="Solo para clientes"
+          mensaje="La compra de boletos está disponible solo para cuentas de cliente."
+          alCerrar={() => setSoloClientes(false)}
+          botones={[{ texto: 'Entendido', enfocar: true, alPulsar: () => setSoloClientes(false) }]}
         />
       )}
     </main>

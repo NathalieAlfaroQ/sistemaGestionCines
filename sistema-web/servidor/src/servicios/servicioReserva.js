@@ -10,6 +10,7 @@ import {
   obtenerPelicula,
   obtenerProyeccionVigente,
 } from '../repositorios/repositorioReserva.js';
+import { ahoraCostaRica } from '../utilidades/fechas.js';
 import { obtenerUrlImagen } from './almacenamientoImagenes.js';
 
 export const MENSAJE_ASIENTO_NO_DISPONIBLE =
@@ -25,22 +26,6 @@ const POSICION_MONTO_SALA = 6;
 
 function esSubtitulada(idiomas) {
   return idiomas.some((nombre) => nombre !== IDIOMA_LOCAL);
-}
-
-// 'sv-SE' formatea como 'AAAA-MM-DD HH:MM:SS', el mismo formato que espera el repositorio
-const formateadorCostaRica = new Intl.DateTimeFormat('sv-SE', {
-  timeZone: 'America/Costa_Rica',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hourCycle: 'h23',
-});
-
-function ahoraCostaRica() {
-  return formateadorCostaRica.format(new Date());
 }
 
 function validarId(id, nombre) {
@@ -111,6 +96,10 @@ function validarBoletos(boletos) {
   return conCantidad;
 }
 
+export function calcularPrecios(tiposBoleto) {
+  return new Map(tiposBoleto.map(([idTipoBoleto, , precio]) => [idTipoBoleto, { monto: precio, descuento: 0 }]));
+}
+
 // Encabezado de la película que comparten las dos pantallas
 export async function consultarPelicula(idPelicula) {
   validarId(idPelicula, 'la película');
@@ -170,9 +159,8 @@ export async function consultarAsientos(idProyeccion) {
   return { proyeccion, asientos, tiposBoleto: calcularPrecios(tiposBoleto, proyeccion[POSICION_MONTO_SALA]) };
 }
 
-// Confirma que la selección se puede comprar en este momento.
 // No reserva nada; la garantía final contra la doble venta es el UNIQUE de DETALLES_FACTURA.
-export async function verificarSeleccion(idProyeccion, datos) {
+export async function validarSeleccion(idProyeccion, datos) {
   validarId(idProyeccion, 'la función');
 
   const asientos = validarAsientos(datos?.asientos);
@@ -207,7 +195,16 @@ export async function verificarSeleccion(idProyeccion, datos) {
     throw new ErrorConflicto(MENSAJE_ASIENTO_NO_DISPONIBLE);
   }
 
-  const total = boletos.reduce((suma, { idTipoBoleto, cantidad }) => suma + precios.get(idTipoBoleto) * cantidad, 0);
+  const total = boletos.reduce(
+    (suma, { idTipoBoleto, cantidad }) => suma + precios.get(idTipoBoleto).monto * cantidad,
+    0
+  );
 
+  return { proyeccion, asientos, boletos, precios, total };
+}
+
+// Botón Continuar: solo le interesa el total
+export async function verificarSeleccion(idProyeccion, datos) {
+  const { total } = await validarSeleccion(idProyeccion, datos);
   return { total };
 }

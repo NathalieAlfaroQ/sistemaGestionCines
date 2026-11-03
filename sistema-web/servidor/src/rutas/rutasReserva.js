@@ -15,11 +15,11 @@ enrutador.get('/peliculas/:id', verPelicula);
 enrutador.get('/peliculas/:id/proyecciones', listarHorarios);
 enrutador.get('/proyecciones/:id/asientos', verAsientos);
 
-// Solo clientes y empleados con sesión pueden continuar hacia el pago
+// Solo clientes con sesión pueden continuar hacia el pago
 enrutador.post(
   '/proyecciones/:id/verificacion',
   verificarAutenticacion,
-  autorizarRoles('CLIENTE', 'EMPLEADO', 'ADMINISTRADOR'),
+  autorizarRoles('CLIENTE'),
   verificarAsientos
 );
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { usePeliculaCartelera } from '../ganchos/usePeliculaCartelera.js';
 import { useHorarios } from '../ganchos/useHorarios.js';
 import { generarDias } from '../utilidades/fechas.js';
@@ -22,10 +22,12 @@ function filtroValido(valor, opciones) {
 function HorariosPelicula() {
   const { idPelicula } = useParams();
   const navegar = useNavigate();
+  // La cartelera de la página de inicio manda el cine elegido como ?sede=ID
+  const [parametros] = useSearchParams();
 
   const dias = useMemo(() => generarDias(DIAS_SELECCIONABLES), []);
   const [fecha, setFecha] = useState(dias[0].valor);
-  const [filtros, setFiltros] = useState(SIN_FILTROS);
+  const [filtros, setFiltros] = useState({ ...SIN_FILTROS, idSede: parametros.get('sede') ?? '' });
   const [idSeleccionado, setIdSeleccionado] = useState(null);
 
   const pelicula = usePeliculaCartelera(idPelicula);
