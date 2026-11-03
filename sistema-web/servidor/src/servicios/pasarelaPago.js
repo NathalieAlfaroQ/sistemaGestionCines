@@ -2,6 +2,8 @@ import { configuracionOnvo } from '../configuracion/onvo.js';
 import { ErrorPagoRechazado } from '../errores/ErrorPagoRechazado.js';
 import { ErrorPasarela } from '../errores/ErrorPasarela.js';
 
+// Adaptador de la pasarela de pago ONVO. El resto del servidor solo conoce cobrar() y reembolsar();
+
 export const MENSAJE_PAGO_RECHAZADO =
   'El pago no pudo ser procesado. Verifica los datos de tu tarjeta o intenta con otro método de pago.';
 export const MENSAJE_ERROR_PASARELA = 'No se pudo procesar el pago en este momento. Intenta de nuevo más tarde.';
@@ -34,6 +36,8 @@ async function peticion(metodo, ruta, cuerpo, idIntencion = null) {
   return { ok: respuesta.ok, estadoHttp: respuesta.status, datos };
 }
 
+// Cuando no se sabe si ONVO alcanzó a cobrar (tiempo agotado o error 5xx al confirmar),
+// se consulta el estado real de la intención antes de decidir.
 async function consultarIntencion(idIntencion) {
   const respuesta = await peticion('GET', `/payment-intents/${idIntencion}`, undefined, idIntencion);
   if (!respuesta.ok) {
@@ -58,7 +62,7 @@ async function confirmarIntencion(idIntencion, idMetodoPago) {
 
   if (respuesta.ok) return respuesta.datos;
   if (CODIGOS_RECHAZO.has(respuesta.estadoHttp)) throw new ErrorPagoRechazado(MENSAJE_PAGO_RECHAZADO);
-  // 500 u otra respuesta inesperada: tampoco se sabe si se cobró
+  // 5xx u otra respuesta inesperada: tampoco se sabe si se cobró
   return await consultarIntencion(idIntencion);
 }
 
@@ -84,6 +88,23 @@ export async function cobrar({ monto, idMetodoPago, descripcion }) {
   }
   // requires_payment_method (rechazada), requires_action (3DS, fuera del alcance) o canceled
   throw new ErrorPagoRechazado(MENSAJE_PAGO_RECHAZADO);
+}
+
+// Se piden a ONVO con la llave secreta en vez de creerle a lo que mande el navegador.
+export async function obtenerTarjeta(idMetodoPago) {
+  const respuesta = await peticion('GET', `/payment-methods/${encodeURIComponent(idMetodoPago)}`);
+  const tarjeta = respuesta.datos?.card;
+  if (!respuesta.ok || respuesta.datos?.type !== 'card' || !tarjeta) {
+    throw new ErrorPasarela(MENSAJE_ERROR_PASARELA);
+  }
+
+  return {
+    marca: tarjeta.brand,
+    ultimosDigitos: tarjeta.last4,
+    mesVencimiento: tarjeta.expMonth,
+    anioVencimiento: tarjeta.expYear,
+    titular: tarjeta.holderName,
+  };
 }
 
 // Devuelve el dinero de un cobro aprobado. Se usa si la compra no se pudo guardar después de cobrar.
