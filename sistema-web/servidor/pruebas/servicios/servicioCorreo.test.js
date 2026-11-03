@@ -20,7 +20,7 @@ const { enviarCorreo } = await import('../../src/servicios/servicioCorreo.js');
 // la configuración de Vitest (clearMocks) borra el historial de los mocks antes de cada prueba.
 const opcionesTransporte = createTransport.mock.calls[0]?.[0];
 
-describe('SCRUM-XX servicioCorreo', () => {
+describe('SCRUM-94 servicioCorreo', () => {
   beforeEach(() => {
     sendMail.mockReset();
   });
