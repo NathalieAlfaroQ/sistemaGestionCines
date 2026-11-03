@@ -10,18 +10,13 @@ import { HORAS, MINUTOS, fechaATexto, hoyParaCalendario, horaATexto } from '../v
 import { temaCalendario } from '../temas/temaCalendario.js';
 import MensajeError from '../common/MensajeError.jsx';
 import ErrorCarga from './ErrorCarga.jsx';
+import { claseDesplegable } from '../constantes/clasesFormulario.js';
+import Etiqueta from './Etiqueta.jsx';
+import PieFormulario from './PieFormulario.jsx';
 
-const claseEtiqueta = 'mb-2 block text-sm text-text-color';
-const claseDesplegable = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
 const claseDesplegableVacio = claseDesplegable.replace('text-text-color', 'text-text-muted') + ' [&>option]:text-text-color';
 const claseDesplegableHora = (valor) => (valor === '' ? claseDesplegableVacio : claseDesplegable);
 
-const claseBotonConfirmar = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover disabled:opacity-50';
-const claseBotonCancelar = 'flex items-center gap-2 rounded-lg bg-brand-soft px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-soft-hover disabled:opacity-50';
-
-function Asterisco() {
-  return <span className="text-danger">*</span>;
-}
 
 function FormularioProyeccion({
   valorInicial,
@@ -82,9 +77,7 @@ function FormularioProyeccion({
       )}
 
       <div className="col-span-2">
-        <label htmlFor="pelicula" className={claseEtiqueta}>
-          Película <Asterisco />
-        </label>
+        <Etiqueta id="pelicula">Película</Etiqueta>
         <select
           id="pelicula"
           className={claseDesplegable}
@@ -103,9 +96,7 @@ function FormularioProyeccion({
       </div>
 
       <div>
-        <label htmlFor="sede" className={claseEtiqueta}>
-          Cine <Asterisco />
-        </label>
+        <Etiqueta id="sede">Cine</Etiqueta>
         <select
           id="sede"
           className={claseDesplegable}
@@ -126,9 +117,7 @@ function FormularioProyeccion({
       </div>
 
       <div>
-        <label htmlFor="sala" className={claseEtiqueta}>
-          Sala <Asterisco />
-        </label>
+        <Etiqueta id="sala">Sala</Etiqueta>
         <select
           id="sala"
           className={claseDesplegable}
@@ -148,9 +137,7 @@ function FormularioProyeccion({
       </div>
 
       <div>
-        <label htmlFor="fecha" className={claseEtiqueta}>
-          Fecha <Asterisco />
-        </label>
+        <Etiqueta id="fecha">Fecha</Etiqueta>
         <ThemeProvider theme={temaCalendario}>
           <Datepicker
             id="fecha"
@@ -170,9 +157,7 @@ function FormularioProyeccion({
       </div>
 
       <div>
-        <label htmlFor="hora" className={claseEtiqueta}>
-          Hora <Asterisco />
-        </label>
+        <Etiqueta id="hora">Hora</Etiqueta>
         <div className="flex items-center gap-2">
           <select
             id="hora"
@@ -212,22 +197,14 @@ function FormularioProyeccion({
         <MensajeError id="error-hora" mensaje={errorHora} />
       </div>
 
-      <div className="col-span-2 flex flex-col gap-4">
-        <MensajeError mensaje={error} className="mt-0" />
-
-        {/* */}
-        {hayCamposVacios && <p className="text-sm text-danger">* Espacio obligatorio</p>}
-
-        <div className="flex gap-4">
-          <button type="submit" disabled={guardando} className={claseBotonConfirmar}>
-            {guardando ? 'Guardando...' : textoGuardar}
-          </button>
-
-          <button type="button" onClick={alCancelar} className={claseBotonCancelar}>
-            Cancelar
-          </button>
-        </div>
-      </div>
+      <PieFormulario
+        className="col-span-2"
+        error={error}
+        hayCamposVacios={hayCamposVacios}
+        guardando={guardando}
+        textoGuardar={textoGuardar}
+        alCancelar={alCancelar}
+      />
     </form>
   );
 }

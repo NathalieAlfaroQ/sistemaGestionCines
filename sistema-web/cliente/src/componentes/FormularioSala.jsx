@@ -11,16 +11,10 @@ import CampoSoloLectura from './CampoSoloLectura.jsx';
 import MapaAsientos from './MapaAsientos.jsx';
 import MensajeError from '../common/MensajeError.jsx';
 import ErrorCarga from './ErrorCarga.jsx';
+import { claseCampo, claseDesplegable } from '../constantes/clasesFormulario.js';
+import Etiqueta from './Etiqueta.jsx';
+import PieFormulario from './PieFormulario.jsx';
 
-const claseEtiqueta = 'mb-2 block text-sm text-text-color';
-const claseCampo = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
-const claseDesplegable = claseCampo;
-const claseBotonConfirmar = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover disabled:opacity-50';
-const claseBotonCancelar = 'flex items-center gap-2 rounded-lg bg-brand-soft px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-soft-hover disabled:opacity-50';
-
-function Asterisco() {
-  return <span className="text-danger">*</span>;
-}
 
 function buscarPorId(lista, id) {
   return lista.find((fila) => String(fila[POS_CATALOGO_SALA.id]) === id);
@@ -95,9 +89,7 @@ function FormularioSala({
       <div className="grid gap-x-12 gap-y-6 md:grid-cols-2">
         <div className="flex flex-col gap-6">
           <div>
-            <label htmlFor="nombre" className={claseEtiqueta}>
-              Nombre <Asterisco />
-            </label>
+            <Etiqueta id="nombre">Nombre</Etiqueta>
             <input
               id="nombre"
               className={claseCampo}
@@ -110,9 +102,7 @@ function FormularioSala({
           </div>
 
           <div>
-            <label htmlFor="tipo" className={claseEtiqueta}>
-              Tipo <Asterisco />
-            </label>
+            <Etiqueta id="tipo">Tipo</Etiqueta>
             <select
               id="tipo"
               className={claseDesplegable}
@@ -131,9 +121,7 @@ function FormularioSala({
           </div>
 
           <div>
-            <label htmlFor="formato" className={claseEtiqueta}>
-              Formato <Asterisco />
-            </label>
+            <Etiqueta id="formato">Formato</Etiqueta>
             <select
               id="formato"
               className={claseDesplegable}
@@ -156,9 +144,7 @@ function FormularioSala({
 
         <div className="flex flex-col gap-6">
           <div>
-            <label htmlFor="sede" className={claseEtiqueta}>
-              Cine <Asterisco />
-            </label>
+            <Etiqueta id="sede">Cine</Etiqueta>
             <select
               id="sede"
               className={claseDesplegable}
@@ -177,9 +163,7 @@ function FormularioSala({
           </div>
 
           <div>
-            <label htmlFor="distribucion" className={claseEtiqueta}>
-              Distribución <Asterisco />
-            </label>
+            <Etiqueta id="distribucion">Distribución</Etiqueta>
             <select
               id="distribucion"
               className={claseDesplegable}
@@ -215,22 +199,13 @@ function FormularioSala({
         )}
       </section>
 
-      <div className="flex flex-col gap-4">
-        <MensajeError mensaje={error} className="mt-0" />
-
-        {/* */}
-        {hayCamposVacios && <p className="text-sm text-danger">* Espacio obligatorio</p>}
-
-        <div className="flex gap-4">
-          <button type="submit" disabled={guardando} className={claseBotonConfirmar}>
-            {guardando ? 'Guardando...' : textoGuardar}
-          </button>
-
-          <button type="button" onClick={alCancelar} className={claseBotonCancelar}>
-            Cancelar
-          </button>
-        </div>
-      </div>
+      <PieFormulario
+          error={error}
+          hayCamposVacios={hayCamposVacios}
+          guardando={guardando}
+          textoGuardar={textoGuardar}
+          alCancelar={alCancelar}
+        />
     </form>
   );
 }
