@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { POS_CATALOGO } from '../constantes/posicionesCatalogo.js';
 
-function SeleccionMultiple({ etiqueta, opciones, seleccionados, alCambiar, textoVacio }) {
+function SeleccionMultiple({ etiqueta, opciones, seleccionados, alCambiar, textoVacio, obligatorio = true }) {
   const [abierto, setAbierto] = useState(false);
   const contenedor = useRef(null);
 
@@ -31,7 +31,7 @@ function SeleccionMultiple({ etiqueta, opciones, seleccionados, alCambiar, texto
   return (
     <div className="relative" ref={contenedor}>
       <label className="mb-2 block text-sm text-white">
-        {etiqueta} <span className="text-linea">*</span>
+        {etiqueta} {obligatorio && <span className="text-linea">*</span>}
       </label>
 
       <div className="w-full min-h-11 px-3 py-2 flex flex-wrap items-center gap-2 rounded-lg bg-boton">

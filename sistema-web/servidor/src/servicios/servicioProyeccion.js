@@ -1,9 +1,9 @@
 import {
+  buscarChoqueDeHorario,
   actualizarProyeccion,
   crearProyeccion,
   desactivarProyeccion as desactivarProyeccionEnRepositorio,
   existeSalaActiva,
-  hayChoqueDeHorario,
   listarProyecciones,
   listarTareas,
   obtenerDuracionPelicula,
@@ -19,6 +19,7 @@ const ESTADOS_PROYECCION = { activas: 1, eliminadas: 0, todas: null };
 const PATRON_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
 const PATRON_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+// MINUTOS_RESERVADOS es NUMBER(5): no admite más de 99999
 const MINUTOS_TAREA_MAXIMO = 99999;
 
 // Acepta solo AAAA-MM-DD y que el día exista (rechaza 2026-02-30)
@@ -94,6 +95,7 @@ function validarDatosProyeccion(datos) {
   return { idPelicula, idSala, fechaHora: `${datos.fecha} ${datos.hora}`, tareas: validarTareas(datos.tareas) };
 }
 
+// Tareas adicionales (opcionales): [{ idTarea, minutos }, ...] sin repetir la tarea
 function validarTareas(tareas) {
   if (tareas === undefined || tareas === null) return [];
   if (!Array.isArray(tareas)) throw new ErrorValidacion('Las tareas no son válidas');
@@ -132,6 +134,7 @@ async function validarQueExistanLasTareas(tareas) {
   }
 }
 
+// Reglas de negocio comunes a crear y editar. Al editar, la proyección no choca consigo misma.
 async function validarProgramacion({ idPelicula, idSala, fechaHora, tareas }, idExcluida = null) {
   if (fechaHora <= formateadorCostaRica.format(new Date())) {
     throw new ErrorValidacion('La proyección debe ser posterior a la fecha y hora actuales');
@@ -144,10 +147,15 @@ async function validarProgramacion({ idPelicula, idSala, fechaHora, tareas }, id
 
   await validarQueExistanLasTareas(tareas);
 
+  // La sala queda ocupada por la película y por el tiempo de las tareas adicionales
   const minutosDeTareas = tareas.reduce((total, tarea) => total + tarea.minutos, 0);
 
-  if (await hayChoqueDeHorario({ idSala, fechaHora, duracion: duracion + minutosDeTareas, idExcluida })) {
-    throw new ErrorConflicto('La sala ya tiene una proyección en ese horario');
+  const choque = await buscarChoqueDeHorario({ idSala, fechaHora, duracion: duracion + minutosDeTareas, idExcluida });
+
+  if (choque) {
+    throw new ErrorConflicto(
+      `La sala ya tiene una proyección en ese horario: "${choque.titulo}" de ${choque.inicio} a ${choque.fin}`,
+    );
   }
 }
 

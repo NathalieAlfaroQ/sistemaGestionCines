@@ -1,9 +1,16 @@
 export const MENSAJE_OBLIGATORIO = 'Este espacio es obligatorio';
 const MENSAJE_HORA_PASADA = 'La proyección debe ser posterior a la fecha y hora actuales';
 
-export const HORAS = Array.from({ length: 24 }, (_, hora) => String(hora).padStart(2, '0'));
+const HORA_PRIMERA = 6;
+const HORA_ULTIMA = 22;
+export const HORAS = Array.from({ length: HORA_ULTIMA - HORA_PRIMERA + 1 }, (_, indice) =>
+  String(HORA_PRIMERA + indice).padStart(2, '0'),
+);
 // Las proyecciones se programan cada 5 minutos
 export const MINUTOS = Array.from({ length: 12 }, (_, indice) => String(indice * 5).padStart(2, '0'));
+
+export const MINUTOS_TAREA_MAXIMO = 99999;
+const MENSAJE_MINUTOS_TAREA = `Los minutos deben estar entre 1 y ${MINUTOS_TAREA_MAXIMO}`;
 
 // 'sv-SE' formatea como 'AAAA-MM-DD HH:MM', en la hora del cine (Costa Rica)
 const formateadorCostaRica = new Intl.DateTimeFormat('sv-SE', {
@@ -43,12 +50,28 @@ function validarHora(formulario) {
   return horaYaPaso(formulario) ? MENSAJE_HORA_PASADA : null;
 }
 
+function validarTareas(tareas) {
+  if (tareas.some((tarea) => tarea.idTarea === '' || tarea.minutos === '')) return MENSAJE_OBLIGATORIO;
+
+  const minutosInvalidos = tareas.some((tarea) => {
+    const minutos = Number(tarea.minutos);
+    return !Number.isInteger(minutos) || minutos < 1 || minutos > MINUTOS_TAREA_MAXIMO;
+  });
+  return minutosInvalidos ? MENSAJE_MINUTOS_TAREA : null;
+}
+
+// Suma de los minutos de las tareas que ya tienen minutos válidos
+export function minutosDeTareas(tareas) {
+  return tareas.reduce((total, tarea) => total + (Number.parseInt(tarea.minutos, 10) || 0), 0);
+}
+
 const reglas = {
   idPelicula: ({ formulario }) => (formulario.idPelicula === '' ? MENSAJE_OBLIGATORIO : null),
   idSede: ({ formulario }) => (formulario.idSede === '' ? MENSAJE_OBLIGATORIO : null),
   idSala: ({ formulario }) => (formulario.idSala === '' ? MENSAJE_OBLIGATORIO : null),
   fecha: ({ formulario }) => (formulario.fecha === null ? MENSAJE_OBLIGATORIO : null),
   hora: ({ formulario }) => validarHora(formulario),
+  tareas: ({ formulario }) => validarTareas(formulario.tareas),
 };
 
 export function validarTodo(datos) {

@@ -2,16 +2,20 @@ import { Datepicker, ThemeProvider } from 'flowbite-react';
 import { usePeliculas } from '../ganchos/usePeliculas.js';
 import { useSalas } from '../ganchos/useSalas.js';
 import { useSedes } from '../ganchos/useSedes.js';
+import { useTareas } from '../ganchos/useTareas.js';
 import { useFormularioProyeccion } from '../ganchos/useFormularioProyeccion.js';
 import { POS_PELICULA } from '../constantes/posicionesPelicula.js';
 import { POS_SALA } from '../constantes/posicionesSala.js';
 import { POS_SEDE } from '../constantes/posicionesSede.js';
-import { HORAS, MINUTOS, fechaATexto, hoyParaCalendario, horaATexto } from '../validaciones/validacionesProyeccion.js';
+import { HORAS, MINUTOS, fechaATexto, hoyParaCalendario, horaATexto, minutosDeTareas } from '../validaciones/validacionesProyeccion.js';
 import { temaCalendario } from '../temas/temaCalendario.js';
+import { formatearDuracion } from '../utilidades/formatearDuracion.js';
 import MensajeError from '../common/MensajeError.jsx';
 import ErrorCarga from './ErrorCarga.jsx';
-import { claseDesplegable } from '../constantes/clasesFormulario.js';
+import { claseDesplegable, claseSoloLecturaEnModal } from '../constantes/clasesFormulario.js';
 import Etiqueta from './Etiqueta.jsx';
+import CampoSoloLectura from './CampoSoloLectura.jsx';
+import SeccionTareas from './SeccionTareas.jsx';
 import PieFormulario from './PieFormulario.jsx';
 
 const claseDesplegableVacio = claseDesplegable.replace('text-text-color', 'text-text-muted') + ' [&>option]:text-text-color';
@@ -33,6 +37,8 @@ function FormularioProyeccion({
     actualizar,
     enlazar,
     cambiarSede,
+    elegirTareas,
+    cambiarMinutos,
     marcarTocado,
     validarAlEnviar,
   } = useFormularioProyeccion(valorInicial);
@@ -41,12 +47,14 @@ function FormularioProyeccion({
   const { peliculas, error: errorPeliculas, recargar: recargarPeliculas } = usePeliculas();
   const { sedes, error: errorSedes, recargar: recargarSedes } = useSedes({ estado: 'activas' });
   const { salas, error: errorSalas, recargar: recargarSalas } = useSalas({ idSede: formulario.idSede, estado: 'activas' });
-  const errorCarga = errorPeliculas || errorSedes || errorSalas;
+  const { tareas: catalogoTareas, error: errorTareas, recargar: recargarTareas } = useTareas();
+  const errorCarga = errorPeliculas || errorSedes || errorSalas || errorTareas;
 
   function reintentarCarga() {
     if (errorPeliculas) recargarPeliculas();
     if (errorSedes) recargarSedes();
     if (errorSalas) recargarSalas();
+    if (errorTareas) recargarTareas();
   }
   const salasDisponibles = formulario.idSede === '' ? [] : salas;
 
@@ -55,6 +63,12 @@ function FormularioProyeccion({
   const errorSala = errorVisible('idSala');
   const errorFecha = errorVisible('fecha');
   const errorHora = errorVisible('hora');
+  const errorTareasFormulario = errorVisible('tareas');
+
+  const pelicula = peliculas.find((fila) => String(fila[POS_PELICULA.id]) === formulario.idPelicula);
+  const duracionTotal = pelicula ? pelicula[POS_PELICULA.duracion] + minutosDeTareas(formulario.tareas) : null;
+
+  const horasOfrecidas = formulario.hora === '' || HORAS.includes(formulario.hora) ? HORAS : [...HORAS, formulario.hora].sort();
 
   function manejarEnvio(evento) {
     evento.preventDefault();
@@ -65,11 +79,12 @@ function FormularioProyeccion({
       idSala: Number(formulario.idSala),
       fecha: fechaATexto(formulario.fecha),
       hora: horaATexto(formulario),
+      tareas: formulario.tareas.map((tarea) => ({ idTarea: Number(tarea.idTarea), minutos: Number(tarea.minutos) })),
     });
   }
 
   return (
-    <form onSubmit={manejarEnvio} className="grid grid-cols-2 gap-x-4 gap-y-6">
+    <form onSubmit={manejarEnvio} noValidate className="grid grid-cols-2 gap-x-4 gap-y-6">
       {errorCarga && (
         <div className="col-span-2">
           <ErrorCarga error={errorCarga} alReintentar={reintentarCarga} />
@@ -169,7 +184,7 @@ function FormularioProyeccion({
             onChange={(evento) => actualizar('hora', evento.target.value)}
           >
             <option value="">HH</option>
-            {HORAS.map((hora) => (
+            {horasOfrecidas.map((hora) => (
               <option key={hora} value={hora}>
                 {hora}
               </option>
@@ -195,6 +210,28 @@ function FormularioProyeccion({
           </select>
         </div>
         <MensajeError id="error-hora" mensaje={errorHora} />
+      </div>
+
+      <div className="col-span-2">
+        <SeccionTareas
+          tareas={formulario.tareas}
+          catalogo={catalogoTareas}
+          error={errorTareasFormulario}
+          alElegir={(ids) => {
+            elegirTareas(ids);
+            marcarTocado('tareas');
+          }}
+          alCambiarMinutos={cambiarMinutos}
+          alTocar={() => marcarTocado('tareas')}
+        />
+      </div>
+
+      <div className={`col-span-2 ${claseSoloLecturaEnModal}`}>
+        <CampoSoloLectura
+          id="duracion"
+          etiqueta="Duración total (película y tareas)"
+          valor={duracionTotal === null ? null : formatearDuracion(duracionTotal)}
+        />
       </div>
 
       <PieFormulario
