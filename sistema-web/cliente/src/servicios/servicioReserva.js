@@ -6,12 +6,13 @@ const URL_BASE = '/api/reserva';
 export const TIPOS_ERROR = {
   conexion: 'conexion',
   conflicto: 'conflicto',
+  rechazado: 'rechazado',
   solicitud: 'solicitud',
 };
 
-const MENSAJE_SIN_CONEXION = 'No se pudo conectar con el servidor. Revisa tu conexión e intenta de nuevo.';
+export const MENSAJE_SIN_CONEXION = 'No se pudo conectar con el servidor. Revisa tu conexión e intenta de nuevo.';
 
-function crearError(mensaje, tipo) {
+export function crearError(mensaje, tipo) {
   const error = new Error(mensaje);
   error.tipo = tipo;
   return error;
@@ -19,12 +20,13 @@ function crearError(mensaje, tipo) {
 
 function tipoSegunEstado(estado) {
   if (estado === 409) return TIPOS_ERROR.conflicto;
+  if (estado === 402) return TIPOS_ERROR.rechazado;
   if (estado >= 500) return TIPOS_ERROR.conexion;
   return TIPOS_ERROR.solicitud;
 }
 
 // Hace la petición y devuelve el cuerpo JSON, o lanza un error con su tipo
-async function pedir(url, opciones, mensajePorDefecto) {
+export async function pedir(url, opciones, mensajePorDefecto) {
   let respuesta;
   try {
     respuesta = await peticionApi(url, opciones);
