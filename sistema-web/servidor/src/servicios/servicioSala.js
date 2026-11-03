@@ -152,7 +152,7 @@ export async function modificarSala(idSala, datos) {
   const { nombre, idTipo, idFormato } = validarDatosEditables(datos);
 
   const sala = await obtenerSalaEnRepositorio(id);
-  if (!sala || sala[POS_ESTADO_SALA] !== ESTADO_SALA_ACTIVA) throw new ErrorNoEncontrado(MENSAJE_SALA_NO_EXISTE);
+  if (sala?.[POS_ESTADO_SALA] !== ESTADO_SALA_ACTIVA) throw new ErrorNoEncontrado(MENSAJE_SALA_NO_EXISTE);
 
   const monto = await calcularMonto(idTipo, idFormato);
 

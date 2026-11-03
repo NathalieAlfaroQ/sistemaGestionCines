@@ -68,7 +68,7 @@ function FormularioProyeccion({
   const pelicula = peliculas.find((fila) => String(fila[POS_PELICULA.id]) === formulario.idPelicula);
   const duracionTotal = pelicula ? pelicula[POS_PELICULA.duracion] + minutosDeTareas(formulario.tareas) : null;
 
-  const horasOfrecidas = formulario.hora === '' || HORAS.includes(formulario.hora) ? HORAS : [...HORAS, formulario.hora].sort();
+  const horasOfrecidas = formulario.hora === '' || HORAS.includes(formulario.hora) ? HORAS : [...HORAS, formulario.hora].sort((a, b) => a.localeCompare(b));
 
   function manejarEnvio(evento) {
     evento.preventDefault();
