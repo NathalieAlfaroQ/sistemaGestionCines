@@ -1,20 +1,8 @@
 export function nombreFila(indice) {
-  let numero = indice + 1;
-  let nombre = '';
-  while (numero > 0) {
-    const resto = (numero - 1) % 26;
-    nombre = String.fromCodePoint(65 + resto) + nombre;
-    numero = Math.floor((numero - 1) / 26);
-  }
-  return nombre;
+  const letra = String.fromCodePoint(65 + (indice % 26));
+  return indice < 26 ? letra : nombreFila(Math.floor(indice / 26) - 1) + letra;
 }
 
 export function generarAsientos(filas, columnas) {
-  const asientos = [];
-  for (let fila = 0; fila < filas; fila++) {
-    for (let numero = 1; numero <= columnas; numero++) {
-      asientos.push([asientos.length + 1, nombreFila(fila), numero, 0]);
-    }
-  }
-  return asientos;
+  return Array.from({ length: filas * columnas }, (_, i) => [i + 1, nombreFila(Math.floor(i / columnas)), (i % columnas) + 1, 0]);
 }
