@@ -9,6 +9,7 @@ import { POS_SEDE } from '../constantes/posicionesSede.js';
 import Tabla from '../common/Tabla.jsx';
 import ErrorCarga from '../componentes/ErrorCarga.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
+import EditarSala from '../componentes/EditarSala.jsx';
 import { eliminarSala } from '../servicios/servicioSalas.js';
 import { useNotificaciones } from '../ganchos/useNotificaciones.js';
 
@@ -92,7 +93,12 @@ function Salas() {
     navegar(`/salas/${sala[POS_SALA.id]}`);
   }
 
-  function editarSala() {}
+  const [salaAEditar, setSalaAEditar] = useState(null);
+  function salaEditada() {
+    setSalaAEditar(null);
+    notificaciones.exito('Sala modificada con éxito');
+    recargar();
+  }
 
   const [salaAEliminar, setSalaAEliminar] = useState(null);
   async function confirmarEliminacion() {
@@ -113,11 +119,11 @@ function Salas() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5 flex items-center gap-38">
+        <div className="mb-5 flex items-center gap-27">
           <h1 className="text-4xl font-bold">Salas</h1>
 
           <button type="button" onClick={() => navegar('/salas/nueva')} className={claseBoton}>
-            Crear
+            Crear sala
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path
                 fillRule="evenodd"
@@ -148,11 +154,19 @@ function Salas() {
           alCambiarFiltros={setFiltros}
           textoVacio={cargando ? '' : textoVacio}
           onVer={verSala}
-          onEditar={editarSala}
+          onEditar={setSalaAEditar}
           onEliminar={setSalaAEliminar}
           accionesDeshabilitadas={salaEliminada}
         />
       </div>
+
+      {salaAEditar && (
+        <EditarSala
+          sala={salaAEditar}
+          alCancelar={() => setSalaAEditar(null)}
+          alEditar={salaEditada}
+        />
+      )}
 
       {salaAEliminar && (
         <ModalConfirmacion

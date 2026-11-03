@@ -1,7 +1,8 @@
 import { useId } from 'react';
 import Dialogo from './Dialogo.jsx';
 
-function ModalFormulario({ titulo, alCerrar, children }) {
+// ancho: clase de Tailwind con el ancho máximo de la caja (por defecto, estrecha como la de sedes)
+function ModalFormulario({ titulo, alCerrar, ancho = 'max-w-md', children }) {
   const idTitulo = useId();
 
   return (
@@ -9,7 +10,7 @@ function ModalFormulario({ titulo, alCerrar, children }) {
       idTitulo={idTitulo}
       alCerrar={alCerrar}
       cerrarAlClicFuera={false}
-      claseCaja="w-full max-w-md rounded-lg bg-border px-8 py-8"
+      claseCaja={`max-h-full w-full overflow-y-auto rounded-lg bg-border px-8 py-8 ${ancho}`}
     >
       <h2 id={idTitulo} className="mb-6 text-2xl font-bold text-text-color">
         {titulo}
