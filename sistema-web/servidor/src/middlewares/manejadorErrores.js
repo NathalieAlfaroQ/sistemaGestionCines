@@ -34,7 +34,7 @@ export function manejadorErrores(error, req, res, next) {
     return res.status(error.status).json({ mensaje: 'Solicitud inválida' });
   }
   if (error instanceof ErrorPasarela) {
-    return res.status(502).json({ mensaje: error.message, idIntencion: error.idIntencion });
+    return res.status(502).json({ mensaje: error.message });
   }
   console.error(error);
   return res.status(500).json({ mensaje: 'Error interno del servidor' });
