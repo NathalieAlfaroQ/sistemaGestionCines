@@ -14,8 +14,11 @@ function leerSedeGuardada() {
 }
 
 function guardarSede(idSede) {
+  const numero = Number.parseInt(idSede, 10);
+  if (!Number.isInteger(numero)) return;
+
   try {
-    localStorage.setItem(CLAVE_SEDE_GUARDADA, idSede);
+    localStorage.setItem(CLAVE_SEDE_GUARDADA, String(numero));
   } catch {
   }
 }
@@ -58,6 +61,9 @@ export function useCartelera() {
   const cartelera = useCarga(consultarCartelera);
 
   function elegirSede(nuevaSede) {
+    const existe = sedes.datos.some((sede) => String(sede[POS_SEDE_CARTELERA.id]) === nuevaSede);
+    if (!existe) return;
+
     setSedeElegida(nuevaSede);
     guardarSede(nuevaSede);
   }
