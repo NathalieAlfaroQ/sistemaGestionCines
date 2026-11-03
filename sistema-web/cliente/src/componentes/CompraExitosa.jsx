@@ -35,11 +35,12 @@ function CompraExitosa({ compra, correo, guardoTarjeta, alVolver }) {
       botones={[
         {
           texto: descargando ? 'Descargando...' : 'Descargar boletos',
+          varianteBoton: 'principal',
           enfocar: !compra.correoEnviado,
           deshabilitado: descargando,
           alPulsar: descargar,
         },
-        { texto: 'Volver al inicio', variante: 'secundario', enfocar: compra.correoEnviado, alPulsar: alVolver },
+        { texto: 'Volver al inicio', varianteBoton: 'secundario', enfocar: compra.correoEnviado, alPulsar: alVolver },
       ]}
     >
       <p className="text-sm">

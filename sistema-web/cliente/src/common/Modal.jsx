@@ -43,7 +43,7 @@ function Modal({ titulo, mensaje, icono, children, botones, alCerrar }) {
             key={indice}
             ref={indice === indiceEnfocado ? refBotonEnfocado : undefined}
             tamano="sm"
-            variante={variantesBoton[boton.variante ?? 'principal']}
+            variante={boton.varianteBoton ?? variantesBoton[boton.variante ?? 'principal']}
             disabled={boton.deshabilitado}
             onClick={boton.alPulsar}
           >
