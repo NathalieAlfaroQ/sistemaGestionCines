@@ -30,7 +30,7 @@ import BarraCliente from './common/BarraCliente.jsx'
 import PiePagina from './common/PiePagina.jsx'
 
 // Pantallas de cliente
-import Hero from './componentes/Hero'
+import Inicio from './paginas/Inicio.jsx'
 
 // Rutas que NO llevan navbar ni footer (pantallas públicas de auth)
 const rutasPublicas = [
@@ -94,8 +94,8 @@ function App() {
         {/* Rutas de trabajo que aún no tienen componente, quedan como placeholder */}
         <Route path="/empleados" element={<div>Empleados</div>} />
 
-        {/* --- Home --- */}
-        <Route path="/" element={<Hero />} />
+        {/* --- Inicio y cartelera --- */}
+        <Route path="/" element={<Inicio />} />
       </Routes>
 
       {mostrarNavbarYFooter && <PiePagina />}

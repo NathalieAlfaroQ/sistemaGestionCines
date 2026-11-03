@@ -9,6 +9,7 @@ import rutasUbicacion from './rutas/rutasUbicacion.js'
 import rutasPelicula from './rutas/rutasPelicula.js'
 import rutasCatalogo from './rutas/rutasCatalogo.js'
 import rutasReserva from './rutas/rutasReserva.js'
+import rutasCartelera from './rutas/rutasCartelera.js'
 import crearCuenta from './crearCuenta.js'
 import iniciarSesion from './iniciarSesion.js'
 import recuperarContrasena from './recuperarContrasena.js'
@@ -53,6 +54,7 @@ app.use('/api/ubicaciones', verificarAutenticacion, autorizarRoles('ADMINISTRADO
 app.use('/api/catalogo', verificarAutenticacion, soloPersonal, rutasCatalogo);
 app.use('/api/peliculas',verificarAutenticacion, soloPersonal ,rutasPelicula);
 app.use('/api/reserva', rutasReserva);
+app.use('/api/cartelera', rutasCartelera);
 app.use('/api/crear-cuenta', crearCuenta)
 app.use('/api/iniciar-sesion', iniciarSesion)
 app.use('/api/recuperar-contrasena', recuperarContrasena)
