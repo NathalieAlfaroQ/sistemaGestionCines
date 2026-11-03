@@ -49,7 +49,9 @@ function estadoDe(asiento, seleccionado) {
   return seleccionado ? 'seleccionado' : 'disponible';
 }
 
-function MapaAsientos({ asientos, estaSeleccionado, alAlternar, etiquetasSeleccionados }) {
+// Con soloVista el mapa solo muestra los asientos (sin selección, resumen ni leyenda de estados).
+// Se usa para ver la distribución de una sala al crearla.
+function MapaAsientos({ asientos, estaSeleccionado, alAlternar, etiquetasSeleccionados, soloVista = false }) {
   return (
     <section aria-label="Mapa de asientos" className="flex flex-col gap-8 text-text-color">
       <Pantalla />
@@ -62,6 +64,15 @@ function MapaAsientos({ asientos, estaSeleccionado, alAlternar, etiquetasSelecci
             <ul className="flex gap-1.5">
               {asientosFila.map((asiento) => {
                 const etiqueta = `${fila}${asiento[POS_ASIENTO.numero]}`;
+                if (soloVista) {
+                  return (
+                    <li key={asiento[POS_ASIENTO.id]}>
+                      <span title={etiqueta} className={`block ${ESTADOS_ASIENTO.disponible.clase}`}>
+                        <IconoAsiento className="h-6 w-6" />
+                      </span>
+                    </li>
+                  );
+                }
                 const estado = estadoDe(asiento, estaSeleccionado(asiento[POS_ASIENTO.id]));
                 return (
                   <li key={asiento[POS_ASIENTO.id]}>
@@ -86,22 +97,26 @@ function MapaAsientos({ asientos, estaSeleccionado, alAlternar, etiquetasSelecci
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 text-sm">
-        <p className="flex items-center gap-2">
-          <IconoAsiento className={`h-5 w-5 ${ESTADOS_ASIENTO.seleccionado.clase}`} />
-          {etiquetasSeleccionados.length} {etiquetasSeleccionados.length === 1 ? 'asiento seleccionado' : 'asientos seleccionados'}
-        </p>
-        <p aria-live="polite">{etiquetasSeleccionados.join(', ')}</p>
-      </div>
+      {!soloVista && (
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm">
+          <p className="flex items-center gap-2">
+            <IconoAsiento className={`h-5 w-5 ${ESTADOS_ASIENTO.seleccionado.clase}`} />
+            {etiquetasSeleccionados.length} {etiquetasSeleccionados.length === 1 ? 'asiento seleccionado' : 'asientos seleccionados'}
+          </p>
+          <p aria-live="polite">{etiquetasSeleccionados.join(', ')}</p>
+        </div>
+      )}
 
-      <ul aria-label="Leyenda" className="flex flex-wrap gap-x-10 gap-y-3">
-        {Object.entries(ESTADOS_ASIENTO).map(([clave, { etiqueta, clase }]) => (
-          <li key={clave} className="flex items-center gap-2">
-            <IconoAsiento className={`h-6 w-6 ${clase}`} />
-            {etiqueta}
-          </li>
-        ))}
-      </ul>
+      {!soloVista && (
+        <ul aria-label="Leyenda" className="flex flex-wrap gap-x-10 gap-y-3">
+          {Object.entries(ESTADOS_ASIENTO).map(([clave, { etiqueta, clase }]) => (
+            <li key={clave} className="flex items-center gap-2">
+              <IconoAsiento className={`h-6 w-6 ${clase}`} />
+              {etiqueta}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

@@ -1,4 +1,5 @@
 import { peticionApi } from './clienteApi.js';
+import { leerDatos } from './leerDatos.js';
 
 export async function obtenerSalas(filtros = {}) {
   const parametros = new URLSearchParams();
@@ -7,23 +8,14 @@ export async function obtenerSalas(filtros = {}) {
   });
 
   const consulta = parametros.toString();
-  const respuesta = await peticionApi(consulta ? `/api/salas?${consulta}` : '/api/salas');
-
-  if (!respuesta.ok) {
-    throw new Error('No se pudieron obtener las salas');
-  }
-
-  return await respuesta.json();
+  return await leerDatos(
+    () => peticionApi(consulta ? `/api/salas?${consulta}` : '/api/salas'),
+    'No se pudieron obtener las salas'
+  );
 }
 
 async function obtenerCatalogo(url, mensajeError) {
-  const respuesta = await peticionApi(url);
-
-  if (!respuesta.ok) {
-    throw new Error(mensajeError);
-  }
-
-  return await respuesta.json();
+  return await leerDatos(() => peticionApi(url), mensajeError);
 }
 
 export function obtenerTiposSala() {
@@ -48,4 +40,28 @@ export async function eliminarSala(idSala) {
   }
 
   return cuerpo;
+}
+
+export function obtenerDistribucionesSala() {
+  return obtenerCatalogo('/api/salas/distribuciones', 'No se pudieron obtener las distribuciones');
+}
+
+export async function crearSala(sala) {
+  const respuesta = await peticionApi('/api/salas', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sala),
+  });
+
+  const cuerpo = await leerCuerpo(respuesta);
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo crear la sala');
+  }
+
+  return cuerpo;
+}
+
+export async function obtenerSala(idSala) {
+  return await leerDatos(() => peticionApi(`/api/salas/${idSala}`), 'No se pudo obtener la sala');
 }

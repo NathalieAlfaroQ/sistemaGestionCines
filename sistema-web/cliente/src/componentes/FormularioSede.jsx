@@ -3,16 +3,10 @@ import { POS_CANTON, POS_PROVINCIA } from '../constantes/posicionesUbicacion.js'
 import MensajeError from '../common/MensajeError.jsx';
 import { useFormularioSede } from '../ganchos/useFormularioSede.js';
 import { normalizarNombre, NOMBRE_MAXIMO } from '../validaciones/validacionesSede.js';
+import { claseCampo, claseDesplegable } from '../constantes/clasesFormulario.js';
+import Etiqueta from './Etiqueta.jsx';
+import PieFormulario from './PieFormulario.jsx';
 
-const claseEtiqueta = 'mb-2 block text-sm text-text-color';
-const claseCampo = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
-const claseDesplegable = 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-text-color placeholder:text-text-muted focus:border-brand-soft focus:ring-brand-soft disabled:opacity-50';
-const claseBotonConfirmar = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover disabled:opacity-50';
-const claseBotonCancelar = 'flex items-center gap-2 rounded-lg bg-brand-soft px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-soft-hover disabled:opacity-50';
-
-function Asterisco() {
-  return <span className="text-danger">*</span>;
-}
 
 function FormularioSede({
   valorInicial,
@@ -59,9 +53,7 @@ function FormularioSede({
   return (
     <form onSubmit={manejarEnvio} className="flex max-w-sm flex-col gap-10">
       <div>
-        <label htmlFor="nombre" className={claseEtiqueta}>
-          Nombre <Asterisco />
-        </label>
+        <Etiqueta id="nombre">Nombre</Etiqueta>
         <input
           id="nombre"
           className={claseCampo}
@@ -74,9 +66,7 @@ function FormularioSede({
       </div>
 
       <div>
-        <label htmlFor="provincia" className={claseEtiqueta}>
-          Provincia <Asterisco />
-        </label>
+        <Etiqueta id="provincia">Provincia</Etiqueta>
         <div className="relative">
           <select
             id="provincia"
@@ -99,9 +89,7 @@ function FormularioSede({
       </div>
 
       <div>
-        <label htmlFor="canton" className={claseEtiqueta}>
-          Cantón <Asterisco />
-        </label>
+        <Etiqueta id="canton">Cantón</Etiqueta>
         <div className="relative">
           <select
             id="canton"
@@ -122,22 +110,13 @@ function FormularioSede({
         <MensajeError id="error-canton" mensaje={errorCanton} />
       </div>
 
-      <div className="flex flex-col gap-4">
-        <MensajeError mensaje={error} className="mt-0" />
-
-        {/* Desaparece cuando ya no queda ningún campo obligatorio vacío */}
-        {hayCamposVacios && <p className="text-sm text-danger">* Espacio obligatorio</p>}
-
-        <div className="flex gap-4">
-          <button type="submit" disabled={guardando} className={claseBotonConfirmar}>
-            {guardando ? 'Guardando...' : textoGuardar}
-          </button>
-
-          <button type="button" onClick={alCancelar} className={claseBotonCancelar}>
-            Cancelar
-          </button>
-        </div>
-      </div>
+      <PieFormulario
+          error={error}
+          hayCamposVacios={hayCamposVacios}
+          guardando={guardando}
+          textoGuardar={textoGuardar}
+          alCancelar={alCancelar}
+        />
     </form>
   );
 }

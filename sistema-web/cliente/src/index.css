@@ -38,6 +38,12 @@
   --color-warning-hover: #e9b07c;
 }
 
+@layer base {
+  body {
+    background-color: var(--color-background);
+  }
+}
+
 
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
@@ -48,7 +54,7 @@ input:-webkit-autofill:active {
   caret-color: var(--color-text-muted);
 }
 @theme {
-  --color-fondo: #1F1F24;
-  --color-boton: #3D1D53;
-  --color-linea: #B188CE;
+  --color-fondo: #1C1C21;
+  --color-boton: #381b4b;
+  --color-linea: #a06ec4;
 }

@@ -3,11 +3,13 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import rutasSede from './rutas/rutasSede.js'
 import rutasSala from './rutas/rutasSala.js'
+import rutasProyeccion from './rutas/rutasProyeccion.js'
 import rutasUbicacion from './rutas/rutasUbicacion.js'
 
 import rutasPelicula from './rutas/rutasPelicula.js'
 import rutasCatalogo from './rutas/rutasCatalogo.js'
 import rutasReserva from './rutas/rutasReserva.js'
+import rutasCartelera from './rutas/rutasCartelera.js'
 import crearCuenta from './crearCuenta.js'
 import iniciarSesion from './iniciarSesion.js'
 import recuperarContrasena from './recuperarContrasena.js'
@@ -48,6 +50,7 @@ const soloPersonal = autorizarRoles('ADMINISTRADOR', 'EMPLEADO');
 
 app.use('/api/sedes', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasSede);
 app.use('/api/salas', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasSala);
+app.use('/api/proyecciones', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasProyeccion);
 app.use('/api/ubicaciones', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasUbicacion);
 app.use('/api/catalogo', verificarAutenticacion, soloPersonal, rutasCatalogo);
 app.use('/api/peliculas',verificarAutenticacion, soloPersonal ,rutasPelicula);

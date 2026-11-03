@@ -18,7 +18,7 @@ export function useSedes({ busqueda = '', nombre = '', idProvincia = '', idCanto
         const datos = await obtenerSedes({ busqueda, nombre, idProvincia, idCanton, estado });
         if (!cancelado) setSedes(datos);
       } catch (error) {
-        if (!cancelado) setError(error.message);
+        if (!cancelado) setError(error);
       } finally {
         if (!cancelado) setCargando(false);
       }
