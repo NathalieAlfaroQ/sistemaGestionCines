@@ -1,7 +1,7 @@
 import oracledb from 'oracledb';
 import { ejecutar } from '../configuracion/baseDatos.js';
 
-// Las fechas llegan como texto en hora de Costa Rica ('AAAA-MM-DD HH24:MI:SS'), ver utilidades/fechas.js
+// Las fechas llegan como texto en hora de Costa Rica ('AAAA-MM-DD HH24:MI:SS')
 const FORMATO_FECHA = 'YYYY-MM-DD HH24:MI:SS';
 
 // Cada asiento vendido es una línea de DETALLES_FACTURA de tipo boleto con cantidad 1
@@ -38,7 +38,7 @@ export async function obtenerIdMetodoPago(nombre) {
 }
 
 // Las siguientes funciones reciben la conexión de ejecutarTransaccion: no hacen commit,
-// todo se confirma o se deshace junto.
+// se confirma o se deshace junto.
 
 const sqlInsertarFactura = `
   INSERT INTO FACTURAS_FINALES (ID_CLIENTE, ID_METODO, MONTO, FECHA)
@@ -79,10 +79,6 @@ export async function insertarDetallesBoletos(conexion, idFactura, idProyeccion,
   await conexion.executeMany(sqlInsertarDetalleBoleto, filas);
 }
 
-// Datos del comprobante: una fila por boleto. Los datos de la factura y la función se repiten
-// en cada fila (todos los boletos de una compra son de la misma función).
-// Filtra también por cliente: nadie puede ver los boletos de otro cambiando el id en la URL.
-// Orden de columnas:
 //  0: ID_FACTURA  1: MONTO_TOTAL  2: FECHA_COMPRA  3: ID_INTENCION_PAGO  4: TITULO  5: CLASIFICACION
 //  6: FECHA_FUNCION  7: NOMBRE_SEDE  8: NOMBRE_SALA  9: NOMBRE_FORMATO  10: ID_PROYECCION
 //  11: ID_ASIENTO  12: FILA  13: NUMERO  14: NOMBRE_TIPO_BOLETO  15: MONTO_BOLETO
@@ -107,6 +103,55 @@ const sqlComprobante = `
 export async function listarBoletosDeFactura(idFactura, idCliente) {
   const resultado = await ejecutar(sqlComprobante, { idFactura, idCliente });
   return resultado.rows;
+}
+
+// Tarjeta guardada del cliente (una por cliente, por el UNIQUE de ID_CLIENTE).
+// TOKEN es el id del método de pago en ONVO, nunca el número de la tarjeta.
+export const ESTADO_METODO_ACTIVO = 'ACTIVO';
+
+// Orden de columnas: 0: TOKEN, 1: MARCA, 2: ULTIMOS_DIGITOS, 3: VENCIMIENTO ('AAAA-MM'), 4: TITULAR
+const sqlMetodoPagoCliente = `
+  SELECT TOKEN, MARCA, ULTIMOS_DIGITOS, TO_CHAR(FECHA_VENCIMIENTO, 'YYYY-MM'), TITULAR
+  FROM METODOS_PAGO_CLIENTE
+  WHERE ID_CLIENTE = :idCliente AND ESTADO = '${ESTADO_METODO_ACTIVO}'
+`;
+
+export async function obtenerMetodoPagoCliente(idCliente) {
+  const resultado = await ejecutar(sqlMetodoPagoCliente, { idCliente });
+  return resultado.rows[0] ?? null;
+}
+
+// Si el cliente ya tenía una tarjeta guardada, la nueva la reemplaza.
+// La fecha de vencimiento se guarda como el último día del mes ('AAAA-MM' -> LAST_DAY).
+const sqlGuardarMetodoPagoCliente = `
+  MERGE INTO METODOS_PAGO_CLIENTE m
+  USING (SELECT :idCliente AS ID_CLIENTE FROM DUAL) d
+  ON (m.ID_CLIENTE = d.ID_CLIENTE)
+  WHEN MATCHED THEN UPDATE SET
+    m.ID_METODO = :idMetodo,
+    m.TOKEN = :token,
+    m.MARCA = :marca,
+    m.ULTIMOS_DIGITOS = :ultimosDigitos,
+    m.FECHA_VENCIMIENTO = LAST_DAY(TO_DATE(:vencimiento, 'YYYY-MM')),
+    m.TITULAR = :titular,
+    m.ESTADO = '${ESTADO_METODO_ACTIVO}'
+  WHEN NOT MATCHED THEN INSERT
+    (ID_CLIENTE, ID_METODO, TOKEN, MARCA, ULTIMOS_DIGITOS, FECHA_VENCIMIENTO, TITULAR, ESTADO)
+  VALUES
+    (d.ID_CLIENTE, :idMetodo, :token, :marca, :ultimosDigitos,
+     LAST_DAY(TO_DATE(:vencimiento, 'YYYY-MM')), :titular, '${ESTADO_METODO_ACTIVO}')
+`;
+
+export async function guardarMetodoPagoCliente({ idCliente, idMetodo, token, marca, ultimosDigitos, vencimiento, titular }) {
+  await ejecutar(sqlGuardarMetodoPagoCliente, {
+    idCliente,
+    idMetodo,
+    token,
+    marca,
+    ultimosDigitos,
+    vencimiento,
+    titular,
+  });
 }
 
 const sqlRegistrarIntencionPago = `

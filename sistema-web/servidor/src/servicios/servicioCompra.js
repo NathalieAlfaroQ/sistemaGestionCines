@@ -6,23 +6,36 @@ import { ErrorPasarela } from '../errores/ErrorPasarela.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 import {
   RESTRICCION_ASIENTO_VENDIDO,
+  guardarMetodoPagoCliente,
   insertarDetallesBoletos,
   insertarFactura,
   obtenerDatosCliente,
   obtenerIdMetodoPago,
+  obtenerMetodoPagoCliente,
   registrarIntencionPago,
 } from '../repositorios/repositorioCompra.js';
 import { ahoraCostaRica } from '../utilidades/fechas.js';
-import { cobrar, reembolsar } from './pasarelaPago.js';
+import { cobrar, obtenerTarjeta, reembolsar } from './pasarelaPago.js';
 import { enviarComprobante } from './servicioComprobante.js';
 import { MENSAJE_ASIENTO_NO_DISPONIBLE, validarSeleccion } from './servicioReserva.js';
 
 export const NOMBRE_METODO_TARJETA = 'Tarjeta';
+export const MENSAJE_SIN_TARJETA_GUARDADA = 'No tienes una tarjeta guardada';
+export const MENSAJE_TARJETA_VENCIDA = 'Tu tarjeta guardada está vencida. Usa otra tarjeta.';
 
 const CODIGO_ORACLE_DUPLICADO = 1;
 
 // Los ids de ONVO son alfanuméricos (ej. cmvyv38ar0l1uk301e9jal5l8)
 const PATRON_ID_METODO_PAGO = /^[A-Za-z0-9_-]{10,64}$/;
+
+// Los tokens emitidos antes de agregar idCliente (y los del personal) no sirven para comprar
+function obtenerIdCliente(usuario) {
+  const idCliente = usuario?.idCliente;
+  if (!Number.isInteger(idCliente) || idCliente <= 0) {
+    throw new ErrorNoAutenticado('Tu sesión no es válida para comprar. Inicia sesión de nuevo.');
+  }
+  return idCliente;
+}
 
 function validarIdMetodoPago(idMetodoPago) {
   if (typeof idMetodoPago !== 'string' || !PATRON_ID_METODO_PAGO.test(idMetodoPago)) {
@@ -30,14 +43,35 @@ function validarIdMetodoPago(idMetodoPago) {
   }
 }
 
+// 'AAAA-MM' de la tarjeta contra el mes actual en Costa Rica: vence al terminar ese mes
+function estaVencida(vencimiento) {
+  return vencimiento < ahoraCostaRica().slice(0, 7);
+}
+
+async function resolverMetodoPago(idCliente, datos) {
+  if (datos?.usarTarjetaGuardada !== true) {
+    validarIdMetodoPago(datos?.idMetodoPago);
+    return datos.idMetodoPago;
+  }
+
+  const guardado = await obtenerMetodoPagoCliente(idCliente);
+  if (!guardado) {
+    throw new ErrorValidacion(MENSAJE_SIN_TARJETA_GUARDADA);
+  }
+  const [token, , , vencimiento] = guardado;
+  if (estaVencida(vencimiento)) {
+    throw new ErrorValidacion(MENSAJE_TARJETA_VENCIDA);
+  }
+  return token;
+}
+
 function esAsientoYaVendido(error) {
   return error?.errorNum === CODIGO_ORACLE_DUPLICADO && error.message?.includes(RESTRICCION_ASIENTO_VENDIDO);
 }
 
-// Reparte los tipos de boleto entre los asientos en orden (da igual cuál asiento es "el del niño").
-// Devuelve una línea por asiento: [{ idAsiento, idTipoBoleto, monto, descuento }]
+// Repartir asientos
 export function asignarBoletos(asientos, boletos, precios) {
-  const tipos = boletos.flatMap(({ idTipoBoleto, cantidad }) => Array(cantidad).fill(idTipoBoleto));
+  const tipos = boletos.flatMap(({ idTipoBoleto, cantidad }) => new Array(cantidad).fill(idTipoBoleto));
   return asientos.map((idAsiento, indice) => ({
     idAsiento,
     idTipoBoleto: tipos[indice],
@@ -55,8 +89,9 @@ async function reembolsarSinFallar(idIntencion, monto) {
   }
 }
 
-// El correo se manda después de guardar la compra. Si falla, la compra sigue siendo válida:
-// el cliente ve "Compra exitosa" y puede descargar sus boletos en pantalla.
+// Las dos tareas que siguen se hacen con la compra ya guardada. Si fallan, la compra sigue
+// siendo válida: solo se avisa en la respuesta (correoEnviado, metodoGuardado).
+
 async function enviarComprobanteSinFallar(idFactura, cliente) {
   try {
     await enviarComprobante(idFactura, cliente);
@@ -67,19 +102,29 @@ async function enviarComprobanteSinFallar(idFactura, cliente) {
   }
 }
 
-// Compra los boletos de la selección y los cobra con la tarjeta registrada en ONVO.
-// Orden: validar -> insertar factura y detalles (sin commit) -> cobrar -> commit.
-// Así nunca se cobra un asiento que no se pudo vender: si el asiento ya se vendió, el
-// INSERT falla antes de cobrar. Si algo falla después de cobrar, se reembolsa.
-export async function comprarBoletos(usuario, idProyeccion, datos) {
-  // Los tokens emitidos antes de agregar idCliente no sirven para comprar
-  const idCliente = usuario?.idCliente;
-  if (!Number.isInteger(idCliente) || idCliente <= 0) {
-    throw new ErrorNoAutenticado('Tu sesión no es válida para comprar. Inicia sesión de nuevo.');
+async function guardarMetodoPagoSinFallar(idCliente, idMetodo, idMetodoPago) {
+  try {
+    const tarjeta = await obtenerTarjeta(idMetodoPago);
+    await guardarMetodoPagoCliente({
+      idCliente,
+      idMetodo,
+      token: idMetodoPago,
+      marca: tarjeta.marca,
+      ultimosDigitos: tarjeta.ultimosDigitos,
+      vencimiento: `${tarjeta.anioVencimiento}-${String(tarjeta.mesVencimiento).padStart(2, '0')}`,
+      titular: tarjeta.titular,
+    });
+    return true;
+  } catch (error) {
+    console.error(`No se pudo guardar el método de pago del cliente ${idCliente}:`, error);
+    return false;
   }
+}
 
-  const idMetodoPago = datos?.idMetodoPago;
-  validarIdMetodoPago(idMetodoPago);
+export async function comprarBoletos(usuario, idProyeccion, datos) {
+  const idCliente = obtenerIdCliente(usuario);
+  const idMetodoPago = await resolverMetodoPago(idCliente, datos);
+  const guardarTarjeta = datos?.guardarMetodo === true && datos?.usarTarjetaGuardada !== true;
 
   // Revisa la selección y los asientos libres antes de tocar la pasarela
   const { asientos, boletos, precios, total } = await validarSeleccion(idProyeccion, datos);
@@ -128,7 +173,29 @@ export async function comprarBoletos(usuario, idProyeccion, datos) {
 
   // La compra ya está guardada: desde aquí nada debe reembolsar
   const [nombre, , correo] = cliente;
-  const correoEnviado = await enviarComprobanteSinFallar(idFactura, { idCliente, nombre, correo });
+  const [correoEnviado, metodoGuardado] = await Promise.all([
+    enviarComprobanteSinFallar(idFactura, { idCliente, nombre, correo }),
+    guardarTarjeta ? guardarMetodoPagoSinFallar(idCliente, idMetodo, idMetodoPago) : false,
+  ]);
 
-  return { idFactura, total, referencia: cobro.referencia, correoEnviado };
+  return { idFactura, total, referencia: cobro.referencia, correoEnviado, metodoGuardado };
+}
+
+// Tarjeta guardada del cliente para mostrarla en la pantalla de pago (sin el token).
+// Devuelve null si no tiene ninguna.
+export async function consultarMetodoPagoGuardado(usuario) {
+  const idCliente = obtenerIdCliente(usuario);
+
+  const guardado = await obtenerMetodoPagoCliente(idCliente);
+  if (!guardado) return null;
+
+  const [, marca, ultimosDigitos, vencimiento, titular] = guardado;
+  const [anio, mes] = vencimiento.split('-');
+  return {
+    marca,
+    ultimosDigitos,
+    vencimiento: `${mes}/${anio.slice(2)}`,
+    titular,
+    vencida: estaVencida(vencimiento),
+  };
 }
