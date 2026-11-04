@@ -178,11 +178,7 @@ export default function IniciarSesion() {
             <hr />
           </div>
 
-          <div className="botones-terceros">
-            <button type="button" className="boton-tercero" disabled title="Próximamente">
-              <span className="icono-google">G</span>
-            </button>
-            
+          <div className="botones-terceros">            
             <BotonGoogle alError={(texto) => setMensaje({ tipo: 'error', texto })} />
           </div>
 
