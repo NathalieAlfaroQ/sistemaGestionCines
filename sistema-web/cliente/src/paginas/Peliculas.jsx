@@ -36,7 +36,7 @@ function Peliculas() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5 flex items-center gap-35">
+        <div className="mb-5 flex items-center gap-23">
           <h1 className="text-4xl font-bold">Películas</h1>
 
           <button type="button" onClick={() => navegar('/peliculas/nueva')} className={claseBoton}>
