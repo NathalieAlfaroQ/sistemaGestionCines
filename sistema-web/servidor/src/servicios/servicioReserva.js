@@ -22,6 +22,8 @@ const PATRON_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 // Regla de negocio: toda película en un idioma distinto del español se proyecta subtitulada al español.
 const IDIOMA_LOCAL = 'Español';
 
+const POSICION_MONTO_SALA = 6;
+
 function esSubtitulada(idiomas) {
   return idiomas.some((nombre) => nombre !== IDIOMA_LOCAL);
 }
@@ -94,8 +96,25 @@ function validarBoletos(boletos) {
   return conCantidad;
 }
 
-export function calcularPrecios(tiposBoleto) {
-  return new Map(tiposBoleto.map(([idTipoBoleto, , precio]) => [idTipoBoleto, { monto: precio, descuento: 0 }]));
+// Precio de cada tipo de boleto en una sala: el monto de la sala menos el descuento del tipo,
+// redondeado al colón. [[id, nombre, descuento %]] → [[id, nombre, precio]] (lo que recibe el cliente)
+export function calcularPrecios(tiposBoleto, montoSala) {
+  return tiposBoleto.map(([idTipoBoleto, nombre, descuento]) => [
+    idTipoBoleto,
+    nombre,
+    Math.round((montoSala * (100 - descuento)) / 100),
+  ]);
+}
+
+// Los mismos precios por id, para la compra: monto a cobrar y descuento en colones
+// (lo que va en MONTO y DESCUENTO de DETALLES_FACTURA). monto + descuento = monto de la sala.
+export function mapaPrecios(tiposBoleto, montoSala) {
+  return new Map(
+    calcularPrecios(tiposBoleto, montoSala).map(([idTipoBoleto, , precio]) => [
+      idTipoBoleto,
+      { monto: precio, descuento: montoSala - precio },
+    ])
+  );
 }
 
 // Encabezado de la película que comparten las dos pantallas
@@ -135,7 +154,7 @@ export async function consultarHorarios(idPelicula, fecha) {
   return await listarHorarios(idPelicula, dia, ahora);
 }
 
-// Datos de la función, mapa de asientos y tipos de boleto
+// Datos de la función, mapa de asientos y tipos de boleto con su precio en esa sala
 export async function consultarAsientos(idProyeccion) {
   validarId(idProyeccion, 'la función');
 
@@ -146,7 +165,7 @@ export async function consultarAsientos(idProyeccion) {
 
   const [asientos, tiposBoleto] = await Promise.all([listarAsientos(idProyeccion), listarTiposBoleto()]);
 
-  return { proyeccion, asientos, tiposBoleto };
+  return { proyeccion, asientos, tiposBoleto: calcularPrecios(tiposBoleto, proyeccion[POSICION_MONTO_SALA]) };
 }
 
 // No reserva nada; la garantía final contra la doble venta es el UNIQUE de DETALLES_FACTURA.
@@ -169,7 +188,7 @@ export async function validarSeleccion(idProyeccion, datos) {
     throw new ErrorNoEncontrado('La función no existe o ya no está disponible');
   }
 
-  const precios = calcularPrecios(await listarTiposBoleto());
+  const precios = mapaPrecios(await listarTiposBoleto(), proyeccion[POSICION_MONTO_SALA]);
   if (!boletos.every(({ idTipoBoleto }) => precios.has(idTipoBoleto))) {
     throw new ErrorValidacion('El tipo de boleto no es válido');
   }

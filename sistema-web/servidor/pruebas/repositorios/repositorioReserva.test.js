@@ -66,9 +66,9 @@ describe('SCRUM-93 repositorioReserva: consultas', () => {
   });
 
   it('listarAsientos y listarTiposBoleto devuelven las filas', async () => {
-    ejecutar.mockResolvedValueOnce({ rows: [[10, 'A', 1, 0]] }).mockResolvedValueOnce({ rows: [[1, 'Adulto', 3300]] });
+    ejecutar.mockResolvedValueOnce({ rows: [[10, 'A', 1, 0]] }).mockResolvedValueOnce({ rows: [[1, 'Adulto', 0]] });
     await expect(listarAsientos(7)).resolves.toEqual([[10, 'A', 1, 0]]);
-    await expect(listarTiposBoleto()).resolves.toEqual([[1, 'Adulto', 3300]]);
+    await expect(listarTiposBoleto()).resolves.toEqual([[1, 'Adulto', 0]]);
   });
 
   it('contarAsientosDeSala usa un bind por asiento', async () => {

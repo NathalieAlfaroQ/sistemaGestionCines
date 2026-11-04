@@ -24,6 +24,8 @@ const {
   consultarAsientos,
   consultarHorarios,
   consultarPelicula,
+  calcularPrecios,
+  mapaPrecios,
   verificarSeleccion,
 } = await import('../../src/servicios/servicioReserva.js');
 
@@ -31,11 +33,12 @@ const {
 const AHORA_UTC = new Date('2026-10-28T08:00:00Z');
 const AHORA_CR = '2026-10-28 02:00:00';
 
-const PROYECCION = [7, 3, '2026-10-28 19:30', 'Cine Aurora Alba', 'Sala 1', '2D'];
+// La sala cuesta 3300; los tipos de boleto traen su descuento en porcentaje
+const PROYECCION = [7, 3, '2026-10-28 19:30', 'Cine Aurora Alba', 'Sala 1', '2D', 3300];
 const TIPOS_BOLETO = [
-  [1, 'Adulto', 3300],
-  [2, 'Niño', 2600],
-  [3, 'Tercera edad', 2600],
+  [1, 'Adulto', 0],
+  [2, 'Niño', 20],
+  [3, 'Tercera edad', 20],
 ];
 
 beforeEach(() => {
@@ -138,9 +141,30 @@ describe('SCRUM-93 servicioReserva: consultarAsientos', () => {
     await expect(consultarAsientos(7)).resolves.toEqual({
       proyeccion: PROYECCION,
       asientos,
-      tiposBoleto: TIPOS_BOLETO,
+      tiposBoleto: [
+        [1, 'Adulto', 3300],
+        [2, 'Niño', 2640],
+        [3, 'Tercera edad', 2640],
+      ],
     });
     expect(repositorio.obtenerProyeccionVigente).toHaveBeenCalledWith(7, AHORA_CR);
+  });
+});
+
+describe('SCRUM-93 servicioReserva: calcularPrecios', () => {
+  it('aplica el descuento de cada tipo sobre el monto de la sala y redondea al colón', () => {
+    expect(calcularPrecios([[1, 'Adulto', 0], [2, 'Niño', 20]], 3333)).toEqual([
+      [1, 'Adulto', 3333],
+      [2, 'Niño', 2666],
+    ]);
+  });
+});
+
+describe('SCRUM-93 servicioReserva: mapaPrecios', () => {
+  it('da por id el monto a cobrar y el descuento en colones', () => {
+    const precios = mapaPrecios([[1, 'Adulto', 0], [2, 'Niño', 20]], 3300);
+    expect(precios.get(1)).toEqual({ monto: 3300, descuento: 0 });
+    expect(precios.get(2)).toEqual({ monto: 2640, descuento: 660 });
   });
 });
 
@@ -163,7 +187,7 @@ describe('SCRUM-93 servicioReserva: verificarSeleccion', () => {
 
   it('devuelve el total calculado con los precios de la BD', async () => {
     prepararBdValida();
-    await expect(verificarSeleccion(7, seleccionValida)).resolves.toEqual({ total: 3300 * 2 + 2600 });
+    await expect(verificarSeleccion(7, seleccionValida)).resolves.toEqual({ total: 3300 * 2 + 2640 });
     expect(repositorio.contarAsientosDeSala).toHaveBeenCalledWith(7, [10, 11, 12]);
   });
 
