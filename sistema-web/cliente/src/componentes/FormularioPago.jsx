@@ -4,16 +4,18 @@ import { IconoVer } from '../common/iconos.jsx';
 import { LARGOS_TARJETA } from '../validaciones/validacionesTarjeta.js';
 import Campo from './Campo.jsx';
 
-// Anchos segun la base de datos
+// Ancho de los campos de la tarjeta: el largo máximo (ver LARGOS_TARJETA) + 4 caracteres de relleno
+// interno; el CVV solo + 2. max-w-full los encoge en pantallas angostas.
+// Las clases van escritas completas para que Tailwind las detecte.
 const ANCHOS = {
-  titular: 'w-[30ch] max-w-full',
-  numero: 'w-[27ch] max-w-full',
-  vencimiento: 'w-[9ch] max-w-full',
-  cvv: 'w-[6ch] max-w-full',
+  titular: 'w-[30ch] max-w-full', // 26
+  numero: 'w-[27ch] max-w-full', // 23 (19 dígitos + 4 espacios)
+  vencimiento: 'w-[9ch] max-w-full', // 5 (MM/AA)
+  cvv: 'w-[6ch] max-w-full', // 4
 };
 
 // Los datos personales no se editan: cada campo mide lo que muestra + 4 de relleno.
-// Va como estilo en línea porque el ancho depende del valor.
+// Va como estilo en línea porque el ancho depende del valor (Tailwind no genera clases dinámicas).
 const RELLENO_CARACTERES = 4;
 const MINIMO_CARACTERES = 6;
 
@@ -44,6 +46,8 @@ function IconoOcultar({ className = 'h-5 w-5' }) {
   );
 }
 
+// Campo de texto con botón para mostrar u ocultar el valor (número de tarjeta y CVV).
+// El botón va al lado del campo y no encima, para no tapar los dígitos en campos angostos.
 function CampoOculto({ id, etiqueta, ancho, propiedades, error, ...resto }) {
   const [visible, setVisible] = useState(false);
 
@@ -106,8 +110,8 @@ function FormularioPago({ id, usuario, metodoGuardado, metodo, setMetodo, tarjet
       <fieldset disabled={deshabilitado} className="flex min-w-0 flex-col gap-3">
         <legend className="mb-4 text-sm">Método de pago</legend>
 
-        <OpcionMetodo valor={METODOS.paypal} metodo={metodo} setMetodo={setMetodo} deshabilitado>
-          PayPal <span className="text-xs">(próximamente)</span>
+        <OpcionMetodo valor={METODOS.paypal} metodo={metodo} setMetodo={setMetodo}>
+          PayPal
         </OpcionMetodo>
 
         {metodoGuardado && (

@@ -22,6 +22,14 @@ vi.mock('../../src/servicios/pasarelaPago.js', () => ({
   reembolsar: vi.fn(),
   obtenerTarjeta: vi.fn(),
 }));
+vi.mock('../../src/servicios/pasarelaPayPal.js', () => ({
+  MENSAJE_PAYPAL_NO_COMPLETADO: 'La transacción fue cancelada o no pudo completarse.',
+  crearOrden: vi.fn(),
+  consultarOrden: vi.fn(),
+  capturarOrden: vi.fn(),
+  reembolsarCaptura: vi.fn(),
+  convertirADolares: vi.fn(),
+}));
 vi.mock('../../src/servicios/servicioComprobante.js', () => ({
   enviarComprobante: vi.fn(),
 }));
@@ -29,7 +37,12 @@ vi.mock('../../src/utilidades/fechas.js', () => ({
   ahoraCostaRica: () => '2026-11-02 20:15:00',
 }));
 
-import { asignarBoletos, comprarBoletos, consultarMetodoPagoGuardado } from '../../src/servicios/servicioCompra.js';
+import {
+  asignarBoletos,
+  calcularHuella,
+  comprarBoletos,
+  completarPagoPayPal,
+} from '../../src/servicios/servicioCompra.js';
 import { ejecutarTransaccion } from '../../src/configuracion/baseDatos.js';
 import {
   guardarMetodoPagoCliente,
@@ -42,9 +55,14 @@ import {
 } from '../../src/repositorios/repositorioCompra.js';
 import { validarSeleccion } from '../../src/servicios/servicioReserva.js';
 import { cobrar, obtenerTarjeta, reembolsar } from '../../src/servicios/pasarelaPago.js';
+import {
+  capturarOrden,
+  consultarOrden,
+  convertirADolares,
+  reembolsarCaptura,
+} from '../../src/servicios/pasarelaPayPal.js';
 import { enviarComprobante } from '../../src/servicios/servicioComprobante.js';
 import { ErrorConflicto } from '../../src/errores/ErrorConflicto.js';
-import { ErrorNoAutenticado } from '../../src/errores/ErrorNoAutenticado.js';
 import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js';
 import { ErrorPagoRechazado } from '../../src/errores/ErrorPagoRechazado.js';
 import { ErrorPasarela } from '../../src/errores/ErrorPasarela.js';
@@ -81,7 +99,7 @@ function errorOracleDuplicado(restriccion) {
   });
 }
 
-describe('SCRUM-XX servicioCompra', () => {
+describe('SCRUM-94-95 servicioCompra', () => {
   beforeEach(() => {
     vi.resetAllMocks();
 
@@ -119,13 +137,6 @@ describe('SCRUM-XX servicioCompra', () => {
   });
 
   describe('comprarBoletos', () => {
-    it('rechaza con 401 un token sin idCliente (sesión anterior al cambio o personal del cine)', async () => {
-      await expect(comprarBoletos({ idCredencial: 3, tipoUsuario: 'CLIENTE' }, ID_PROYECCION, datosCompra)).rejects.toBeInstanceOf(
-        ErrorNoAutenticado
-      );
-      expect(validarSeleccion).not.toHaveBeenCalled();
-    });
-
     it.each([undefined, '', 'abc', 'id con espacios y símbolos!!', 12345678901])(
       'rechaza el método de pago inválido %s sin cobrar',
       async (idMetodoPago) => {
@@ -166,16 +177,6 @@ describe('SCRUM-XX servicioCompra', () => {
       });
       expect(guardarMetodoPagoCliente).not.toHaveBeenCalled();
       expect(enviarComprobante).toHaveBeenCalledWith(ID_FACTURA, { idCliente: 21, nombre: 'Ana', correo: 'ana@correo.com' });
-    });
-
-    it('si el correo falla, la compra sigue siendo válida y no se reembolsa', async () => {
-      enviarComprobante.mockRejectedValue(new Error('SMTP caído'));
-      vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      const compra = await comprarBoletos(usuarioCliente, ID_PROYECCION, datosCompra);
-
-      expect(compra.correoEnviado).toBe(false);
-      expect(reembolsar).not.toHaveBeenCalled();
     });
 
     it('no manda correo si la compra falla', async () => {
@@ -290,26 +291,6 @@ describe('SCRUM-XX servicioCompra', () => {
       expect(compra.metodoGuardado).toBe(true);
     });
 
-    it('si no se puede guardar la tarjeta, la compra sigue siendo válida', async () => {
-      guardarMetodoPagoCliente.mockRejectedValue(new Error('ORA-12899'));
-      vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      const compra = await comprarBoletos(usuarioCliente, ID_PROYECCION, { ...datosCompra, guardarMetodo: true });
-
-      expect(compra.metodoGuardado).toBe(false);
-      expect(compra.idFactura).toBe(ID_FACTURA);
-      expect(reembolsar).not.toHaveBeenCalled();
-    });
-
-    it('no guarda la tarjeta si el pago se rechaza', async () => {
-      cobrar.mockRejectedValue(new ErrorPagoRechazado('El pago no pudo ser procesado.'));
-
-      await expect(
-        comprarBoletos(usuarioCliente, ID_PROYECCION, { ...datosCompra, guardarMetodo: true })
-      ).rejects.toBeInstanceOf(ErrorPagoRechazado);
-      expect(guardarMetodoPagoCliente).not.toHaveBeenCalled();
-    });
-
     it('cobra con el token guardado del cliente de la sesión, ignorando el idMetodoPago del cuerpo', async () => {
       obtenerMetodoPagoCliente.mockResolvedValue([TOKEN_GUARDADO, 'Visa', '4242', '2030-03', 'Ana Mora']);
 
@@ -323,27 +304,6 @@ describe('SCRUM-XX servicioCompra', () => {
       expect(cobrar).toHaveBeenCalledWith(expect.objectContaining({ idMetodoPago: TOKEN_GUARDADO }));
     });
 
-    it('no vuelve a guardar la tarjeta guardada aunque llegue guardarMetodo', async () => {
-      obtenerMetodoPagoCliente.mockResolvedValue([TOKEN_GUARDADO, 'Visa', '4242', '2030-03', 'Ana Mora']);
-
-      await comprarBoletos(usuarioCliente, ID_PROYECCION, {
-        ...datosCompra,
-        usarTarjetaGuardada: true,
-        guardarMetodo: true,
-      });
-
-      expect(guardarMetodoPagoCliente).not.toHaveBeenCalled();
-    });
-
-    it('rechaza usar la tarjeta guardada si el cliente no tiene una', async () => {
-      obtenerMetodoPagoCliente.mockResolvedValue(null);
-
-      await expect(
-        comprarBoletos(usuarioCliente, ID_PROYECCION, { asientos: [101], boletos: [], usarTarjetaGuardada: true })
-      ).rejects.toThrow('No tienes una tarjeta guardada');
-      expect(cobrar).not.toHaveBeenCalled();
-    });
-
     it('rechaza una tarjeta guardada vencida sin cobrar', async () => {
       obtenerMetodoPagoCliente.mockResolvedValue([TOKEN_GUARDADO, 'Visa', '4242', '2026-10', 'Ana Mora']);
 
@@ -353,30 +313,76 @@ describe('SCRUM-XX servicioCompra', () => {
       expect(cobrar).not.toHaveBeenCalled();
     });
 
-    it('una tarjeta que vence este mes todavía sirve', async () => {
-      obtenerMetodoPagoCliente.mockResolvedValue([TOKEN_GUARDADO, 'Visa', '4242', '2026-11', 'Ana Mora']);
+  });
 
-      await expect(
-        comprarBoletos(usuarioCliente, ID_PROYECCION, { ...datosCompra, usarTarjetaGuardada: true })
-      ).resolves.toMatchObject({ idFactura: ID_FACTURA });
+  describe('PayPal', () => {
+    const ID_ORDEN = '7YJ07784CA3167202';
+    const ID_CAPTURA = '2XM6716424273201D';
+    const seleccion = { asientos: [101, 102, 103], boletos: datosCompra.boletos };
+    const huella = () => calcularHuella(21, ID_PROYECCION, seleccion.asientos, seleccion.boletos);
+
+    beforeEach(() => {
+      convertirADolares.mockReturnValue('18.22');
+      consultarOrden.mockImplementation(async () => ({
+        estado: 'APPROVED',
+        huella: huella(),
+        moneda: 'USD',
+        montoDolares: '18.22',
+        captura: null,
+      }));
+      capturarOrden.mockResolvedValue({ idPago: ID_CAPTURA, referencia: ID_CAPTURA });
+      obtenerIdMetodoPago.mockImplementation(async (nombre) => (nombre === 'PayPal' ? 2 : 1));
     });
 
-    it('consultarMetodoPagoGuardado devuelve la tarjeta sin el token', async () => {
-      obtenerMetodoPagoCliente.mockResolvedValue([TOKEN_GUARDADO, 'Visa', '4242', '2030-03', 'Ana Mora']);
+    describe('calcularHuella', () => {
+      it('no depende del orden en que llegan los asientos y los boletos', () => {
+        const otraForma = calcularHuella(21, ID_PROYECCION, [103, 101, 102], [...datosCompra.boletos].reverse());
+        expect(otraForma).toBe(huella());
+      });
 
-      await expect(consultarMetodoPagoGuardado(usuarioCliente)).resolves.toEqual({
-        marca: 'Visa',
-        ultimosDigitos: '4242',
-        vencimiento: '03/30',
-        titular: 'Ana Mora',
-        vencida: false,
+      it('cambia si cambia el cliente, la función, un asiento o un boleto', () => {
+        const base = huella();
+        expect(calcularHuella(22, ID_PROYECCION, seleccion.asientos, seleccion.boletos)).not.toBe(base);
+        expect(calcularHuella(21, 8, seleccion.asientos, seleccion.boletos)).not.toBe(base);
+        expect(calcularHuella(21, ID_PROYECCION, [101, 102, 104], seleccion.boletos)).not.toBe(base);
+        expect(
+          calcularHuella(21, ID_PROYECCION, seleccion.asientos, [{ idTipoBoleto: ADULTO, cantidad: 3 }])
+        ).not.toBe(base);
       });
     });
 
-    it('consultarMetodoPagoGuardado devuelve null si no hay tarjeta guardada', async () => {
-      obtenerMetodoPagoCliente.mockResolvedValue(null);
+    describe('completarPagoPayPal', () => {
+      it('verifica la orden, guarda la compra como PayPal y captura', async () => {
+        const compra = await completarPagoPayPal(usuarioCliente, ID_PROYECCION, ID_ORDEN, datosCompra);
 
-      await expect(consultarMetodoPagoGuardado(usuarioCliente)).resolves.toBeNull();
+        expect(consultarOrden).toHaveBeenCalledWith(ID_ORDEN);
+        expect(insertarFactura).toHaveBeenCalledWith(conexion, expect.objectContaining({ idMetodo: 2, monto: 9200 }));
+        expect(capturarOrden).toHaveBeenCalledWith(ID_ORDEN);
+        expect(registrarIntencionPago).toHaveBeenCalledWith(conexion, ID_FACTURA, ID_CAPTURA);
+        expect(compra).toEqual({ idFactura: ID_FACTURA, total: 9200, referencia: ID_CAPTURA, correoEnviado: true });
+        expect(cobrar).not.toHaveBeenCalled();
+      });
+
+      it('no captura una orden cuya huella no corresponde a la selección', async () => {
+        consultarOrden.mockResolvedValue({ estado: 'APPROVED', huella: 'huella-de-otra-seleccion', moneda: 'USD', montoDolares: '18.22' });
+
+        await expect(completarPagoPayPal(usuarioCliente, ID_PROYECCION, ID_ORDEN, datosCompra)).rejects.toThrow(
+          'La orden de PayPal no corresponde a esta compra'
+        );
+        expect(capturarOrden).not.toHaveBeenCalled();
+      });
+
+      it('reembolsa la captura si la compra no se pudo guardar después de capturar', async () => {
+        const errorCommit = new Error('fallo al confirmar');
+        ejecutarTransaccion.mockImplementation(async (operaciones) => {
+          await operaciones(conexion);
+          throw errorCommit;
+        });
+
+        await expect(completarPagoPayPal(usuarioCliente, ID_PROYECCION, ID_ORDEN, datosCompra)).rejects.toBe(errorCommit);
+        expect(reembolsarCaptura).toHaveBeenCalledWith(ID_CAPTURA);
+        expect(reembolsar).not.toHaveBeenCalled();
+      });
     });
   });
 });

@@ -57,6 +57,7 @@ sistema-web/
 - El Wallet de la base de datos, junto con la contraseña con la que fue descargado.
 - Proyecto de google para autenticación de terceros
 - Llaves de prueba de la cuenta de ONVO del equipo (pago con tarjeta).
+- Credenciales de la app de sandbox de PayPal del equipo y su cuenta de comprador de prueba.
 - Datos de una cuenta de correo SMTP para enviar correos (contraseña temporal y comprobantes de compra).
 
 
@@ -266,11 +267,76 @@ Todas exigen sesión con rol `CLIENTE`.
 - **La compra se hace, pero no llega el correo.** Revisa las variables `SMTP_*` y la terminal del servidor. La compra igual es válida y los boletos se descargan en pantalla.
 
 
+## Pago con PayPal
+
+Los clientes también pueden pagar con su cuenta de PayPal. El proyecto usa el **sandbox** de PayPal: las cuentas, el dinero y los pagos son de prueba.
+
+PayPal **no acepta colones**, así que se cobra en dólares con un tipo de cambio fijo (`TIPO_CAMBIO_DOLAR`). La factura se guarda en colones, igual que con tarjeta.
+
+El flujo de una compra es:
+
+1. Al presionar el botón de PayPal, el servidor valida la selección, convierte el total a dólares y crea una **orden** en PayPal (`POST /api/compras/paypal/ordenes`). Todavía no se guarda nada en la base de datos.
+2. Se abre la ventana de PayPal y el cliente **aprueba** el pago. Aprobar no mueve dinero.
+3. El servidor consulta la orden y verifica que esté aprobada, que el monto sea el esperado y que corresponda a la misma selección (en la orden se guarda una huella de la selección). Después guarda la factura sin confirmar, **captura** la orden (aquí se cobra) y confirma (`POST /api/compras/paypal/ordenes/:idOrden/captura`). Si algún asiento se vendió mientras el cliente estaba en PayPal, la compra se detiene **antes** de capturar.
+4. Se envía el comprobante por correo, igual que con tarjeta.
+
+Si el cliente cierra la ventana de PayPal, cancela o PayPal rechaza el pago, vuelve a la pantalla de pago con el mensaje "La transacción fue cancelada o no pudo completarse." y no se cobra nada.
+
+### Configuración local de PayPal (cada integrante)
+
+1. **Credenciales.** Pide al equipo, por un canal privado, el *Client ID* y el *Secret* de la app de sandbox, y el correo y la contraseña de la **cuenta Personal de prueba** (`...@personal.example.com`). Con esa cuenta se inicia sesión en la ventana de PayPal para "pagar"; nunca uses una cuenta real.
+
+2. **Variables de entorno** (los modelos están en los `.env.example`):
+
+```env
+   # servidor/.env
+   PAYPAL_ID_CLIENTE=<client-id>
+   PAYPAL_SECRETO_CLIENTE=<secret>
+   TIPO_CAMBIO_DOLAR=505
+
+   # cliente/.env
+   VITE_PAYPAL_ID_CLIENTE=<client-id>
+```
+
+   El *Client ID* es el mismo en los dos archivos y no es un secreto. El *Secret* solo va en el servidor. `TIPO_CAMBIO_DOLAR` son los colones por dólar; actualízalo cuando haga falta.
+
+   Al arrancar, si falta alguna de las tres variables del servidor, se detiene con un mensaje que dice cuál. Después de cambiar `cliente/.env` hay que **reiniciar** `npm run dev`.
+
+3. **Dependencias.** El cliente usa `@paypal/react-paypal-js`. Se instala con `npm run instalar-todo`.
+
+4. **Probar.** Inicia sesión con una cuenta de **cliente**, elige una función y asientos, selecciona **PayPal** y presiona el botón amarillo. En la ventana de PayPal entra con la cuenta Personal de prueba y aprueba. Para probar la cancelación, cierra la ventana sin aprobar.
+
+### Rutas
+
+Exigen sesión con rol `CLIENTE`. Las dos reciben `{ idProyeccion, asientos, boletos }`.
+
+| Ruta | Qué hace |
+|---|---|
+| `POST /api/compras/paypal/ordenes` | Crea la orden en PayPal. Devuelve `{ idOrden }`. |
+| `POST /api/compras/paypal/ordenes/:idOrden/captura` | Verifica la orden y hace la compra. Devuelve `{ idFactura, total, referencia, correoEnviado }`. |
+
+| Código | Cuándo |
+|---|---|
+| `201` | Orden creada o compra realizada. |
+| `400` | Datos inválidos, o la orden no corresponde a la selección (otro monto u otros asientos). |
+| `402` | El pago se canceló, no se aprobó o PayPal lo rechazó. |
+| `409` | Algún asiento ya se vendió. No se cobra nada. |
+| `502` | No se pudo comunicar con PayPal. |
+
+### Problemas comunes
+
+- **No aparece el botón de PayPal.** Revisa `VITE_PAYPAL_ID_CLIENTE` y reinicia `npm run dev`; la consola del navegador avisa si falta.
+- **La ventana de PayPal no abre.** El navegador puede estar bloqueando ventanas emergentes para `localhost`.
+- **"La orden de PayPal no corresponde a esta compra".** Cambió el tipo de cambio o la selección entre crear la orden y capturarla. Vuelve a presionar el botón de PayPal.
+- **El pago se ve en dólares en PayPal.** Es lo esperado: PayPal no acepta colones.
+
+
 ## Nunca subir al repositorio
 
 - La llave privada (`.pem`) y `~/.oci/config`.
 - El ID del proyecto de Google
-- Las llaves de ONVO.
+- Las llaves de ONVO, sobre todo la secreta.
+- El *Secret* de PayPal y las credenciales de las cuentas de prueba.
 - Imágenes de prueba.
 
 
