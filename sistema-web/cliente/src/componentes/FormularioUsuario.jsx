@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { POS_SEDE } from '../constantes/posicionesSede.js'
 import { validarNombreOApellido, validarCorreo, MENSAJES_ERROR } from '../validaciones/validaciones'
+import { claseBotonPrincipal, claseBotonSecundario } from '../constantes/clasesFormulario.js'
+
 
 function FormularioUsuario({ sedes = [], alEnviar, alCancelar, guardando, error }) {
   const [form, setForm] = useState({
@@ -129,14 +131,14 @@ function FormularioUsuario({ sedes = [], alEnviar, alCancelar, guardando, error 
         <button 
           type="button" 
           onClick={alCancelar}
-          className="px-4 py-2 text-sm text-gray-300 hover:text-white"
+          className={claseBotonPrincipal}
           disabled={guardando}
         >
           Cancelar
         </button>
         <button 
           type="submit" 
-          className="px-4 py-2 text-sm bg-purple-700 text-white rounded-md hover:bg-purple-600"
+          className={claseBotonSecundario}
           disabled={guardando}
         >
           {guardando ? 'Creando...' : 'Crear'}
