@@ -54,6 +54,7 @@ app.use('/api/proyecciones', verificarAutenticacion, autorizarRoles('ADMINISTRAD
 app.use('/api/ubicaciones', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasUbicacion);
 app.use('/api/catalogo', verificarAutenticacion, soloPersonal, rutasCatalogo);
 app.use('/api/peliculas',verificarAutenticacion, soloPersonal ,rutasPelicula);
+app.use('/api/cartelera', rutasCartelera);
 app.use('/api/reserva', rutasReserva);
 app.use('/api/compras', verificarAutenticacion, autorizarRoles('CLIENTE'), rutasCompra);
 app.use('/api/crear-cuenta', crearCuenta)
