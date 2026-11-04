@@ -127,7 +127,7 @@ function FormularioUsuario({ sedes = [], alEnviar, alCancelar, guardando, error 
 
       {error && <p className="text-red-500 text-sm font-bold mt-2">{error}</p>}
 
-      <div className="flex justify-end gap-3 mt-4">
+      <div className="flex gap-4">
         <button 
           type="button" 
           onClick={alCancelar}
