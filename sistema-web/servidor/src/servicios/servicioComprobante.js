@@ -7,9 +7,7 @@ import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 import { listarBoletosDeFactura } from '../repositorios/repositorioCompra.js';
 import { formatearFechaHora } from '../utilidades/fechas.js';
 import { enviarCorreo } from './servicioCorreo.js';
-
-// Comprobante de compra: los mismos boletos (PDF con un QR por boleto) se mandan por correo
-// y se descargan desde la pantalla de pago si el correo falla.
+import { COLOR_MARCA, ESTILO_CELDA, ESTILO_PARRAFO, ESTILO_TABLA, plantillaCorreo } from '../plantillas/plantillaCorreo.js';
 
 // Las fuentes estándar de PDF no tienen el símbolo ₡: se usa DejaVu, instalada como paquete de npm
 const require = createRequire(import.meta.url);
@@ -17,7 +15,6 @@ const FUENTE_NORMAL = require.resolve('dejavu-fonts-ttf/ttf/DejaVuSans.ttf');
 const FUENTE_NEGRITA = require.resolve('dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf');
 
 const NOMBRE_CINE = 'Cine Aurora';
-const COLOR_MARCA = '#3D1D53';
 const COLOR_TEXTO_SECUNDARIO = '#565669';
 
 const formateadorColones = new Intl.NumberFormat('es-CR', {
@@ -184,43 +181,45 @@ async function generarPdf(comprobante, qrs) {
   return buffer;
 }
 
+// El correo usa la plantilla base (plantillas/plantillaCorreo.js); aquí solo se arma su contenido.
 function generarHtmlCorreo(comprobante, nombreCliente) {
   const filasBoletos = comprobante.boletos
     .map(
       (boleto, indice) => `
         <tr>
-          <td style="padding:12px;border-bottom:1px solid #ddd;">
-            <strong style="font-size:18px;color:${COLOR_MARCA};">Asiento ${escaparHtml(boleto.asiento)}</strong><br>
+          <td style="${ESTILO_CELDA} padding: 12px 0; border-bottom: 1px solid #eaebed;" valign="middle">
+            <strong style="font-size: 18px; color: ${COLOR_MARCA};">Asiento ${escaparHtml(boleto.asiento)}</strong><br>
             ${escaparHtml(boleto.tipo)} · ${escaparHtml(formatearMonto(boleto.monto))}
           </td>
-          <td style="padding:12px;border-bottom:1px solid #ddd;text-align:right;">
-            <img src="cid:qr-${indice}" alt="Código QR del asiento ${escaparHtml(boleto.asiento)}" width="120" height="120">
+          <td style="${ESTILO_CELDA} padding: 12px 0; border-bottom: 1px solid #eaebed; text-align: right;" align="right" valign="middle">
+            <img src="cid:qr-${indice}" alt="Código QR del asiento ${escaparHtml(boleto.asiento)}" width="120" height="120" style="display: inline-block;">
           </td>
         </tr>`
     )
     .join('');
 
-  return `
-    <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#1F1F24;">
-      <div style="background:${COLOR_MARCA};color:#fff;padding:16px;text-align:center;">
-        <h1 style="margin:0;font-size:22px;">${NOMBRE_CINE}</h1>
-      </div>
-      <div style="padding:16px;">
-        <p>Hola ${escaparHtml(nombreCliente)},</p>
-        <p>¡Gracias por tu compra! Estos son tus boletos. También van adjuntos en PDF.</p>
-        <h2 style="font-size:18px;margin-bottom:4px;">${escaparHtml(comprobante.titulo)}</h2>
-        <p style="margin-top:0;">
-          ${escaparHtml(comprobante.fechaFuncion)}<br>
-          ${escaparHtml(comprobante.sede)} · ${escaparHtml(comprobante.sala)} · ${escaparHtml(comprobante.formato)}
-        </p>
-        <table style="width:100%;border-collapse:collapse;">${filasBoletos}</table>
-        <p style="font-size:18px;text-align:right;"><strong>Total: ${escaparHtml(formatearMonto(comprobante.total))}</strong></p>
-        <p style="font-size:12px;color:${COLOR_TEXTO_SECUNDARIO};">
-          Factura N.º ${comprobante.idFactura} · ${escaparHtml(comprobante.fechaCompra)}<br>
-          Presenta el código QR de cada boleto en la entrada de la sala.
-        </p>
-      </div>
-    </div>`;
+  const contenido = `
+    <p style="${ESTILO_PARRAFO}">Hola ${escaparHtml(nombreCliente)},</p>
+    <p style="${ESTILO_PARRAFO}">¡Gracias por tu compra! Estos son tus boletos. También van adjuntos en PDF.</p>
+    <p style="${ESTILO_PARRAFO} margin-bottom: 4px; font-size: 20px; font-weight: bold;">${escaparHtml(comprobante.titulo)}</p>
+    <p style="${ESTILO_PARRAFO} color: ${COLOR_TEXTO_SECUNDARIO};">
+      ${escaparHtml(comprobante.fechaFuncion)}<br>
+      ${escaparHtml(comprobante.sede)} · ${escaparHtml(comprobante.sala)} · ${escaparHtml(comprobante.formato)}
+    </p>
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="${ESTILO_TABLA} border-collapse: collapse; margin-bottom: 16px;" width="100%">${filasBoletos}
+    </table>
+    <p style="${ESTILO_PARRAFO} font-size: 18px; text-align: right;"><strong>Total: ${escaparHtml(formatearMonto(comprobante.total))}</strong></p>
+    <p style="${ESTILO_PARRAFO} margin-bottom: 0; font-size: 14px; color: ${COLOR_TEXTO_SECUNDARIO};">
+      Factura N.º ${comprobante.idFactura} · ${escaparHtml(comprobante.fechaCompra)}<br>
+      Presenta el código QR de cada boleto en la entrada de la sala.
+    </p>`;
+
+  return plantillaCorreo({
+    titulo: `Tus boletos - ${NOMBRE_CINE}`,
+    preencabezado: `Tus boletos para ${escaparHtml(comprobante.titulo)} · ${escaparHtml(comprobante.fechaFuncion)}`,
+    contenido,
+    pie: `${NOMBRE_CINE} · Este correo es el comprobante de tu compra.`,
+  });
 }
 
 function nombreArchivoPdf(idFactura) {
