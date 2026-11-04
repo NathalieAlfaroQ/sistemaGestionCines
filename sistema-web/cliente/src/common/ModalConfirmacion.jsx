@@ -1,29 +1,66 @@
+import { useState } from 'react';
 import Modal from './Modal.jsx';
+import MensajeError from './MensajeError.jsx';
 
 function ModalConfirmacion({
   mensaje,
   titulo,
+  icono,
   textoConfirmar = 'Confirmar',
   textoCancelar = 'Cancelar',
+  textoProcesando = 'Procesando...',
   peligrosa = false,
   alConfirmar,
+  alExito,
   alCancelar,
 }) {
+  const [procesando, setProcesando] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Mientras se espera al servidor no se puede cancelar ni cerrar
+  function cancelar() {
+    if (!procesando) alCancelar();
+  }
+
+  async function confirmar() {
+    setProcesando(true);
+    setError(null);
+
+    try {
+      await alConfirmar();
+      alExito?.();
+    } catch (fallo) {
+      setError(fallo.message);
+    } finally {
+      setProcesando(false);
+    }
+  }
+
   return (
     <Modal
       titulo={titulo}
       mensaje={mensaje}
-      alCerrar={alCancelar}
+      icono={icono}
+      alCerrar={cancelar}
       botones={[
-        { texto: textoCancelar, variante: 'secundario', enfocar: peligrosa, alPulsar: alCancelar },
         {
-          texto: textoConfirmar,
+          texto: textoCancelar,
+          variante: 'secundario',
+          enfocar: peligrosa,
+          deshabilitado: procesando,
+          alPulsar: cancelar,
+        },
+        {
+          texto: procesando ? textoProcesando : textoConfirmar,
           variante: peligrosa ? 'peligro' : 'principal',
           enfocar: !peligrosa,
-          alPulsar: alConfirmar,
+          deshabilitado: procesando,
+          alPulsar: confirmar,
         },
       ]}
-    />
+    >
+      <MensajeError mensaje={error} />
+    </Modal>
   );
 }
 
