@@ -129,19 +129,19 @@ function FormularioUsuario({ sedes = [], alEnviar, alCancelar, guardando, error 
 
       <div className="flex gap-4">
         <button 
-          type="button" 
-          onClick={alCancelar}
+          type="submit" 
           className={claseBotonPrincipal}
           disabled={guardando}
         >
-          Cancelar
+          {guardando ? 'Creando...' : 'Crear'}
         </button>
         <button 
-          type="submit" 
+          type="button" 
+          onClick={alCancelar}
           className={claseBotonSecundario}
           disabled={guardando}
         >
-          {guardando ? 'Creando...' : 'Crear'}
+          Cancelar
         </button>
       </div>
     </form>
