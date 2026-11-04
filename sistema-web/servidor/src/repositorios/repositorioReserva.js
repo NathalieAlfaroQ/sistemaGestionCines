@@ -136,9 +136,9 @@ export async function listarAsientos(idProyeccion) {
   return resultado.rows;
 }
 
-// Orden de columnas: 0: ID_TIPO_BOLETO, 1: NOMBRE_TIPO_BOLETO, 2: PRECIO
+// Orden de columnas: 0: ID_TIPO_BOLETO, 1: NOMBRE_TIPO_BOLETO, 2: DESCUENTO (porcentaje)
 const sqlTiposBoleto = `
-  SELECT ID_TIPO_BOLETO, NOMBRE_TIPO_BOLETO, PRECIO
+  SELECT ID_TIPO_BOLETO, NOMBRE_TIPO_BOLETO, DESCUENTO
   FROM TIPOS_BOLETO
   ORDER BY ID_TIPO_BOLETO
 `;
