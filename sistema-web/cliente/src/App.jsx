@@ -8,6 +8,7 @@ import Peliculas from './paginas/Peliculas.jsx'
 import FormularioPelicula from './paginas/FormularioPelicula.jsx'
 import VerPelicula from './paginas/VerPelicula.jsx'
 import EditarPelicula from './paginas/EditarPelicula.jsx'
+import Empleados from './paginas/Empleados.jsx' 
 import RutaProtegida from './rutas/RutaProtegida.jsx'
 
 // Componentes y pantallas tuyas
@@ -48,14 +49,13 @@ function App() {
         <Route path="/crear-cuenta" element={<CrearCuenta />} />
         <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
 
-
         {/* Rutas que solo piden sesión */}
         <Route element={<RutaProtegida />}>
           <Route path="/perfil" element={<Perfil />} />
           <Route path="/cambiar-contrasena" element={<CambiarContrasena />} />
         </Route>
 
-        {/* Rutas de trabajo: solo personal */}
+        {/* Rutas de trabajo: solo personal (Empleados y Administradores) */}
         <Route element={<RutaProtegida rolesPermitidos={['EMPLEADO', 'ADMINISTRADOR']} />}>
           <Route element={<DisenoGestion />}>
             <Route path="/peliculas" element={<Peliculas />} />
@@ -64,18 +64,20 @@ function App() {
             <Route path="/peliculas/:id/editar" element={<EditarPelicula />} />
             <Route path="/sedes" element={<Sedes />} />
             <Route path="/sedes/nueva" element={<CrearSede />} />
+            
+            {/* RUTA DE EMPLEADOS */}
+            <Route path="/empleados" element={<Empleados />} />
+            
           </Route>
         </Route>
 
-
-        {/* --- Rutas de cliente (con tu navbar y footer) --- */}
+        {/* --- Rutas de cliente --- */}
         <Route path="/dulceria" element={<div>Dulcería</div>} />
         <Route path="/cartelera" element={<div>Cartelera</div>} />
 
-        {/* Rutas de trabajo que aún no tienen componente, quedan como placeholder */}
+        {/* Rutas de trabajo que aún no tienen componente */}
         <Route path="/salas" element={<div>Salas</div>} />
         <Route path="/proyecciones" element={<div>Proyecciones</div>} />
-        <Route path="/empleados" element={<div>Empleados</div>} />
 
         {/* --- Home --- */}
         <Route path="/" element={<Hero />} />
