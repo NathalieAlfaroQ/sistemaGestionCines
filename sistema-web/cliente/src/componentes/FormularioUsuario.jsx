@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { POS_SEDE } from '../constantes/posicionesSede.js'
 import { validarNombreOApellido, validarCorreo, MENSAJES_ERROR } from '../validaciones/validaciones'
 
 function FormularioUsuario({ sedes = [], alEnviar, alCancelar, guardando, error }) {
@@ -112,9 +113,10 @@ function FormularioUsuario({ sedes = [], alEnviar, alCancelar, guardando, error 
           className="bg-gray-800 border border-gray-600 text-white text-sm rounded-md block w-full p-2.5"
         >
           <option value="">Seleccione una sede</option>
+          {/* */}
           {sedes.map((sede) => (
-            <option key={sede.ID_SEDE || sede.idSede} value={sede.ID_SEDE || sede.idSede}>
-              {sede.NOMBRE_SEDE || sede.nombre}
+            <option key={sede[POS_SEDE.id]} value={sede[POS_SEDE.id]}>
+              {sede[POS_SEDE.nombre]}
             </option>
           ))}
         </select>

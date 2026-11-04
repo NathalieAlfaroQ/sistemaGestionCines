@@ -1,30 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { crearUsuarioInterno } from '../servicios/servicioEmpleados.js'
+import { useSedes } from '../ganchos/useSedes.js'
 import FormularioUsuario from './FormularioUsuario.jsx'
 import ModalFormulario from '../common/ModalFormulario.jsx'
 
 function CrearUsuario({ alCancelar, alCrear }) {
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState(null)
-  const [sedes, setSedes] = useState([])
-
-  // Cargar las sedes para el desplegable del formulario
-  useEffect(() => {
-    async function cargarSedes() {
-      try {
-        const res = await fetch('/api/sedes') 
-
-        if (res.ok) {
-          const data = await res.json()
-          setSedes(data)
-        }
-
-      } catch (err) {
-        console.error("Error cargando sedes: ", err)
-      }
-    }
-    cargarSedes()
-  }, [])
+  const { sedes } = useSedes()
 
   async function guardar(datos) {
     setGuardando(true)

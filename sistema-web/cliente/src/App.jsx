@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 // Layout y páginas del compañero
 import DisenoGestion from './common/DisenoGestion.jsx'
 import Sedes from './paginas/Sedes.jsx'
+import CrearSede from './paginas/CrearSede.jsx'
 import Salas from './paginas/Salas.jsx'
 import CrearSala from './paginas/CrearSala.jsx'
 import VerSala from './paginas/VerSala.jsx'
@@ -81,18 +82,15 @@ function App() {
             <Route path="/peliculas/:id" element={<VerPelicula />} />
             <Route path="/peliculas/:id/editar" element={<EditarPelicula />} />
             <Route path="/sedes" element={<Sedes />} />
-<<<<<<< HEAD
             <Route path="/sedes/nueva" element={<CrearSede />} />
             
             {/* RUTA DE EMPLEADOS */}
             <Route path="/empleados" element={<Empleados />} />
             
-=======
             <Route path="/salas" element={<Salas />} />
             <Route path="/salas/nueva" element={<CrearSala />} />
             <Route path="/salas/:id" element={<VerSala />} />
             <Route path="/proyecciones" element={<Proyecciones />} />
->>>>>>> desarrollo
           </Route>
         </Route>
 
@@ -103,14 +101,11 @@ function App() {
         <Route path="/funciones/:idProyeccion/asientos" element={<SeleccionAsientos />} />
         <Route path="/terminos" element={<TerminosCondiciones />} />
 
-<<<<<<< HEAD
         {/* Rutas de trabajo que aún no tienen componente */}
         <Route path="/salas" element={<div>Salas</div>} />
         <Route path="/proyecciones" element={<div>Proyecciones</div>} />
-=======
         {/* Rutas de trabajo que aún no tienen componente, quedan como placeholder */}
         <Route path="/empleados" element={<div>Empleados</div>} />
->>>>>>> desarrollo
 
         {/* --- Inicio y cartelera --- */}
         <Route path="/" element={<Inicio />} />

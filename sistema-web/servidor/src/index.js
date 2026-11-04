@@ -64,11 +64,8 @@ app.use('/api/iniciar-sesion', iniciarSesion)
 app.use('/api/recuperar-contrasena', recuperarContrasena)
 app.use('/api/cambiar-contrasena', cambiarContrasena)
 app.use('/api/perfil', perfil)
-<<<<<<< HEAD
 app.use('/api/crear-empleado', crearEmpleado) 
-=======
 app.use('/api/iniciar-sesion-google', rutasGoogle)
->>>>>>> desarrollo
 
 app.use(manejadorErrores)
 
