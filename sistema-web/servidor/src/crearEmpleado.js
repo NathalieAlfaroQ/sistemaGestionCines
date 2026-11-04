@@ -9,40 +9,6 @@ import { MENSAJES } from './constantes/constantes.js'
 const router = express.Router()
 const MINUTOS_VIGENCIA = 20
 
-async function insertarCredencial(connection, {
-  correo, contrasena, tipoUsuario, idEmpleado, idAdministrador
-}) {
-  const salt = await bcrypt.genSalt(10)
-  const hash = await bcrypt.hash(contrasena, salt)
-  const fechaVencimiento = new Date(Date.now() + MINUTOS_VIGENCIA * 60 * 1000)
-
-  const result = await connection.execute(
-    `INSERT INTO CREDENCIALES
-       (CORREO, HASH, SALT, TIPO_USUARIO, FECHA_VENCIMIENTO,
-        ID_ADMINISTRADOR, ID_EMPLEADO, ID_CLIENTE)
-     VALUES
-       (:correo, :hash, :salt, :tipoUsuario, :fechaVencimiento,
-        :idAdministrador, :idEmpleado, NULL)
-     RETURNING ID_CREDENCIAL INTO :idCredencial`,
-    {
-      correo, hash, salt, tipoUsuario, fechaVencimiento,
-      idAdministrador: idAdministrador || null,
-      idEmpleado: idEmpleado || null,
-      idCredencial: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
-    },
-    { autoCommit: false }
-  )
-  return result.outBinds.idCredencial[0]
-}
-
-async function correoExiste(connection, correo) {
-  const r = await connection.execute(
-    'SELECT 1 FROM CREDENCIALES WHERE CORREO = :correo',
-    { correo }
-  )
-  return r.rows.length > 0
-}
-
 router.post('/interno', async (req, res) => {
   const { nombre, apellido, correo, tipoUsuario, idSede, idCreador } = req.body
 
@@ -50,12 +16,7 @@ router.post('/interno', async (req, res) => {
     return res.status(400).json({ error: 'Todos los campos son obligatorios' })
   }
 
-  if (!['EMPLEADO', 'ADMINISTRADOR'].includes(tipoUsuario)) {
-    return res.status(400).json({ error: 'Tipo de usuario inválido' })
-  }
-
   let connection
-
   try {
     connection = await getConnection()
 
@@ -63,14 +24,14 @@ router.post('/interno', async (req, res) => {
       `SELECT TIPO_USUARIO FROM CREDENCIALES WHERE ID_CREDENCIAL = :id`,
       { id: idCreador }
     )
-
     if (checkAdmin.rows.length === 0 || checkAdmin.rows[0][0] !== 'ADMINISTRADOR') {
       return res.status(403).json({ error: 'No tienes permisos de administrador' })
     }
 
-    if (await correoExiste(connection, correo)) {
-      return res.status(409).json({ error: 'Correo inválido' })
-    }
+    const checkCorreo = await connection.execute(
+      'SELECT 1 FROM CREDENCIALES WHERE CORREO = :correo', { correo }
+    )
+    if (checkCorreo.rows.length > 0) return res.status(409).json({ error: 'Correo inválido' })
 
     let idEmpleado = null
     let idAdministrador = null
@@ -102,21 +63,28 @@ router.post('/interno', async (req, res) => {
     }
 
     const contrasenaTemp = generarContrasena()
-    await insertarCredencial(connection, {
-      correo, contrasena: contrasenaTemp, tipoUsuario, idEmpleado, idAdministrador
-    })
+    const salt = await bcrypt.genSalt(10)
+    const hash = await bcrypt.hash(contrasenaTemp, salt)
+    const fechaVencimiento = new Date(Date.now() + MINUTOS_VIGENCIA * 60 * 1000)
 
-    await connection.commit()
+    await connection.execute(
+      `INSERT INTO CREDENCIALES
+         (CORREO, HASH, SALT, TIPO_USUARIO, FECHA_VENCIMIENTO, ID_ADMINISTRADOR, ID_EMPLEADO)
+       VALUES
+         (:correo, :hash, :salt, :tipoUsuario, :fechaVencimiento, :idAdministrador, :idEmpleado)`,
+      {
+        correo, hash, salt, tipoUsuario, fechaVencimiento,
+        idAdministrador: idAdministrador || null,
+        idEmpleado: idEmpleado || null
+      },
+      { autoCommit: true }
+    )
 
     await enviarCorreoContrasena(correo, nombre, contrasenaTemp, tipoUsuario)
-
     return res.status(201).json({ mensaje: 'Usuario creado. Revisa su correo.' })
 
   } catch (error) {
-    if (connection) {
-      try { await connection.rollback() } catch (_) {}
-    }
-    console.error('Error en /crear-empleado/interno:', error)
+    console.error('Error en /crear-empleado:', error)
     return res.status(500).json({ error: MENSAJES.SERVIDOR })
   } finally {
     if (connection) await connection.close()
@@ -130,7 +98,7 @@ router.get('/listar', async (req, res) => {
     
     const empleadosRes = await connection.execute(`
       SELECT E.ID_EMPLEADO, E.NOMBRE_EMPLEADO, E.APELLIDO_EMPLEADO, 
-             C.CORREO, C.TIPO_USUARIO, S.NOMBRE_SEDE
+             C.CORREO, C.TIPO_USUARIO, S.NOMBRE_SEDE, E.ID_SEDE
       FROM EMPLEADOS E
       JOIN CREDENCIALES C ON C.ID_EMPLEADO = E.ID_EMPLEADO
       LEFT JOIN SEDES S ON S.ID_SEDE = E.ID_SEDE
@@ -138,31 +106,84 @@ router.get('/listar', async (req, res) => {
 
     const adminsRes = await connection.execute(`
       SELECT A.ID_ADMINISTRADOR, A.NOMBRE, A.APELLIDO, 
-             C.CORREO, C.TIPO_USUARIO
+             C.CORREO, C.TIPO_USUARIO, 'N/A' AS NOMBRE_SEDE
       FROM ADMINISTRADORES A
       JOIN CREDENCIALES C ON C.ID_ADMINISTRADOR = A.ID_ADMINISTRADOR
     `);
 
     const empleados = empleadosRes.rows.map(row => ({
       idEmpleado: row[0],
+      nombre: row[1],
+      apellido: row[2],
       nombreCompleto: `${row[1]} ${row[2]}`,
       correo: row[3],
       tipoUsuario: row[4],
-      nombreSede: row[5] || 'Sin sede'
+      nombreSede: row[5] || 'Sin sede',
+      idSede: row[6]
     }));
 
     const admins = adminsRes.rows.map(row => ({
       idEmpleado: row[0], 
+      nombre: row[1],
+      apellido: row[2],
       nombreCompleto: `${row[1]} ${row[2]}`,
       correo: row[3],
       tipoUsuario: row[4],
-      nombreSede: 'Ver en Bitácora' 
+      nombreSede: row[5],
+      idSede: null
     }));
 
     return res.json([...empleados, ...admins]);
   } catch (error) {
     console.error('Error al listar empleados:', error);
     return res.status(500).json({ error: MENSAJES.SERVIDOR });
+  } finally {
+    if (connection) await connection.close();
+  }
+});
+
+router.put('/editar/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nombre, apellido, correo, tipoUsuario, idSede, idCreador } = req.body;
+
+  let connection;
+  try {
+    connection = await getConnection();
+
+    const checkAdmin = await connection.execute(
+      `SELECT TIPO_USUARIO FROM CREDENCIALES WHERE ID_CREDENCIAL = :idCreador`,
+      { idCreador }
+    );
+    if (checkAdmin.rows.length === 0 || checkAdmin.rows[0][0] !== 'ADMINISTRADOR') {
+      return res.status(403).json({ error: 'No tienes permisos' });
+    }
+
+    if (tipoUsuario === 'EMPLEADO') {
+      await connection.execute(
+        `UPDATE EMPLEADOS 
+         SET NOMBRE_EMPLEADO = :nombre, APELLIDO_EMPLEADO = :apellido, ID_SEDE = :idSede
+         WHERE ID_EMPLEADO = :id`,
+        { nombre, apellido, idSede: Number(idSede), id }
+      );
+    } else {
+      await connection.execute(
+        `UPDATE ADMINISTRADORES 
+         SET NOMBRE = :nombre, APELLIDO = :apellido
+         WHERE ID_ADMINISTRADOR = :id`,
+        { nombre, apellido, id }
+      );
+    }
+
+    await connection.execute(
+      `UPDATE CREDENCIALES SET CORREO = :correo WHERE ID_EMPLEADO = :id OR ID_ADMINISTRADOR = :id`,
+      { correo, id }
+    );
+    
+    await connection.commit();
+    return res.json({ mensaje: 'Usuario actualizado' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Error al editar' });
   } finally {
     if (connection) await connection.close();
   }
