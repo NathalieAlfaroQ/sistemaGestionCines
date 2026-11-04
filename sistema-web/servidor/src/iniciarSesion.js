@@ -1,6 +1,7 @@
 import express from 'express'
 import bcrypt from 'bcrypt'
 import { getConnection } from './db.js'
+import { generarToken } from './servicios/servicioToken.js'
 
 const router = express.Router()
 
@@ -16,7 +17,6 @@ router.post('/', async (req, res) => {
   try {
     connection = await getConnection()
 
-    // Buscando el correo en Oracle
     const result = await connection.execute(
       `SELECT ID_CREDENCIAL, CORREO, HASH, SALT, TIPO_USUARIO,
               FECHA_VENCIMIENTO, ID_CLIENTE, ID_EMPLEADO, ID_ADMINISTRADOR
@@ -26,40 +26,39 @@ router.post('/', async (req, res) => {
     )
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Credenciales inválidas' })
+      return res.status(401).json({ error: 'X Credenciales inválidas' })
     }
 
     const row = result.rows[0]
     const [
-      idCredencial,
-      correoDB,
-      hashDB,
-      saltDB,
-      tipoUsuario,
-      fechaVencimiento,
-      idCliente,
-      idEmpleado,
-      idAdministrador
+      idCredencial, correoDB, hashDB, saltDB, tipoUsuario,
+      fechaVencimiento, idCliente, idEmpleado, idAdministrador
     ] = row
-
-    // Compara contraseña
     const coincide = await bcrypt.compare(contrasena, hashDB)
 
     if (!coincide) {
-      return res.status(401).json({ error: 'Credenciales inválidas' })
+      return res.status(401).json({ error: 'X Credenciales inválidas' })
     }
 
-    // Fecha de vencimiento para la contraseña temporal
-    const esTemporal = fechaVencimiento !== null && fechaVencimiento !== undefined
 
-    if (esTemporal) {
+    // Lógica de vencimiento
+    let esTemporal = false
+
+    if (fechaVencimiento) {
       const ahora = new Date()
       const vence = new Date(fechaVencimiento)
-
+      
       if (ahora > vence) {
-        return res.status(403).json({
-          error: 'La contraseña temporal ha expirado. Solicita una nueva.'
-        })
+        return res.status(403).json({ error: 'Credenciales inválidas' })
+      }
+
+      // Calculamos la diferencia en minutos
+      const diferenciaMinutos = (vence.getTime() - ahora.getTime()) / 1000 / 60
+
+      // Si la fecha de vencimiento es en menos de 25 minutos, es temporal.
+      // Si es mayor (ej. 90 días), es una contraseña personalizada.
+      if (diferenciaMinutos <= 25) {
+        esTemporal = true
       }
     }
 
@@ -67,45 +66,39 @@ router.post('/', async (req, res) => {
     let apellido = ''
 
     if (tipoUsuario === 'CLIENTE') {
-      const r = await connection.execute(
-        'SELECT NOMBRE, APELLIDO FROM CLIENTES WHERE ID_CLIENTE = :id',
-        { id: idCliente }
-      )
-
+      const r = await connection.execute('SELECT NOMBRE, APELLIDO FROM CLIENTES WHERE ID_CLIENTE = :id', { id: idCliente })
+     
       if (r.rows.length > 0) [nombre, apellido] = r.rows[0]
+
     } else if (tipoUsuario === 'EMPLEADO') {
-      const r = await connection.execute(
-        'SELECT NOMBRE_EMPLEADO, APELLIDO_EMPLEADO FROM EMPLEADOS WHERE ID_EMPLEADO = :id',
-        { id: idEmpleado }
-      )
-
+      const r = await connection.execute('SELECT NOMBRE_EMPLEADO, APELLIDO_EMPLEADO FROM EMPLEADOS WHERE ID_EMPLEADO = :id', { id: idEmpleado })
+     
       if (r.rows.length > 0) [nombre, apellido] = r.rows[0]
-    } else if (tipoUsuario === 'ADMINISTRADOR') {
-      const r = await connection.execute(
-        'SELECT NOMBRE, APELLIDO FROM ADMINISTRADORES WHERE ID_ADMINISTRADOR = :id',
-        { id: idAdministrador }
-      )
 
+    } else if (tipoUsuario === 'ADMINISTRADOR') {
+      const r = await connection.execute('SELECT NOMBRE, APELLIDO FROM ADMINISTRADORES WHERE ID_ADMINISTRADOR = :id', { id: idAdministrador })
+     
       if (r.rows.length > 0) [nombre, apellido] = r.rows[0]
     }
 
+    const token = generarToken({ idCredencial, tipoUsuario, idCliente })
+
     return res.json({
       mensaje: 'Inicio de sesión exitoso',
+      token,
       usuario: {
-        idCredencial,
-        correo: correoDB,
-        tipoUsuario,
-        nombre,
-        apellido,
-        contrasenaTemporal: esTemporal   
+        idCredencial, correo: correoDB, tipoUsuario, nombre, apellido,
+        contrasenaTemporal: esTemporal
       }
     })
+
   } catch (error) {
     console.error('Error en /iniciar-sesion:', error)
+    return res.status(500).json({ error: 'Error al cargar la pantalla, intenta luego.' })
 
-    return res.status(500).json({ error: 'Error del servidor' })
   } finally {
     if (connection) await connection.close()
   }
 })
+
 export default router

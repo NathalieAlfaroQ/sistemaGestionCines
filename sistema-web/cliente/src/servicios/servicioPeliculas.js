@@ -1,9 +1,11 @@
+import { peticionApi } from './clienteApi.js';
+
 export async function obtenerPeliculas(busqueda = '') {
   const url = busqueda
     ? `/api/peliculas?busqueda=${encodeURIComponent(busqueda)}`
     : '/api/peliculas';
 
-  const respuesta = await fetch(url);
+  const respuesta = await peticionApi(url);
 
   if (!respuesta.ok) {
     throw new Error('No se pudieron obtener las películas');
@@ -13,7 +15,7 @@ export async function obtenerPeliculas(busqueda = '') {
 }
 
 export async function obtenerCatalogo() {
-  const respuesta = await fetch('/api/catalogo');
+  const respuesta = await peticionApi('/api/catalogo');
 
   if (!respuesta.ok) {
     throw new Error('No se pudo obtener el catálogo');
@@ -23,7 +25,7 @@ export async function obtenerCatalogo() {
 }
 
 export async function crearPelicula(pelicula) {
-  const respuesta = await fetch('/api/peliculas', {
+  const respuesta = await peticionApi('/api/peliculas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(pelicula),
@@ -42,7 +44,7 @@ async function subirImagenPelicula(idPelicula, tipo, archivo) {
   const datos = new FormData();
   datos.append('imagen', archivo);
 
-  const respuesta = await fetch(`/api/peliculas/${idPelicula}/imagenes/${tipo}`, {
+  const respuesta = await peticionApi(`/api/peliculas/${idPelicula}/imagenes/${tipo}`, {
     method: 'PUT',
     body: datos,
   });
@@ -77,7 +79,7 @@ export async function subirImagenesPelicula(idPelicula, archivos) {
 }
 
 export async function borrarPelicula(idPelicula) {
-  const respuesta = await fetch(`/api/peliculas/${idPelicula}`, { method: 'DELETE' });
+  const respuesta = await peticionApi(`/api/peliculas/${idPelicula}`, { method: 'DELETE' });
 
   if (!respuesta.ok) {
     const cuerpo = await respuesta.json().catch(() => ({}));
@@ -86,7 +88,7 @@ export async function borrarPelicula(idPelicula) {
 }
 
 export async function obtenerPelicula(idPelicula) {
-  const respuesta = await fetch(`/api/peliculas/${idPelicula}`);
+  const respuesta = await peticionApi(`/api/peliculas/${idPelicula}`);
   const cuerpo = await respuesta.json().catch(() => ({}));
 
   if (!respuesta.ok) {
@@ -97,7 +99,7 @@ export async function obtenerPelicula(idPelicula) {
 }
 
 export async function actualizarPelicula(idPelicula, pelicula) {
-  const respuesta = await fetch(`/api/peliculas/${idPelicula}`, {
+  const respuesta = await peticionApi(`/api/peliculas/${idPelicula}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(pelicula),

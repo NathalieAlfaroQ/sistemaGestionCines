@@ -20,7 +20,7 @@ function PiePagina() {
         </div>
 
         <p className="text-sm text-text-muted">
-          © Cine Aurora 2026. Derechos reservados. Términos y condiciones
+          © Cines Aurora 2026. Derechos reservados. Términos y condiciones
         </p>
       </div>
     </footer>

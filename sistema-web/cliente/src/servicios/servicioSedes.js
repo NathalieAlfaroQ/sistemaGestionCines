@@ -1,23 +1,25 @@
+import { peticionApi } from './clienteApi.js';
+import { leerDatos } from './leerDatos.js';
+
 async function leerCuerpo(respuesta) {
   return await respuesta.json().catch(() => ({}));
 }
 
-export async function obtenerSedes(busqueda = '') {
-  const url = busqueda
-    ? `/api/sedes?busqueda=${encodeURIComponent(busqueda)}`
-    : '/api/sedes';
+export async function obtenerSedes(filtros = {}) {
+  const parametros = new URLSearchParams();
+  Object.entries(filtros).forEach(([clave, valor]) => {
+    if (valor !== '' && valor != null) parametros.set(clave, valor);
+  });
 
-  const respuesta = await fetch(url);
-
-  if (!respuesta.ok) {
-    throw new Error('No se pudieron obtener las sedes');
-  }
-
-  return await respuesta.json();
+  const consulta = parametros.toString();
+  return await leerDatos(
+    () => peticionApi(consulta ? `/api/sedes?${consulta}` : '/api/sedes'),
+    'No se pudieron obtener las sedes'
+  );
 }
 
 export async function obtenerUbicaciones() {
-  const respuesta = await fetch('/api/ubicaciones');
+  const respuesta = await peticionApi('/api/ubicaciones');
 
   if (!respuesta.ok) {
     throw new Error('No se pudieron obtener las provincias y cantones');
@@ -27,7 +29,7 @@ export async function obtenerUbicaciones() {
 }
 
 export async function crearSede(sede) {
-  const respuesta = await fetch('/api/sedes', {
+  const respuesta = await peticionApi('/api/sedes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(sede),
@@ -42,8 +44,24 @@ export async function crearSede(sede) {
   return cuerpo;
 }
 
+export async function editarSede(idSede, sede) {
+  const respuesta = await peticionApi(`/api/sedes/${idSede}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sede),
+  });
+
+  const cuerpo = await leerCuerpo(respuesta);
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo editar la sede');
+  }
+
+  return cuerpo;
+}
+
 export async function eliminarSede(idSede) {
-  const respuesta = await fetch(`/api/sedes/${idSede}`, { method: 'DELETE' });
+  const respuesta = await peticionApi(`/api/sedes/${idSede}`, { method: 'DELETE' });
 
   const cuerpo = await leerCuerpo(respuesta);
 
