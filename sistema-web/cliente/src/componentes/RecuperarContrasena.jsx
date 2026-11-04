@@ -1,25 +1,41 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import aurora from '../assets/aurora.jpg'
 import '../estilos/RecuperarContrasena.css'
+import { validarCorreo, MENSAJES_ERROR } from '../validaciones/validaciones'
 
 export default function RecuperarContrasena() {
   const navigate = useNavigate()
   const [correo, setCorreo] = useState('')
+  const [tocado, setTocado] = useState(false)
+  const [errorCorreo, setErrorCorreo] = useState('')
+  const [errorGlobal, setErrorGlobal] = useState(null)
+  const [mensajeExito, setMensajeExito] = useState(null)
   const [cargando, setCargando] = useState(false)
-  const [mensaje, setMensaje] = useState(null)
+
+  useEffect(() => {
+    if (tocado) {
+      setErrorCorreo(validarCorreo(correo))
+    }
+  }, [correo, tocado])
+
+  const handleBlur = () => {
+    setTocado(true)
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setMensaje(null)
+    setErrorGlobal(null)
+    setMensajeExito(null)
+    setTocado(true)
 
-    if (!correo.trim()) {
-      setMensaje({ tipo: 'error', texto: 'Debe digitar un correo' })
+    const errorValidacion = validarCorreo(correo)
+    if (errorValidacion) {
+      setErrorCorreo(errorValidacion)
       return
     }
 
     setCargando(true)
-
     try {
       const res = await fetch('/api/recuperar-contrasena', {
         method: 'POST',
@@ -30,17 +46,19 @@ export default function RecuperarContrasena() {
       const data = await res.json()
 
       if (!res.ok) {
-        setMensaje({ tipo: 'error', texto: data.error || 'Error al enviar' })
+        if (res.status === 404) {
+          setErrorGlobal('X Correo inválido')
+        } else {
+          setErrorGlobal(data.error || MENSAJES_ERROR.SERVIDOR)
+        }
       } else {
-        setMensaje({
-          tipo: 'ok',
-          texto: 'Si el correo está registrado, recibirás una contraseña temporal.'
-        })
-
+        setMensajeExito('Si el correo está registrado, recibirás una contraseña temporal.')
         setCorreo('')
+        setTocado(false)
       }
-    } catch {
-      setMensaje({ tipo: 'error', texto: 'No se pudo conectar con el servidor' })
+    } catch (err) {
+      console.error(err)
+      setErrorGlobal(MENSAJES_ERROR.SERVIDOR)
     } finally {
       setCargando(false)
     }
@@ -49,7 +67,6 @@ export default function RecuperarContrasena() {
   return (
     <div className="recuperar-container">
       <div className="panel-izquierdo">
-
         <button
           className="boton-volver"
           onClick={() => navigate(-1)}
@@ -58,8 +75,10 @@ export default function RecuperarContrasena() {
           ←
         </button>
 
-        <h1 className="titulo-app">Cines Aurora</h1>
-        <h2 className="titulo-pantalla">Recuperar Contraseña</h2>
+        <div className="header-formulario">
+          <h1 className="titulo-app">Cine Aurora</h1>
+          <h2 className="titulo-pantalla">Recuperar Contraseña</h2>
+        </div>
 
         <p className="descripcion">
           Digite el correo de su cuenta para enviarle una contraseña temporal y pueda restablecer su contraseña.
@@ -67,24 +86,37 @@ export default function RecuperarContrasena() {
 
         <form onSubmit={handleSubmit} className="form-recuperar" noValidate>
           <label className="campo">
-            <span>Correo</span>
-            
+            <span>Correo <span className="asterisco-rojo">*</span></span>
             <input
               type="email"
               name="correo"
               value={correo}
               onChange={(e) => setCorreo(e.target.value)}
+              onBlur={handleBlur}
               autoComplete="email"
             />
+            {errorCorreo && <p className="error-texto">{errorCorreo}</p>}
           </label>
+
+          {errorGlobal && (
+            <p className="error-texto" style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '8px' }}>
+              {errorGlobal}
+            </p>
+          )}
+
+          {mensajeExito && (
+            <p className="exito-texto" style={{ color: '#4ade80', fontSize: '13px', marginTop: '8px' }}>
+              {mensajeExito}
+            </p>
+          )}
+
+          <p className="obligatorio-texto">* Espacio obligatorio</p>
 
           <button type="submit" className="boton-enviar" disabled={cargando}>
             {cargando ? 'Enviando...' : 'Enviar'}
           </button>
 
-          {mensaje && (
-            <p className={`mensaje ${mensaje.tipo}`}>{mensaje.texto}</p>
-          )}
+     
         </form>
       </div>
 

@@ -3,14 +3,13 @@ import { POS_SEDE } from '../constantes/posicionesSede.js'
 import { validarNombreOApellido, validarCorreo, MENSAJES_ERROR } from '../validaciones/validaciones'
 import { claseBotonPrincipal, claseBotonSecundario } from '../constantes/clasesFormulario.js'
 
-
-function FormularioUsuario({ sedes = [], alEnviar, alCancelar, guardando, error }) {
+function FormularioUsuario({ valorInicial, textoGuardar = 'Crear', sedes = [], alEnviar, alCancelar, guardando, error }) {
   const [form, setForm] = useState({
-    nombre: '',
-    apellido: '',
-    correo: '',
-    tipoUsuario: '',
-    idSede: ''
+    nombre: valorInicial?.nombre ?? '',
+    apellido: valorInicial?.apellido ?? '',
+    correo: valorInicial?.correo ?? '',
+    tipoUsuario: valorInicial?.tipoUsuario ?? '',
+    idSede: valorInicial?.idSede ? String(valorInicial.idSede) : ''
   })
 
   const [errores, setErrores] = useState({ nombre: '', apellido: '', correo: '', tipoUsuario: '', idSede: '' })
@@ -115,7 +114,6 @@ function FormularioUsuario({ sedes = [], alEnviar, alCancelar, guardando, error 
           className="bg-gray-800 border border-gray-600 text-white text-sm rounded-md block w-full p-2.5"
         >
           <option value="">Seleccione una sede</option>
-          {/* */}
           {sedes.map((sede) => (
             <option key={sede[POS_SEDE.id]} value={sede[POS_SEDE.id]}>
               {sede[POS_SEDE.nombre]}
@@ -133,8 +131,9 @@ function FormularioUsuario({ sedes = [], alEnviar, alCancelar, guardando, error 
           className={claseBotonPrincipal}
           disabled={guardando}
         >
-          {guardando ? 'Creando...' : 'Crear'}
+          {guardando ? 'Guardando...' : textoGuardar}
         </button>
+        
         <button 
           type="button" 
           onClick={alCancelar}
