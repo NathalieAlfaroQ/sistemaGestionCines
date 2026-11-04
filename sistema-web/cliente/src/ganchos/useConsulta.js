@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 export function useConsulta(pedir, dependencias, valorInicial) {
+  const claves = dependencias ?? [pedir];
   const [datos, setDatos] = useState(valorInicial);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -29,7 +30,7 @@ export function useConsulta(pedir, dependencias, valorInicial) {
       vigente = false;
     };
 
-  }, [...dependencias, version]);
+  }, [...claves, version]);
 
   function recargar() {
     setVersion((anterior) => anterior + 1);
