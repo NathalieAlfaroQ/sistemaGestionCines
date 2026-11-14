@@ -6,6 +6,7 @@ const enlaces = [
   { texto: 'Películas', ruta: '/peliculas' },
   { texto: 'Salas', ruta: '/salas' },
   { texto: 'Proyecciones', ruta: '/proyecciones' },
+  { texto: 'Descuentos', ruta: '/descuentos' },
   { texto: 'Sedes', ruta: '/sedes' },
   { texto: 'Empleados', ruta: '/empleados' },
   { texto: 'Comprar', ruta: '/' },

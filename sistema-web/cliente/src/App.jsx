@@ -8,6 +8,7 @@ import Salas from './paginas/Salas.jsx'
 import CrearSala from './paginas/CrearSala.jsx'
 import VerSala from './paginas/VerSala.jsx'
 import Proyecciones from './paginas/Proyecciones.jsx'
+import Descuentos from './paginas/Descuentos.jsx'
 import Peliculas from './paginas/Peliculas.jsx'
 import FormularioPelicula from './paginas/FormularioPelicula.jsx'
 import VerPelicula from './paginas/VerPelicula.jsx'
@@ -91,6 +92,7 @@ function App() {
             <Route path="/salas/nueva" element={<CrearSala />} />
             <Route path="/salas/:id" element={<VerSala />} />
             <Route path="/proyecciones" element={<Proyecciones />} />
+            <Route path="/descuentos" element={<Descuentos />} />
           </Route>
         </Route>
 
