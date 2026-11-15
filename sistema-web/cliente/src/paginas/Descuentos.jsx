@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useDescuentos } from '../ganchos/useDescuentos.js';
+import { useDescuentos } from '../ganchos/useDescuento.js';
 import { usePeliculas } from '../ganchos/usePeliculas.js';
 import { useSedes } from '../ganchos/useSedes.js';
 import { useDebounce } from '../ganchos/useDebounce.js';

@@ -55,7 +55,7 @@ app.use('/api/sedes', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), r
 app.use('/api/salas', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasSala);
 app.use('/api/proyecciones', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasProyeccion);
 app.use('/api/ubicaciones', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasUbicacion);
-app.use('/api/descuentos', verificarAutenticacion, soloPersonal('ADMINISTRADOR'), rutasDescuento);
+app.use('/api/descuentos', verificarAutenticacion, soloPersonal, rutasDescuento);
 app.use('/api/catalogo', verificarAutenticacion, soloPersonal, rutasCatalogo);
 app.use('/api/peliculas',verificarAutenticacion, soloPersonal ,rutasPelicula);
 app.use('/api/cartelera', rutasCartelera);
