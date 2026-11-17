@@ -5,7 +5,7 @@ export function useDescuentos({ busqueda = '', idSede = '', idPelicula = '', fec
   const [descuentos, setDescuentos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [version, setVersion] = useState(0);
+  const [intento, setIntento] = useState(0);
 
   useEffect(() => {
     let cancelado = false;
@@ -18,7 +18,10 @@ export function useDescuentos({ busqueda = '', idSede = '', idPelicula = '', fec
         const datos = await obtenerDescuentos({ busqueda, idSede, idPelicula, fechaInicio, fechaFin });
         if (!cancelado) setDescuentos(datos);
       } catch (error) {
-        if (!cancelado) setError(error);
+        if (!cancelado) {
+          setDescuentos([]);
+          setError(error.message);
+        }
       } finally {
         if (!cancelado) setCargando(false);
       }
@@ -29,11 +32,9 @@ export function useDescuentos({ busqueda = '', idSede = '', idPelicula = '', fec
     return () => {
       cancelado = true;
     };
-  }, [busqueda, idSede, idPelicula, fechaInicio, fechaFin, version]);
+  }, [busqueda, idSede, idPelicula, fechaInicio, fechaFin, intento]);
 
-  function recargar() {
-    setVersion((anterior) => anterior + 1);
-  }
+  const recargar = () => setIntento((actual) => actual + 1);
 
   return { descuentos, cargando, error, recargar };
 }

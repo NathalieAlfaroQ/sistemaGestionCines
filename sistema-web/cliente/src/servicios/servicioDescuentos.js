@@ -13,3 +13,19 @@ export async function obtenerDescuentos(filtros = {}) {
     'No se pudo cargar la lista de descuentos, reintente después'
   );
 }
+
+export async function crearDescuento(descuento) {
+  const respuesta = await peticionApi('/api/descuentos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(descuento),
+  });
+
+  const cuerpo = await respuesta.json().catch(() => ({}));
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo crear el descuento');
+  }
+
+  return cuerpo;
+}
