@@ -29,3 +29,15 @@ export async function crearDescuento(descuento) {
 
   return cuerpo;
 }
+
+export async function eliminarDescuento(idDescuento) {
+  const respuesta = await peticionApi(`/api/descuentos/${idDescuento}`, { method: 'DELETE' });
+
+  const cuerpo = await respuesta.json().catch(() => ({}));
+
+  if (!respuesta.ok) {
+    throw new Error(cuerpo.mensaje ?? 'No se pudo eliminar el descuento');
+  }
+
+  return cuerpo;
+}

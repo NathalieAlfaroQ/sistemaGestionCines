@@ -2,10 +2,12 @@ import {
   buscarChoqueDeDescuento,
   contarPeliculasActivas,
   crearDescuento,
+  desactivarDescuento as desactivarDescuentoEnRepositorio,
   existeSedeActiva,
   listarDescuentos,
 } from '../repositorios/repositorioDescuento.js';
 import { ErrorConflicto } from '../errores/ErrorConflicto.js';
+import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 import { ahoraCostaRica } from '../utilidades/fechas.js';
 import { estadoDeFiltro, exigirObjeto, idDeFiltro, idObligatorio } from '../utilidades/validaciones.js';
@@ -133,4 +135,12 @@ export async function registrarDescuento(datos) {
   }
 
   return await crearDescuento(descuento);
+}
+
+export async function desactivarDescuento(idDescuento) {
+  const id = idObligatorio(idDescuento, 'El identificador del descuento no es válido');
+
+  if (!(await desactivarDescuentoEnRepositorio(id))) {
+    throw new ErrorNoEncontrado('El descuento no existe o ya fue eliminado');
+  }
 }

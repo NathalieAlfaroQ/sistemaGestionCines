@@ -3,7 +3,7 @@ import { useDescuentos } from '../ganchos/useDescuento.js';
 import { usePeliculas } from '../ganchos/usePeliculas.js';
 import { useSedes } from '../ganchos/useSedes.js';
 import { useDebounce } from '../ganchos/useDebounce.js';
-import { POS_DESCUENTO } from '../constantes/posicionesDescuento.js';
+import { POS_DESCUENTO, ESTADO_DESCUENTO } from '../constantes/posicionesDescuento.js';
 import { POS_PELICULA } from '../constantes/posicionesPelicula.js';
 import { POS_SEDE } from '../constantes/posicionesSede.js';
 import { formatearHora } from '../utilidades/fechas.js';
@@ -11,9 +11,17 @@ import { formatearFecha } from '../utilidades/formatearFecha.js';
 import Tabla from '../common/Tabla.jsx';
 import ErrorCarga from '../componentes/ErrorCarga.jsx';
 import CrearDescuento from '../componentes/CrearDescuento.jsx';
+import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
+import { eliminarDescuento } from '../servicios/servicioDescuentos.js';
 import { useNotificaciones } from '../ganchos/useNotificaciones.js';
 
-const FILTROS_INICIALES = { idSede: '', idPelicula: '', fechaInicio: '', fechaFin: '' };
+const OPCIONES_ESTADO = [
+  { valor: 'activos', texto: 'Activos' },
+  { valor: 'eliminados', texto: 'Eliminados' },
+  { valor: 'todos', texto: 'Todos' },
+];
+
+const FILTROS_INICIALES = { idSede: '', idPelicula: '', fechaInicio: '', fechaFin: '', estado: 'activos' };
 
 const claseBoton = 'flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-text-color transition-colors hover:bg-brand-hover';
 
@@ -36,6 +44,7 @@ function Descuentos() {
     idPelicula: filtros.idPelicula,
     fechaInicio: filtros.fechaInicio,
     fechaFin: filtros.fechaFin,
+    estado: filtros.estado,
   });
 
   const { sedes, error: errorSedes, recargar: recargarSedes } = useSedes({ estado: 'activas' });
@@ -52,6 +61,22 @@ function Descuentos() {
     notificaciones.exito('Descuento creado con éxito');
     recargar();
   }
+
+  const [descuentoAEliminar, setDescuentoAEliminar] = useState(null);
+  async function confirmarEliminacion() {
+    const descuento = descuentoAEliminar;
+    setDescuentoAEliminar(null);
+
+    try {
+      await eliminarDescuento(descuento[POS_DESCUENTO.id]);
+      notificaciones.exito('Descuento eliminado con éxito');
+    } catch (error) {
+      notificaciones.error(error.message);
+    }
+    recargar();
+  }
+
+  const descuentoEliminado = (descuento) => descuento[POS_DESCUENTO.estado] !== ESTADO_DESCUENTO.activo;
 
   const columnas = [
     {
@@ -90,9 +115,17 @@ function Descuentos() {
       formato: fechaConHora(POS_DESCUENTO.fechaFin, POS_DESCUENTO.horaFin),
       filtro: { clave: 'fechaFin', tipo: 'fecha' },
     },
+    {
+      titulo: 'Estado',
+      posicion: POS_DESCUENTO.estado,
+      formato: (valor) => (valor === ESTADO_DESCUENTO.activo ? 'Activo' : 'Eliminado'),
+      filtro: { clave: 'estado', tipo: 'seleccion', opciones: OPCIONES_ESTADO, opcionVacia: null },
+    },
   ];
 
-  const hayCriterios = busquedaRetrasada.trim() !== '' || Object.values(filtros).some((valor) => valor !== '');
+  const hayCriterios =
+    busquedaRetrasada.trim() !== '' ||
+    Object.entries(filtros).some(([clave, valor]) => valor !== FILTROS_INICIALES[clave]);
   const textoVacio = hayCriterios
     ? 'No se encontraron descuentos con esos criterios'
     : 'No hay descuentos existentes';
@@ -136,11 +169,24 @@ function Descuentos() {
             filtros={filtros}
             alCambiarFiltros={setFiltros}
             textoVacio={cargando ? '' : textoVacio}
+            onEliminar={setDescuentoAEliminar}
+            accionesDeshabilitadas={descuentoEliminado}
           />
         )}
       </div>
 
       {creando && <CrearDescuento alCancelar={() => setCreando(false)} alCrear={descuentoCreado} />}
+
+      {descuentoAEliminar && (
+        <ModalConfirmacion
+          peligrosa
+          titulo="Eliminar descuento"
+          mensaje={`¿Está seguro de que desea eliminar el descuento "${descuentoAEliminar[POS_DESCUENTO.nombre]}" de ${descuentoAEliminar[POS_DESCUENTO.cine]}? Esta acción es permanente.`}
+          textoConfirmar="Eliminar"
+          alConfirmar={confirmarEliminacion}
+          alCancelar={() => setDescuentoAEliminar(null)}
+        />
+      )}
     </main>
   );
 }

@@ -53,6 +53,13 @@ export async function listarDescuentos({
   return resultado.rows;
 }
 
+const sqlDesactivarDescuento = `UPDATE DESCUENTOS SET ESTADO_DESCUENTO = 0 WHERE ID_DESCUENTO = :idDescuento AND ESTADO_DESCUENTO = 1`;
+
+export async function desactivarDescuento(idDescuento) {
+  const resultado = await ejecutar(sqlDesactivarDescuento, { idDescuento });
+  return resultado.rowsAffected > 0;
+}
+
 const sqlExisteSedeActiva = `SELECT 1 FROM SEDES WHERE ID_SEDE = :idSede AND ESTADO_SEDE = 1`;
 
 export async function existeSedeActiva(idSede) {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { obtenerDescuentos } from '../servicios/servicioDescuentos.js';
 
-export function useDescuentos({ busqueda = '', idSede = '', idPelicula = '', fechaInicio = '', fechaFin = '' } = {}) {
+export function useDescuentos({ busqueda = '', idSede = '', idPelicula = '', fechaInicio = '', fechaFin = '', estado = 'activos' } = {}) {
   const [descuentos, setDescuentos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -15,7 +15,7 @@ export function useDescuentos({ busqueda = '', idSede = '', idPelicula = '', fec
       setError(null);
 
       try {
-        const datos = await obtenerDescuentos({ busqueda, idSede, idPelicula, fechaInicio, fechaFin });
+        const datos = await obtenerDescuentos({ busqueda, idSede, idPelicula, fechaInicio, fechaFin, estado });
         if (!cancelado) setDescuentos(datos);
       } catch (error) {
         if (!cancelado) {
@@ -32,7 +32,7 @@ export function useDescuentos({ busqueda = '', idSede = '', idPelicula = '', fec
     return () => {
       cancelado = true;
     };
-  }, [busqueda, idSede, idPelicula, fechaInicio, fechaFin, intento]);
+  }, [busqueda, idSede, idPelicula, fechaInicio, fechaFin, estado, intento]);
 
   const recargar = () => setIntento((actual) => actual + 1);
 
