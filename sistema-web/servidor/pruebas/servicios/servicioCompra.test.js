@@ -23,7 +23,8 @@ vi.mock('../../src/servicios/servicioReserva.js', async () => {
   return {
     MENSAJE_ASIENTO_NO_DISPONIBLE: 'El asiento seleccionado ya no está disponible. Por favor, elige otro.',
     MENSAJE_RESERVA_VENCIDA: 'Tu tiempo para pagar terminó y los asientos se liberaron. Vuelve a elegir tus asientos.',
-    calcularCompraReservada: vi.fn(),
+    armarCompraReservada: vi.fn(),
+    obtenerPreciosFuncion: vi.fn(),
     // Igual que la real: sin idCliente válido no se compra
     obtenerIdCliente: (usuario) => {
       if (!Number.isInteger(usuario?.idCliente) || usuario.idCliente <= 0) throw new ErrorNoAutenticado('Sesión no válida');
@@ -67,7 +68,7 @@ import {
   obtenerMetodoPagoCliente,
   registrarIntencionPago,
 } from '../../src/repositorios/repositorioCompra.js';
-import { calcularCompraReservada } from '../../src/servicios/servicioReserva.js';
+import { armarCompraReservada, obtenerPreciosFuncion } from '../../src/servicios/servicioReserva.js';
 import {
   bloquearReservaCliente,
   borrarReservaCliente,
@@ -99,12 +100,24 @@ const NINO = 2;
 const usuarioCliente = { idCliente: 21, tipoUsuario: 'CLIENTE' };
 const conexion = { nombre: 'conexion de prueba' };
 
-// La reserva bloqueada del cliente: [[idAsiento, idTipoBoleto]]
+// La reserva bloqueada del cliente: [[idAsiento, idTipoBoleto, vigente]]
 const filasReserva = [
+  [101, ADULTO, 1],
+  [102, ADULTO, 1],
+  [103, NINO, 1],
+];
+
+// La misma reserva leída sin bloquear (PayPal paso 1), ya adaptada: [[idAsiento, idTipoBoleto]]
+const filasReservaConsulta = [
   [101, ADULTO],
   [102, ADULTO],
   [103, NINO],
 ];
+
+const precios = new Map([
+  [ADULTO, { monto: 3300, descuento: 0 }],
+  [NINO, { monto: 2600, descuento: 0 }],
+]);
 
 const detalles = [
   { idAsiento: 101, idTipoBoleto: ADULTO, monto: 3300, descuento: 0 },
@@ -139,7 +152,8 @@ describe('SCRUM-94-95 servicioCompra', () => {
     vi.resetAllMocks();
 
     bloquearReservaCliente.mockResolvedValue(filasReserva);
-    calcularCompraReservada.mockResolvedValue(compraReservada);
+    obtenerPreciosFuncion.mockResolvedValue(precios);
+    armarCompraReservada.mockReturnValue(compraReservada);
     obtenerDatosCliente.mockResolvedValue(['Ana', 'Mora', 'ana@correo.com']);
     obtenerIdMetodoPago.mockResolvedValue(1);
     insertarFactura.mockResolvedValue(ID_FACTURA);
@@ -178,7 +192,8 @@ describe('SCRUM-94-95 servicioCompra', () => {
         fecha: '2026-11-02 20:15:00',
       });
       expect(bloquearReservaCliente).toHaveBeenCalledWith(conexion, 21, ID_PROYECCION);
-      expect(calcularCompraReservada).toHaveBeenCalledWith(ID_PROYECCION, filasReserva);
+      expect(obtenerPreciosFuncion).toHaveBeenCalledWith(ID_PROYECCION);
+      expect(armarCompraReservada).toHaveBeenCalledWith(filasReserva, precios);
       expect(insertarDetallesBoletos).toHaveBeenCalledWith(conexion, ID_FACTURA, ID_PROYECCION, detalles);
       expect(cobrar).toHaveBeenCalledWith({
         monto: 9200,
@@ -208,6 +223,37 @@ describe('SCRUM-94-95 servicioCompra', () => {
       expect(insertarFactura).not.toHaveBeenCalled();
       expect(cobrar).not.toHaveBeenCalled();
       expect(borrarReservaCliente).not.toHaveBeenCalled();
+    });
+
+    it('lee los precios antes de abrir la transacción (no pide otra conexión dentro)', async () => {
+      await comprarBoletos(usuarioCliente, ID_PROYECCION, datosCompra);
+
+      expect(obtenerPreciosFuncion.mock.invocationCallOrder[0]).toBeLessThan(
+        ejecutarTransaccion.mock.invocationCallOrder[0]
+      );
+    });
+
+    it('si la función ya empezó, falla sin abrir la transacción', async () => {
+      obtenerPreciosFuncion.mockRejectedValue(new ErrorNoEncontrado('La función no existe o ya no está disponible'));
+
+      await expect(comprarBoletos(usuarioCliente, ID_PROYECCION, datosCompra)).rejects.toBeInstanceOf(ErrorNoEncontrado);
+      expect(ejecutarTransaccion).not.toHaveBeenCalled();
+      expect(cobrar).not.toHaveBeenCalled();
+    });
+
+    it('si una parte de la reserva venció, la trata entera como vencida y no cobra', async () => {
+      bloquearReservaCliente.mockResolvedValue([
+        [101, ADULTO, 1],
+        [102, ADULTO, 0],
+        [103, NINO, 1],
+      ]);
+
+      const promesa = comprarBoletos(usuarioCliente, ID_PROYECCION, datosCompra);
+      await expect(promesa).rejects.toBeInstanceOf(ErrorConflicto);
+      await expect(promesa).rejects.toThrow('Tu tiempo para pagar terminó');
+      expect(armarCompraReservada).not.toHaveBeenCalled();
+      expect(insertarFactura).not.toHaveBeenCalled();
+      expect(cobrar).not.toHaveBeenCalled();
     });
 
     it('ignora asientos y boletos del cuerpo: usa los de la reserva', async () => {
@@ -430,7 +476,8 @@ describe('SCRUM-94-95 servicioCompra', () => {
 
         await expect(iniciarPagoPayPal(usuarioCliente, ID_PROYECCION)).resolves.toEqual({ idOrden: ID_ORDEN });
 
-        expect(calcularCompraReservada).toHaveBeenCalledWith(ID_PROYECCION, filasReserva);
+        expect(obtenerPreciosFuncion).toHaveBeenCalledWith(ID_PROYECCION);
+        expect(armarCompraReservada).toHaveBeenCalledWith(filasReservaConsulta, precios);
         expect(convertirADolares).toHaveBeenCalledWith(9200);
         expect(crearOrden).toHaveBeenCalledWith({
           montoDolares: '18.22',

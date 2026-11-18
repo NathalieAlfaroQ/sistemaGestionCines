@@ -34,8 +34,9 @@ import { enviarComprobante } from './servicioComprobante.js';
 import {
   MENSAJE_ASIENTO_NO_DISPONIBLE,
   MENSAJE_RESERVA_VENCIDA,
-  calcularCompraReservada,
+  armarCompraReservada,
   obtenerIdCliente,
+  obtenerPreciosFuncion,
 } from './servicioReserva.js';
 
 export const NOMBRE_METODO_TARJETA = 'Tarjeta';
@@ -130,14 +131,24 @@ async function guardarMetodoPagoSinFallar(idCliente, idMetodo, idMetodoPago) {
   }
 }
 
-// Registro de compra a partir de la reserva del cliente. Todo va en una transacción:
-//   1. Bloquea las filas vigentes de la reserva (FOR UPDATE). Si ya venció, 409 sin cobrar.
-//   2. Calcula precios y total con la BD, inserta la factura y los detalles.
+// La reserva vale entera o no vale: si no hay filas o alguna ya venció, se trata como vencida
+function esReservaVigente(filas) {
+  return filas.length > 0 && filas.every(([, , vigente]) => vigente === 1);
+}
+
+// Registro de compra a partir de la reserva del cliente. Antes de la transacción se leen
+// los precios de la función (ver obtenerPreciosFuncion). Luego, todo en una transacción:
+//   1. Bloquea las filas de la reserva (FOR UPDATE). Si venció (toda o una parte), 409 sin cobrar.
+//   2. Arma la compra con esos precios, inserta la factura y los detalles.
 //   3. Cobra: cobrarPago(idFactura, compra) recibe { asientos, boletos, detalles, total }.
 //   4. Registra el pago y borra la reserva. El commit confirma todo junto.
 // Si falla el pago no se hace el commit; si falla después de cobrar, se reembolsa.
 async function registrarCompra({ idCliente, nombreMetodo, idProyeccion, cobrarPago, reembolsarPago }) {
-  const [cliente, idMetodo] = await Promise.all([obtenerDatosCliente(idCliente), obtenerIdMetodoPago(nombreMetodo)]);
+  const [cliente, idMetodo, precios] = await Promise.all([
+    obtenerDatosCliente(idCliente),
+    obtenerIdMetodoPago(nombreMetodo),
+    obtenerPreciosFuncion(idProyeccion),
+  ]);
   if (!cliente) {
     throw new ErrorNoEncontrado('El cliente no existe');
   }
@@ -153,9 +164,10 @@ async function registrarCompra({ idCliente, nombreMetodo, idProyeccion, cobrarPa
   try {
     idFactura = await ejecutarTransaccion(async (conexion) => {
       const filas = await bloquearReservaCliente(conexion, idCliente, idProyeccion);
-      if (filas.length === 0) throw new ErrorConflicto(MENSAJE_RESERVA_VENCIDA);
+      if (!esReservaVigente(filas)) throw new ErrorConflicto(MENSAJE_RESERVA_VENCIDA);
 
-      const compra = await calcularCompraReservada(idProyeccion, filas);
+      // Sin consultas a la BD aquí: los precios ya se leyeron antes de abrir la transacción
+      const compra = armarCompraReservada(filas, precios);
       total = compra.total;
       const id = await insertarFactura(conexion, { idCliente, idMetodo, monto: total, fecha: ahoraCostaRica() });
 
@@ -244,10 +256,8 @@ async function filasReservaVigente(idCliente, idProyeccion) {
 export async function iniciarPagoPayPal(usuario, idProyeccion) {
   const idCliente = obtenerIdCliente(usuario);
   validarIdProyeccion(idProyeccion);
-  const { asientos, boletos, total } = await calcularCompraReservada(
-    idProyeccion,
-    await filasReservaVigente(idCliente, idProyeccion)
-  );
+  const filas = await filasReservaVigente(idCliente, idProyeccion);
+  const { asientos, boletos, total } = armarCompraReservada(filas, await obtenerPreciosFuncion(idProyeccion));
 
   const idOrden = await crearOrden({
     montoDolares: convertirADolares(total),

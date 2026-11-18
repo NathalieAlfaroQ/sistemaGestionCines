@@ -36,13 +36,15 @@ describe('SCRUM-93 repositorioReservaAsientos: constantes', () => {
 });
 
 describe('SCRUM-93 repositorioReservaAsientos: borrados', () => {
-  it('borrarReservasVencidas borra con SYSDATE usando la conexión de la transacción', async () => {
-    await borrarReservasVencidas(conexion);
+  it('borrarReservasVencidas borra solo las vencidas de esos asientos, con la conexión de la transacción', async () => {
+    await borrarReservasVencidas(conexion, 3, [10, 11]);
 
     expect(conexion.execute).toHaveBeenCalledTimes(1);
-    const [sql] = conexion.execute.mock.calls[0];
+    const [sql, binds] = conexion.execute.mock.calls[0];
     expect(sql).toMatch(/DELETE FROM RESERVAS_ASIENTOS/);
+    expect(sql).toMatch(/ID_PROYECCION = :idProyeccion AND ID_ASIENTO IN \(:asiento0, :asiento1\)/);
     expect(sql).toMatch(/FECHA_EXPIRACION <= SYSDATE/);
+    expect(binds).toEqual({ idProyeccion: 3, asiento0: 10, asiento1: 11 });
     expect(ejecutar).not.toHaveBeenCalled();
   });
 
@@ -83,19 +85,21 @@ describe('SCRUM-93 repositorioReservaAsientos: insertarReserva', () => {
 });
 
 describe('SCRUM-93 repositorioReservaAsientos: bloquearReservaCliente', () => {
-  it('bloquea con FOR UPDATE solo las filas vigentes del cliente en esa función', async () => {
-    conexion.execute.mockResolvedValueOnce({ rows: [[10, 1], [11, 2]] });
+  it('bloquea con FOR UPDATE todas las filas del cliente en esa función e indica si siguen vigentes', async () => {
+    conexion.execute.mockResolvedValueOnce({ rows: [[10, 1, 1], [11, 2, 0]] });
 
     const filas = await bloquearReservaCliente(conexion, 7, 3);
 
-    expect(filas).toEqual([[10, 1], [11, 2]]);
+    expect(filas).toEqual([[10, 1, 1], [11, 2, 0]]);
     const [sql, binds] = conexion.execute.mock.calls[0];
     expect(sql).toMatch(/FOR UPDATE/);
-    expect(sql).toMatch(/FECHA_EXPIRACION > SYSDATE/);
+    expect(sql).toMatch(/CASE WHEN FECHA_EXPIRACION > SYSDATE THEN 1 ELSE 0 END AS VIGENTE/);
+    // No filtra por fecha en el WHERE: las vencidas también se bloquean y se devuelven
+    expect(sql.split('WHERE')[1]).not.toMatch(/FECHA_EXPIRACION/);
     expect(binds).toEqual({ idCliente: 7, idProyeccion: 3 });
   });
 
-  it('devuelve [] si la reserva no existe o ya venció', async () => {
+  it('devuelve [] si el cliente no tiene reserva en esa función', async () => {
     await expect(bloquearReservaCliente(conexion, 7, 3)).resolves.toEqual([]);
   });
 });

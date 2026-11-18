@@ -43,12 +43,13 @@ const {
   consultarHorarios,
   consultarPelicula,
   calcularPrecios,
-  calcularCompraReservada,
+  armarCompraReservada,
   cancelarReserva,
   consultarReserva,
   crearReserva,
   mapaPrecios,
   obtenerIdCliente,
+  obtenerPreciosFuncion,
   repartirBoletos,
   verificarSeleccion,
 } = await import('../../src/servicios/servicioReserva.js');
@@ -327,7 +328,8 @@ describe('SCRUM-93 servicioReserva: crearReserva', () => {
     });
 
     expect(repositorio.listarAsientosOcupados).toHaveBeenCalledWith(7, [11, 10], 4);
-    expect(reservas.borrarReservasVencidas).toHaveBeenCalledWith(conexion);
+    // Solo las vencidas de los asientos que se reservan, no las de todo el cine
+    expect(reservas.borrarReservasVencidas).toHaveBeenCalledWith(conexion, 7, [11, 10]);
     expect(reservas.borrarReservaCliente).toHaveBeenCalledWith(conexion, 4);
     expect(reservas.insertarReserva).toHaveBeenCalledWith(
       conexion,
@@ -427,18 +429,39 @@ describe('SCRUM-93 servicioReserva: cancelarReserva', () => {
   });
 });
 
-describe('SCRUM-93 servicioReserva: calcularCompraReservada', () => {
-  it('pone el precio actual a cada asiento reservado y calcula el total', async () => {
+describe('SCRUM-93 servicioReserva: obtenerPreciosFuncion', () => {
+  it('devuelve el precio de cada tipo de boleto con el monto de la sala', async () => {
     repositorio.obtenerProyeccionVigente.mockResolvedValue(PROYECCION);
     repositorio.listarTiposBoleto.mockResolvedValue(TIPOS_BOLETO);
 
-    await expect(
-      calcularCompraReservada(7, [
-        [10, 1],
-        [11, 2],
-        [12, 1],
-      ])
-    ).resolves.toEqual({
+    const precios = await obtenerPreciosFuncion(7);
+
+    expect(precios.get(1)).toEqual({ monto: 3300, descuento: 0 });
+    expect(precios.get(2)).toEqual({ monto: 2640, descuento: 660 });
+    expect(repositorio.obtenerProyeccionVigente).toHaveBeenCalledWith(7, AHORA_CR);
+  });
+
+  it('lanza ErrorNoEncontrado si la función ya empezó', async () => {
+    repositorio.obtenerProyeccionVigente.mockResolvedValue(null);
+    await expect(obtenerPreciosFuncion(7)).rejects.toBeInstanceOf(ErrorNoEncontrado);
+    expect(repositorio.listarTiposBoleto).not.toHaveBeenCalled();
+  });
+});
+
+describe('SCRUM-93 servicioReserva: armarCompraReservada', () => {
+  const precios = mapaPrecios(TIPOS_BOLETO, 3300);
+
+  it('pone el precio a cada asiento reservado y calcula el total, sin tocar la BD', () => {
+    expect(
+      armarCompraReservada(
+        [
+          [10, 1, 1],
+          [11, 2, 1],
+          [12, 1, 1],
+        ],
+        precios
+      )
+    ).toEqual({
       asientos: [10, 11, 12],
       boletos: [
         { idTipoBoleto: 1, cantidad: 2 },
@@ -451,17 +474,11 @@ describe('SCRUM-93 servicioReserva: calcularCompraReservada', () => {
       ],
       total: 3300 * 2 + 2640,
     });
-    expect(repositorio.obtenerProyeccionVigente).toHaveBeenCalledWith(7, AHORA_CR);
+    expect(repositorio.obtenerProyeccionVigente).not.toHaveBeenCalled();
+    expect(repositorio.listarTiposBoleto).not.toHaveBeenCalled();
   });
 
-  it('lanza ErrorNoEncontrado si la función ya empezó', async () => {
-    repositorio.obtenerProyeccionVigente.mockResolvedValue(null);
-    await expect(calcularCompraReservada(7, [[10, 1]])).rejects.toBeInstanceOf(ErrorNoEncontrado);
-  });
-
-  it('rechaza un tipo de boleto que ya no existe', async () => {
-    repositorio.obtenerProyeccionVigente.mockResolvedValue(PROYECCION);
-    repositorio.listarTiposBoleto.mockResolvedValue(TIPOS_BOLETO);
-    await expect(calcularCompraReservada(7, [[10, 99]])).rejects.toThrow('El tipo de boleto no es válido');
+  it('rechaza un tipo de boleto que ya no existe', () => {
+    expect(() => armarCompraReservada([[10, 99]], precios)).toThrow('El tipo de boleto no es válido');
   });
 });

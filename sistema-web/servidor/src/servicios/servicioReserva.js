@@ -267,7 +267,7 @@ export async function crearReserva(usuario, idProyeccion, datos) {
 
   try {
     await ejecutarTransaccion(async (conexion) => {
-      await borrarReservasVencidas(conexion);
+      await borrarReservasVencidas(conexion, idProyeccion, asientos);
       await borrarReservaCliente(conexion, idCliente);
       await insertarReserva(conexion, idCliente, idProyeccion, detalles, MINUTOS_RESERVA);
     });
@@ -300,16 +300,24 @@ export async function consultarReserva(usuario) {
   };
 }
 
-// Para la compra: precio de cada asiento reservado y total, con los precios actuales de la BD.
-// filas: [[idAsiento, idTipoBoleto]] (bloquearReservaCliente). Devuelve
-// { asientos, boletos: [{ idTipoBoleto, cantidad }], detalles: [{ idAsiento, idTipoBoleto, monto, descuento }], total }
-export async function calcularCompraReservada(idProyeccion, filas) {
+// Para la compra, en dos partes:
+//   obtenerPreciosFuncion consulta la BD y va ANTES de abrir la transacción;
+//   armarCompraReservada no toca la BD y va DENTRO, con las filas ya bloqueadas.
+// Así la transacción no pide una segunda conexión al pool mientras tiene la suya: con varias
+// compras a la vez, todas podrían quedarse esperando una conexión que nunca se libera.
+
+// Precio de cada tipo de boleto en la función: Map idTipoBoleto → { monto, descuento }
+export async function obtenerPreciosFuncion(idProyeccion) {
   const proyeccion = await obtenerProyeccionVigente(idProyeccion, ahoraCostaRica());
   if (!proyeccion) {
     throw new ErrorNoEncontrado('La función no existe o ya no está disponible');
   }
+  return mapaPrecios(await listarTiposBoleto(), proyeccion[POSICION_MONTO_SALA]);
+}
 
-  const precios = mapaPrecios(await listarTiposBoleto(), proyeccion[POSICION_MONTO_SALA]);
+// filas: [[idAsiento, idTipoBoleto, ...]] (bloquearReservaCliente u obtenerReservaCliente ya adaptadas). Devuelve
+// { asientos, boletos: [{ idTipoBoleto, cantidad }], detalles: [{ idAsiento, idTipoBoleto, monto, descuento }], total }
+export function armarCompraReservada(filas, precios) {
   if (!filas.every(([, idTipoBoleto]) => precios.has(idTipoBoleto))) {
     throw new ErrorValidacion('El tipo de boleto no es válido');
   }

@@ -1,4 +1,5 @@
 import { ejecutar } from '../configuracion/baseDatos.js';
+import { armarBindsLista } from './repositorioReserva.js';
 
 // Reserva temporal de asientos: mientras el cliente paga, sus asientos quedan apartados
 // en RESERVAS_ASIENTOS. Si paga, pasan a DETALLES_FACTURA; si no, la reserva vence sola.
@@ -12,14 +13,17 @@ export const RESTRICCION_ASIENTO_RESERVADO = 'PK_RESERVAS_ASIENTOS';
 // Las siguientes funciones reciben la conexión de ejecutarTransaccion: no hacen commit,
 // se confirma o se deshace junto.
 
-// Las filas vencidas siguen ocupando la PK: se borran antes de reservar para liberar esos asientos
-const sqlBorrarVencidas = `
-  DELETE FROM RESERVAS_ASIENTOS
-  WHERE FECHA_EXPIRACION <= SYSDATE
-`;
-
-export async function borrarReservasVencidas(conexion) {
-  await conexion.execute(sqlBorrarVencidas);
+// Las filas vencidas siguen ocupando la PK: antes de reservar se borran las de esos asientos.
+// Solo las de esos asientos, no las de todo el cine: si una fila vencida está bloqueada por un
+// pago en curso, solo espera quien quiere ese mismo asiento, no todos los que reservan.
+export async function borrarReservasVencidas(conexion, idProyeccion, idsAsientos) {
+  const { marcadores, valores } = armarBindsLista(idsAsientos);
+  const sql = `
+    DELETE FROM RESERVAS_ASIENTOS
+    WHERE ID_PROYECCION = :idProyeccion AND ID_ASIENTO IN (${marcadores})
+      AND FECHA_EXPIRACION <= SYSDATE
+  `;
+  await conexion.execute(sql, { idProyeccion, ...valores });
 }
 
 // Una sola reserva por cliente: se usa al reservar de nuevo, al cancelar y al terminar la compra
@@ -51,15 +55,17 @@ export async function insertarReserva(conexion, idCliente, idProyeccion, detalle
   await conexion.executeMany(sqlInsertarReserva, filas);
 }
 
-// Para la compra: bloquea las filas vigentes de la reserva hasta el commit o el rollback,
-// así nadie puede borrarlas (ni tomar esos asientos) mientras se cobra.
-// Orden de columnas: 0: ID_ASIENTO, 1: ID_TIPO_BOLETO
+// Para la compra: bloquea TODAS las filas de la reserva del cliente en esa función hasta el commit
+// o el rollback, así nadie puede borrarlas (ni tomar esos asientos) mientras se cobra.
+// No filtra por fecha: trae VIGENTE (1 o 0) para que el servicio trate la reserva como todo o nada.
+// Si se filtrara, una reserva que vence justo en ese segundo podría venir incompleta y se cobraría solo una parte.
+// Orden de columnas: 0: ID_ASIENTO, 1: ID_TIPO_BOLETO, 2: VIGENTE
 const sqlBloquearReservaCliente = `
-  SELECT ID_ASIENTO, ID_TIPO_BOLETO
+  SELECT ID_ASIENTO, ID_TIPO_BOLETO,
+    CASE WHEN FECHA_EXPIRACION > SYSDATE THEN 1 ELSE 0 END AS VIGENTE
   FROM RESERVAS_ASIENTOS
   WHERE ID_CLIENTE = :idCliente
     AND ID_PROYECCION = :idProyeccion
-    AND FECHA_EXPIRACION > SYSDATE
   ORDER BY ID_ASIENTO
   FOR UPDATE
 `;
