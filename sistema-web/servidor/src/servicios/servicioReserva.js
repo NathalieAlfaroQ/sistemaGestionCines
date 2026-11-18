@@ -226,12 +226,6 @@ export async function validarSeleccion(idProyeccion, datos, idCliente) {
   return { proyeccion, asientos, boletos, precios, total };
 }
 
-// Botón Continuar (versión anterior, sin reserva). Se quita cuando el cliente use crearReserva (Paso 7).
-export async function verificarSeleccion(idProyeccion, datos) {
-  const { total } = await validarSeleccion(idProyeccion, datos);
-  return { total };
-}
-
 // Reserva temporal de asientos
 
 // Los tokens emitidos antes de agregar idCliente (y los del personal) no sirven para reservar

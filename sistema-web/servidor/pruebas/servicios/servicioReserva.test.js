@@ -51,7 +51,7 @@ const {
   obtenerIdCliente,
   obtenerPreciosFuncion,
   repartirBoletos,
-  verificarSeleccion,
+  validarSeleccion,
 } = await import('../../src/servicios/servicioReserva.js');
 
 // 08:00 UTC = 02:00 en Costa Rica (UTC-6)
@@ -193,7 +193,7 @@ describe('SCRUM-93 servicioReserva: mapaPrecios', () => {
   });
 });
 
-describe('SCRUM-93 servicioReserva: verificarSeleccion', () => {
+describe('SCRUM-93 servicioReserva: validarSeleccion', () => {
   const seleccionValida = {
     asientos: [10, 11, 12],
     boletos: [
@@ -212,20 +212,21 @@ describe('SCRUM-93 servicioReserva: verificarSeleccion', () => {
 
   it('devuelve el total calculado con los precios de la BD', async () => {
     prepararBdValida();
-    await expect(verificarSeleccion(7, seleccionValida)).resolves.toEqual({ total: 3300 * 2 + 2640 });
+    const { total } = await validarSeleccion(7, seleccionValida);
+    expect(total).toBe(3300 * 2 + 2640);
     expect(repositorio.contarAsientosDeSala).toHaveBeenCalledWith(7, [10, 11, 12]);
   });
 
   it('muestra "Te faltan asientos por seleccionar" si hay menos asientos que boletos', async () => {
     await expect(
-      verificarSeleccion(7, { ...seleccionValida, asientos: [10, 11] })
+      validarSeleccion(7, { ...seleccionValida, asientos: [10, 11] })
     ).rejects.toThrow(MENSAJE_FALTAN_ASIENTOS);
     expect(repositorio.obtenerProyeccionVigente).not.toHaveBeenCalled();
   });
 
   it('rechaza más asientos que boletos', async () => {
     await expect(
-      verificarSeleccion(7, { ...seleccionValida, asientos: [10, 11, 12, 13] })
+      validarSeleccion(7, { ...seleccionValida, asientos: [10, 11, 12, 13] })
     ).rejects.toThrow('Seleccionaste más asientos que boletos');
   });
 
@@ -241,24 +242,24 @@ describe('SCRUM-93 servicioReserva: verificarSeleccion', () => {
     ],
     ['todas las cantidades en cero', { boletos: [{ idTipoBoleto: 1, cantidad: 0 }] }, 'Debes elegir al menos un boleto'],
   ])('rechaza %s', async (_caso, cambios, mensaje) => {
-    await expect(verificarSeleccion(7, { ...seleccionValida, ...cambios })).rejects.toThrow(mensaje);
+    await expect(validarSeleccion(7, { ...seleccionValida, ...cambios })).rejects.toThrow(mensaje);
   });
 
   it('lanza ErrorNoEncontrado si la función ya empezó o no existe', async () => {
     repositorio.obtenerProyeccionVigente.mockResolvedValue(null);
-    await expect(verificarSeleccion(7, seleccionValida)).rejects.toBeInstanceOf(ErrorNoEncontrado);
+    await expect(validarSeleccion(7, seleccionValida)).rejects.toBeInstanceOf(ErrorNoEncontrado);
   });
 
   it('rechaza un tipo de boleto que no existe en la BD', async () => {
     prepararBdValida();
     const seleccion = { asientos: [10], boletos: [{ idTipoBoleto: 99, cantidad: 1 }] };
-    await expect(verificarSeleccion(7, seleccion)).rejects.toThrow('El tipo de boleto no es válido');
+    await expect(validarSeleccion(7, seleccion)).rejects.toThrow('El tipo de boleto no es válido');
   });
 
   it('rechaza asientos de otra sala', async () => {
     prepararBdValida();
     repositorio.contarAsientosDeSala.mockResolvedValue(2);
-    await expect(verificarSeleccion(7, seleccionValida)).rejects.toThrow(
+    await expect(validarSeleccion(7, seleccionValida)).rejects.toThrow(
       'Algún asiento no pertenece a la sala de la función'
     );
     expect(repositorio.listarAsientosOcupados).not.toHaveBeenCalled();
@@ -268,7 +269,7 @@ describe('SCRUM-93 servicioReserva: verificarSeleccion', () => {
     prepararBdValida();
     repositorio.listarAsientosOcupados.mockResolvedValue([11]);
 
-    const promesa = verificarSeleccion(7, seleccionValida);
+    const promesa = validarSeleccion(7, seleccionValida);
     await expect(promesa).rejects.toBeInstanceOf(ErrorConflicto);
     await expect(promesa).rejects.toThrow(MENSAJE_ASIENTO_NO_DISPONIBLE);
   });
