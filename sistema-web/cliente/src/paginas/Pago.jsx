@@ -3,12 +3,13 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from 'flowbite-react';
 import { terminarCompraEnCurso, useCompraEnCurso } from '../ganchos/useCompraEnCurso.js';
 import { useConsulta } from '../ganchos/useConsulta.js';
+import { formatearTiempo, useCuentaRegresiva } from '../ganchos/useCuentaRegresiva.js';
 import { useFormularioTarjeta } from '../ganchos/useFormularioTarjeta.js';
 import { useMapaAsientos } from '../ganchos/useMapaAsientos.js';
 import { usePeliculaCartelera } from '../ganchos/usePeliculaCartelera.js';
 import { POS_PROYECCION } from '../constantes/posicionesReserva.js';
 import { comprar, obtenerMetodoPagoGuardado, registrarTarjeta } from '../servicios/servicioCompra.js';
-import { TIPOS_ERROR } from '../servicios/servicioReserva.js';
+import { TIPOS_ERROR, cancelarReserva, obtenerMiReserva } from '../servicios/servicioReserva.js';
 import { obtenerUsuario } from '../servicios/sesion.js';
 import { datosTarjeta } from '../validaciones/validacionesTarjeta.js';
 import { temaFormulario } from '../temas/temaFormulario.js';
@@ -19,11 +20,31 @@ import FormularioPago, { METODOS } from '../componentes/FormularioPago.jsx';
 import CompraExitosa from '../componentes/CompraExitosa.jsx';
 import ContenedorCliente from '../componentes/ContenedorCliente.jsx';
 import ErrorCarga from '../componentes/ErrorCarga.jsx';
+import BotonVolver from '../componentes/BotonVolver.jsx';
 import Boton from '../common/Boton.jsx';
 import Modal from '../common/Modal.jsx';
 
 const ID_FORMULARIO = 'formulario-pago';
 const MENSAJE_PROCESANDO = 'Procesando pago, por favor no recargues ni cierres esta página.';
+const MENSAJE_TIEMPO_AGOTADO =
+  'Tu tiempo para pagar terminó y los asientos se liberaron. Vuelve a elegir tus asientos.';
+// Desde aquí la cuenta regresiva se muestra como advertencia
+const SEGUNDOS_ADVERTENCIA = 60;
+
+// Tiempo que le queda al cliente para pagar, según su reserva en el servidor
+function CuentaRegresiva({ segundos }) {
+  const urgente = segundos <= SEGUNDOS_ADVERTENCIA;
+  return (
+    <p
+      role="timer"
+      aria-live="off"
+      className={`rounded-md border px-4 py-3 text-sm ${urgente ? 'border-warning text-warning' : 'border-brand-soft text-brand-soft'}`}
+    >
+      Tus asientos están reservados. Tiempo para completar el pago:{' '}
+      <span className="font-bold tabular-nums">{formatearTiempo(segundos)}</span>
+    </p>
+  );
+}
 
 // Mientras se procesa el pago, el navegador pide confirmación antes de cerrar o recargar
 function useAvisoAlSalir(activo) {
@@ -50,15 +71,27 @@ function PantallaPago({ compraEnCurso, usuario, compraHecha, alTerminar, alVolve
   const consultarGuardado = useCallback(() => obtenerMetodoPagoGuardado(), []);
   const { datos: metodoGuardado } = useConsulta(consultarGuardado);
 
+  // El tiempo restante lo da el servidor (también si el cliente recarga la página)
+  const consultarReserva = useCallback(() => obtenerMiReserva(), []);
+  const { datos: reserva, cargando: cargandoReserva, error: errorReserva, recargar: recargarReserva } =
+    useConsulta(consultarReserva);
+  const reservaValida = reserva?.idProyeccion === idProyeccion;
+  const segundosRestantes = useCuentaRegresiva(reservaValida ? reserva.segundosRestantes : null);
+
   const tarjeta = useFormularioTarjeta();
   const [metodoElegido, setMetodo] = useState(null);
   const [procesando, setProcesando] = useState(false);
   const [errorPago, setErrorPago] = useState(null);
-  const [asientoTomado, setAsientoTomado] = useState(null);
+  const [reservaPerdida, setReservaPerdida] = useState(null);
   const enviando = useRef(false);
   const refAvisos = useRef(null);
 
   useAvisoAlSalir(procesando);
+
+  // Se acabó el tiempo (o ya no había reserva). Mientras se procesa un pago no se interrumpe:
+  // el servidor decide, y si la reserva venció responde con un error que abre el mismo modal.
+  const sinReserva = !cargandoReserva && !errorReserva && !reservaValida;
+  const tiempoAgotado = !compraHecha && !procesando && (sinReserva || segundosRestantes === 0);
 
   // El botón de pagar queda abajo: se trae a la vista la alerta de "procesando" o del rechazo
   useEffect(() => {
@@ -69,12 +102,21 @@ function PantallaPago({ compraEnCurso, usuario, compraHecha, alTerminar, alVolve
   const metodo =
     metodoElegido ?? (metodoGuardado && !metodoGuardado.vencida ? METODOS.tarjetaGuardada : METODOS.tarjetaNueva);
 
-  const seleccion = { idProyeccion, asientos: compraEnCurso.asientos, boletos: compraEnCurso.boletos };
+  // Los asientos y boletos los toma el servidor de la reserva: solo se manda la función
+  const datosCompra = { idProyeccion };
 
-  // Asiento vendido mientras se pagaba: modal para elegir otros. Cualquier otro error: aviso arriba.
+  // Vuelve al mapa de asientos de esta función y libera la reserva
+  function elegirOtrosAsientos() {
+    terminarCompraEnCurso();
+    void cancelarReserva();
+    void navegar(`/funciones/${idProyeccion}/asientos`, { replace: true });
+  }
+
+  // La reserva venció o un asiento ya no está disponible: modal para elegir otros.
+  // Cualquier otro error: aviso arriba.
   function mostrarError(error) {
     if (error.tipo === TIPOS_ERROR.conflicto) {
-      setAsientoTomado(error.message);
+      setReservaPerdida(error.message);
     } else {
       setErrorPago(error);
     }
@@ -101,7 +143,7 @@ function PantallaPago({ compraEnCurso, usuario, compraHecha, alTerminar, alVolve
               guardarMetodo: tarjeta.guardarTarjeta,
             };
 
-      const resultado = await comprar({ ...seleccion, ...datosMetodo });
+      const resultado = await comprar({ ...datosCompra, ...datosMetodo });
       alTerminar(resultado, metodo === METODOS.tarjetaNueva && tarjeta.guardarTarjeta);
     } catch (error) {
       mostrarError(error);
@@ -127,7 +169,15 @@ function PantallaPago({ compraEnCurso, usuario, compraHecha, alTerminar, alVolve
         {pelicula.detalle && <EncabezadoPelicula detalle={pelicula.detalle} />}
 
         <ContenedorCliente className="py-10 flex flex-col gap-6">
+          {!compraHecha && (
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <BotonVolver alVolver={elegirOtrosAsientos} />
+              {reservaValida && segundosRestantes !== null && <CuentaRegresiva segundos={segundosRestantes} />}
+            </div>
+          )}
+
           <div ref={refAvisos} className="flex flex-col gap-4 empty:hidden">
+            {errorReserva && <ErrorCarga error={errorReserva} alReintentar={recargarReserva} />}
             {procesando && (
               <p role="alert" className="rounded-md border border-warning px-4 py-3 text-warning">
                 {MENSAJE_PROCESANDO}
@@ -145,7 +195,7 @@ function PantallaPago({ compraEnCurso, usuario, compraHecha, alTerminar, alVolve
             >
               {metodo === METODOS.paypal ? (
                 <BotonPayPal
-                  seleccion={seleccion}
+                  seleccion={datosCompra}
                   deshabilitado={procesando}
                   alEmpezarCaptura={() => {
                     setErrorPago(null);
@@ -186,18 +236,12 @@ function PantallaPago({ compraEnCurso, usuario, compraHecha, alTerminar, alVolve
           />
         )}
 
-        {asientoTomado && (
+        {(reservaPerdida || tiempoAgotado) && (
           <Modal
-            titulo="Asiento no disponible"
-            mensaje={asientoTomado}
-            alCerrar={() => setAsientoTomado(null)}
-            botones={[
-              {
-                texto: 'Elegir otros asientos',
-                enfocar: true,
-                alPulsar: () => void navegar(`/funciones/${idProyeccion}/asientos`, { replace: true }),
-              },
-            ]}
+            titulo="Tu reserva ya no está disponible"
+            mensaje={reservaPerdida ?? MENSAJE_TIEMPO_AGOTADO}
+            alCerrar={elegirOtrosAsientos}
+            botones={[{ texto: 'Elegir asientos otra vez', enfocar: true, alPulsar: elegirOtrosAsientos }]}
           />
         )}
       </main>

@@ -118,15 +118,22 @@ export async function obtenerProyeccionVigente(idProyeccion, ahora) {
   return resultado.rows[0] ?? null;
 }
 
-// Mapa de asientos de la proyección, indicando cuáles están ocupados
+// Mapa de asientos de la proyección, indicando cuáles están ocupados.
+// Ocupado = vendido (DETALLES_FACTURA) o apartado por una reserva vigente (RESERVAS_ASIENTOS).
+// Como en un cine, el cliente ve igual un asiento vendido que uno reservado.
+// La PK de RESERVAS_ASIENTOS es (ID_PROYECCION, ID_ASIENTO): el LEFT JOIN no duplica filas.
+// La expiración se compara con SYSDATE, el mismo reloj con que se guardó (ver repositorioReservaAsientos.js).
 
 const sqlAsientos = `
   SELECT a.ID_ASIENTO, a.FILA, a.NUMERO,
-    CASE WHEN df.ID_ASIENTO IS NULL THEN 0 ELSE 1 END AS OCUPADO
+    CASE WHEN df.ID_ASIENTO IS NULL AND r.ID_ASIENTO IS NULL THEN 0 ELSE 1 END AS OCUPADO
   FROM PROYECCIONES p
   JOIN ASIENTOS a ON a.ID_SALA = p.ID_SALA
   LEFT JOIN DETALLES_FACTURA df
     ON df.ID_PROYECCION = p.ID_PROYECCION AND df.ID_ASIENTO = a.ID_ASIENTO
+  LEFT JOIN RESERVAS_ASIENTOS r
+    ON r.ID_PROYECCION = p.ID_PROYECCION AND r.ID_ASIENTO = a.ID_ASIENTO
+    AND r.FECHA_EXPIRACION > SYSDATE
   WHERE p.ID_PROYECCION = :idProyeccion
   ORDER BY a.FILA, a.NUMERO
 `;
@@ -161,14 +168,22 @@ export async function contarAsientosDeSala(idProyeccion, idsAsientos) {
   return resultado.rows[0][0];
 }
 
-// Cuáles de los asientos pedidos ya están vendidos para la proyección
-export async function listarAsientosOcupados(idProyeccion, idsAsientos) {
+// Cuáles de los asientos pedidos ya están vendidos o reservados (reserva vigente) para la proyección.
+// La reserva del propio cliente (idCliente) no cuenta: si vuelve a reservar los mismos asientos,
+// la suya se reemplaza. Sin idCliente (0, ningún cliente tiene ese id) cuentan todas las reservas.
+export async function listarAsientosOcupados(idProyeccion, idsAsientos, idCliente = 0) {
   const { marcadores, valores } = armarBindsLista(idsAsientos);
   const sql = `
     SELECT ID_ASIENTO
     FROM DETALLES_FACTURA
     WHERE ID_PROYECCION = :idProyeccion AND ID_ASIENTO IN (${marcadores})
+    UNION
+    SELECT ID_ASIENTO
+    FROM RESERVAS_ASIENTOS
+    WHERE ID_PROYECCION = :idProyeccion AND ID_ASIENTO IN (${marcadores})
+      AND FECHA_EXPIRACION > SYSDATE
+      AND ID_CLIENTE <> :idCliente
   `;
-  const resultado = await ejecutar(sql, { idProyeccion, ...valores });
+  const resultado = await ejecutar(sql, { idProyeccion, idCliente, ...valores });
   return resultado.rows.map(([idAsiento]) => idAsiento);
 }
