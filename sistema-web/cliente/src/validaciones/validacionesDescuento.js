@@ -3,7 +3,7 @@ import { MENSAJE_OBLIGATORIO, fechaATexto, horaATexto } from './validacionesProy
 export const NOMBRE_MAXIMO = 50;
 
 // Los descuentos pueden empezar o terminar a cualquier hora del día, cada 5 minutos
-export const HORAS_DESCUENTO = Array.from({ length: 24 }, (_, indice) => String(indice).padStart(2, '0'));
+export const HORAS_DESCUENTO = Array.from({ length: 18 }, (_, indice) => String(indice + 6).padStart(2, '0'));
 
 const MENSAJE_PORCENTAJE = 'El porcentaje debe ser mayor que 0 y no mayor que 100, con máximo dos decimales';
 const MENSAJE_FIN = 'La fecha y hora de fin debe ser posterior a la de inicio';
