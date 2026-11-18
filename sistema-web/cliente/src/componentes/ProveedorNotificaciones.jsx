@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Toast, ToastToggle } from 'flowbite-react';
 import { ContextoNotificaciones } from '../ganchos/useNotificaciones.js';
 import { temasToast } from '../temas/temaToast.js';
+import { IconoCheck, IconoEquis, IconoAdvertencia } from '../common/iconos.jsx';
 
 const MAXIMO_VISIBLES = 3;
-const DURACION_MS = { exito: 4000, aviso: 6000, error: 6000 };
+const ICONOS = { exito: IconoCheck, aviso: IconoAdvertencia, error: IconoEquis };
+const DURACION_MS = { exito: 5000, aviso: 6000, error: 6000 };
 
 function ProveedorNotificaciones({ children }) {
   const [notificaciones, setNotificaciones] = useState([]);
@@ -47,13 +49,17 @@ function ProveedorNotificaciones({ children }) {
     <ContextoNotificaciones.Provider value={valor}>
       {children}
 
-      <div className="pointer-events-none fixed bottom-6 right-6 z-[100] flex w-full max-w-sm flex-col gap-3">
-        {notificaciones.map(({ id, mensaje, tipo }) => (
-          <Toast key={id} theme={temasToast[tipo]} duration={150} className="pointer-events-auto">
+      <div className="pointer-events-none fixed left-1/2 top-6 z-[100] flex w-full max-w-md -translate-x-1/2 flex-col gap-3 px-4">
+        {notificaciones.map(({ id, mensaje, tipo }) => {
+          const Icono = ICONOS[tipo];
+          return (
+          <Toast key={id} theme={temasToast[tipo]} duration={150} className="pointer-events-auto" role="status">
+            <Icono className="h-6 w-6 shrink-0" />
             <div className="flex-1">{mensaje}</div>
             <ToastToggle onDismiss={() => cerrar(id)} aria-label="Cerrar notificación" />
           </Toast>
-        ))}
+          );
+        })}
       </div>
     </ContextoNotificaciones.Provider>
   );

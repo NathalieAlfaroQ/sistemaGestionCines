@@ -89,3 +89,11 @@ export function IconoEquis({ className = 'h-4 w-4' }) {
     </svg>
   );
 }
+
+export function IconoCheck({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
