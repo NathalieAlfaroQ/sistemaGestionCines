@@ -12,6 +12,9 @@ import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 import { ahoraCostaRica } from '../utilidades/fechas.js';
 import { estadoDeFiltro, exigirObjeto, idDeFiltro, idObligatorio } from '../utilidades/validaciones.js';
 
+// 'AAAA-MM-DD HH:MM' en hora de Costa Rica
+const ahoraTexto = () => ahoraCostaRica().slice(0, 16);
+
 const ESTADOS_DESCUENTO = { activos: 1, eliminados: 0, todos: null };
 
 const PATRON_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -47,6 +50,7 @@ export async function obtenerDescuentos({ busqueda, idSede, idPelicula, fechaIni
     fechaInicio: fechaDeFiltro(fechaInicio, 'fecha de inicio'),
     fechaFin: fechaDeFiltro(fechaFin, 'fecha de fin'),
     estado: idEstado,
+    ahora: ahoraTexto(),
   });
 }
 
@@ -118,7 +122,7 @@ function validarDatosDescuento(datos) {
 export async function registrarDescuento(datos) {
   const descuento = validarDatosDescuento(datos);
 
-  if (descuento.fechaFin <= ahoraCostaRica().slice(0, 16)) {
+  if (descuento.fechaFin <= ahoraTexto()) {
     throw new ErrorValidacion('La fecha y hora de fin debe ser posterior a la fecha y hora actuales');
   }
 
@@ -128,7 +132,7 @@ export async function registrarDescuento(datos) {
     throw new ErrorValidacion('Una de las películas seleccionadas no existe');
   }
 
-  const choque = await buscarChoqueDeDescuento(descuento);
+  const choque = await buscarChoqueDeDescuento({ ...descuento, ahora: ahoraTexto() });
   if (choque) {
     const aplicaA = choque.titulo ? `"${choque.titulo}"` : 'todas las películas';
     throw new ErrorConflicto(`El descuento "${choque.nombre}" ya aplica a ${aplicaA} en ese cine durante ese periodo`);
@@ -140,7 +144,7 @@ export async function registrarDescuento(datos) {
 export async function desactivarDescuento(idDescuento) {
   const id = idObligatorio(idDescuento, 'El identificador del descuento no es válido');
 
-  if (!(await desactivarDescuentoEnRepositorio(id))) {
+  if (!(await desactivarDescuentoEnRepositorio({ idDescuento: id, ahora: ahoraTexto() }))) {
     throw new ErrorNoEncontrado('El descuento no existe o ya fue eliminado');
   }
 }
