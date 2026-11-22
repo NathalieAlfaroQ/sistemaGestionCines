@@ -22,7 +22,11 @@ const sqlListarDescuentos = `
       FROM DESCUENTOS_PELICULA dp
       JOIN PELICULAS pe ON pe.ID_PELICULA = dp.ID_PELICULA
       WHERE dp.ID_DESCUENTO = d.ID_DESCUENTO
-    ) END AS PELICULAS
+    ) END AS PELICULAS,
+    d.APLICA_TODAS,
+    (SELECT LISTAGG(dp.ID_PELICULA, ',') WITHIN GROUP (ORDER BY dp.ID_PELICULA)
+     FROM DESCUENTOS_PELICULA dp
+     WHERE dp.ID_DESCUENTO = d.ID_DESCUENTO) AS IDS_PELICULAS
   FROM DESCUENTOS d
   JOIN SEDES se ON se.ID_SEDE = d.ID_SEDE
   WHERE (:estado IS NULL OR :estado = CASE WHEN d.ESTADO_DESCUENTO = 1 AND ${FIN_NO_ALCANZADO} THEN 1 ELSE 0 END)
@@ -58,6 +62,13 @@ export async function listarDescuentos({
   return resultado.rows;
 }
 
+const sqlExisteDescuento = `SELECT 1 FROM DESCUENTOS WHERE ID_DESCUENTO = :idDescuento`;
+
+export async function existeDescuento(idDescuento) {
+  const resultado = await ejecutar(sqlExisteDescuento, { idDescuento });
+  return resultado.rows.length > 0;
+}
+
 const sqlExisteSedeActiva = `SELECT 1 FROM SEDES WHERE ID_SEDE = :idSede AND ESTADO_SEDE = 1`;
 
 export async function existeSedeActiva(idSede) {
@@ -83,8 +94,17 @@ export async function contarPeliculasActivas(idsPeliculas) {
 
 // Descuento vigente del mismo cine que ya cubre alguna de las películas en un periodo que se cruza.
 // Un descuento para todas las películas choca con cualquier otro del cine y periodo.
+// Al editar, idDescuentoActual excluye al propio descuento.
 // titulo es null cuando el descuento existente aplica a todas las películas.
-export async function buscarChoqueDeDescuento({ ahora, idSede, idsPeliculas, aplicaTodas = false, fechaInicio, fechaFin }) {
+export async function buscarChoqueDeDescuento({
+  ahora,
+  idSede,
+  idsPeliculas,
+  aplicaTodas = false,
+  fechaInicio,
+  fechaFin,
+  idDescuentoActual = null,
+}) {
   const { marcadores, valores } = bindsDeIds(idsPeliculas);
   const coincidePelicula = idsPeliculas.length > 0 ? `OR dp.ID_PELICULA IN (${marcadores})` : '';
   const resultado = await ejecutar(
@@ -95,11 +115,12 @@ export async function buscarChoqueDeDescuento({ ahora, idSede, idsPeliculas, apl
      WHERE d.ID_SEDE = :idSede
        AND d.ESTADO_DESCUENTO = 1
        AND ${FIN_NO_ALCANZADO}
+       AND (:idDescuentoActual IS NULL OR d.ID_DESCUENTO <> :idDescuentoActual)
        AND (:aplicaTodas = 1 OR d.APLICA_TODAS = 1 ${coincidePelicula})
        AND d.FECHA_INICIO < TO_DATE(:fechaFin, 'YYYY-MM-DD HH24:MI')
        AND d.FECHA_FIN > TO_DATE(:fechaInicio, 'YYYY-MM-DD HH24:MI')
      FETCH FIRST 1 ROWS ONLY`,
-    { ahora, idSede, aplicaTodas: aplicaTodas ? 1 : 0, fechaInicio, fechaFin, ...valores },
+    { ahora, idSede, aplicaTodas: aplicaTodas ? 1 : 0, fechaInicio, fechaFin, idDescuentoActual, ...valores },
   );
   if (resultado.rows.length === 0) return null;
 
@@ -141,6 +162,56 @@ export async function crearDescuento({ idSede, nombre, porcentaje, aplicaTodas =
     );
 
     return idDescuento;
+  });
+}
+
+const sqlActualizarDescuento = `
+  UPDATE DESCUENTOS
+  SET ID_SEDE = :idSede,
+      NOMBRE_DESCUENTO = :nombre,
+      PORCENTAJE = :porcentaje,
+      APLICA_TODAS = :aplicaTodas,
+      FECHA_INICIO = TO_DATE(:fechaInicio, 'YYYY-MM-DD HH24:MI'),
+      FECHA_FIN = TO_DATE(:fechaFin, 'YYYY-MM-DD HH24:MI'),
+      ESTADO_DESCUENTO = 1
+  WHERE ID_DESCUENTO = :idDescuento
+`;
+
+const sqlBorrarPeliculasDeDescuento = `DELETE FROM DESCUENTOS_PELICULA WHERE ID_DESCUENTO = :idDescuento`;
+
+export async function actualizarDescuento({
+  idDescuento,
+  idSede,
+  nombre,
+  porcentaje,
+  aplicaTodas = false,
+  fechaInicio,
+  fechaFin,
+  idsPeliculas = [],
+}) {
+  return await ejecutarTransaccion(async (conexion) => {
+    const resultado = await conexion.execute(sqlActualizarDescuento, {
+      idDescuento,
+      idSede,
+      nombre,
+      porcentaje,
+      aplicaTodas: aplicaTodas ? 1 : 0,
+      fechaInicio,
+      fechaFin,
+    });
+    if (resultado.rowsAffected === 0) return false;
+
+    await conexion.execute(sqlBorrarPeliculasDeDescuento, { idDescuento });
+
+    if (idsPeliculas.length > 0) {
+      await conexion.executeMany(
+        sqlCrearDescuentoPelicula,
+        idsPeliculas.map((idPelicula) => ({ idDescuento, idPelicula })),
+        { bindDefs: { idDescuento: { type: oracledb.NUMBER }, idPelicula: { type: oracledb.NUMBER } } },
+      );
+    }
+
+    return true;
   });
 }
 
