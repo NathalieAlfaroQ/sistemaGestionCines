@@ -136,6 +136,17 @@ describe('SCRUM-94-95 servicioCompra', () => {
     });
   });
 
+  describe('asignarBoletos con oferta', () => {
+    it('lleva el idDescuento de la oferta a cada detalle', () => {
+      const conOferta = new Map([[ADULTO, { monto: 1650, descuento: 1650, idDescuento: 9 }]]);
+
+      expect(asignarBoletos([101, 102], [{ idTipoBoleto: ADULTO, cantidad: 2 }], conOferta)).toEqual([
+        { idAsiento: 101, idTipoBoleto: ADULTO, monto: 1650, descuento: 1650, idDescuento: 9 },
+        { idAsiento: 102, idTipoBoleto: ADULTO, monto: 1650, descuento: 1650, idDescuento: 9 },
+      ]);
+    });
+  });
+
   describe('comprarBoletos', () => {
     it.each([undefined, '', 'abc', 'id con espacios y símbolos!!', 12345678901])(
       'rechaza el método de pago inválido %s sin cobrar',

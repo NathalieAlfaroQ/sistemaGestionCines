@@ -6,6 +6,7 @@ vi.mock('../../src/configuracion/baseDatos.js', () => ({ ejecutar: vi.fn(), ejec
 import { ejecutar, ejecutarTransaccion } from '../../src/configuracion/baseDatos.js'
 import {
   buscarChoqueDeDescuento,
+  buscarOfertaDeProyeccion,
   contarPeliculasActivas,
   crearDescuento,
   desactivarDescuento,
@@ -31,6 +32,7 @@ describe('listarDescuentos', () => {
     await listarDescuentos()
 
     expect(ejecutar).toHaveBeenCalledWith(expect.stringContaining('FROM DESCUENTOS'), {
+      ahora: undefined,
       busqueda: null,
       idSede: null,
       idPelicula: null,
@@ -42,7 +44,7 @@ describe('listarDescuentos', () => {
 
   it('envía los filtros como parámetros enlazados, no dentro del SQL', async () => {
     ejecutar.mockResolvedValue({ rows: [] })
-    const filtros = { busqueda: "x' OR '1'='1", idSede: 4, idPelicula: 7, fechaInicio: '2026-11-16', fechaFin: '2026-11-22', estado: 1 }
+    const filtros = { ahora: '2026-11-16 08:00', busqueda: "x' OR '1'='1", idSede: 4, idPelicula: 7, fechaInicio: '2026-11-16', fechaFin: '2026-11-22', estado: 1 }
 
     await listarDescuentos(filtros)
 
@@ -52,7 +54,6 @@ describe('listarDescuentos', () => {
   })
 })
 
-/* Para restaurar el vencimiento automático: quitar este comentario (y ver las notas en repositorioDescuento.js)
 describe('listarDescuentos y descuentos vencidos', () => {
   it('trata como eliminado el descuento activo cuyo periodo ya terminó', async () => {
     ejecutar.mockResolvedValue({ rows: [] })
@@ -64,7 +65,6 @@ describe('listarDescuentos y descuentos vencidos', () => {
     expect(parametros.ahora).toBe('2026-11-16 08:00')
   })
 })
-*/
 
 describe('existeSedeActiva', () => {
   it('es verdadero cuando el cine activo existe', async () => {
@@ -91,7 +91,7 @@ describe('contarPeliculasActivas', () => {
 })
 
 describe('buscarChoqueDeDescuento', () => {
-  const datos = { idSede: 4, idsPeliculas: [7, 9], fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00' }
+  const datos = { ahora: '2099-11-16 07:00', idSede: 4, idsPeliculas: [7, 9], fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00' }
 
   it('devuelve null cuando ningún descuento activo se cruza', async () => {
     ejecutar.mockResolvedValue({ rows: [] })
@@ -105,7 +105,8 @@ describe('buscarChoqueDeDescuento', () => {
     expect(await buscarChoqueDeDescuento(datos)).toEqual({ nombre: 'Lunes de cine', titulo: 'Clayface' })
     const [sql, parametros] = ejecutar.mock.calls[0]
     expect(sql).toContain('ESTADO_DESCUENTO = 1')
-    expect(parametros).toEqual({ idSede: 4, aplicaTodas: 0, fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00', p0: 7, p1: 9 })
+    expect(sql).toContain('d.FECHA_FIN > TO_DATE(:ahora')
+    expect(parametros).toEqual({ ahora: '2099-11-16 07:00', idSede: 4, aplicaTodas: 0, fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00', p0: 7, p1: 9 })
   })
 })
 
@@ -113,11 +114,11 @@ describe('buscarChoqueDeDescuento con todas las películas', () => {
   it('no compara películas y choca con cualquier descuento del cine y periodo', async () => {
     ejecutar.mockResolvedValue({ rows: [['Lunes de cine', 'Clayface']] })
 
-    await buscarChoqueDeDescuento({ idSede: 4, idsPeliculas: [], aplicaTodas: true, fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00' })
+    await buscarChoqueDeDescuento({ ahora: '2099-11-16 07:00', idSede: 4, idsPeliculas: [], aplicaTodas: true, fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00' })
 
     const [sql, parametros] = ejecutar.mock.calls[0]
     expect(sql).not.toContain('IN (')
-    expect(parametros).toEqual({ idSede: 4, aplicaTodas: 1, fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00' })
+    expect(parametros).toEqual({ ahora: '2099-11-16 07:00', idSede: 4, aplicaTodas: 1, fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00' })
   })
 })
 
@@ -174,16 +175,48 @@ describe('crearDescuento', () => {
 })
 
 describe('desactivarDescuento', () => {
-  it('devuelve true cuando se desactivó una fila y marca solo los activos', async () => {
+  it('devuelve true cuando se desactivó una fila y marca solo los vigentes', async () => {
     ejecutar.mockResolvedValue({ rowsAffected: 1 })
 
-    expect(await desactivarDescuento(5)).toBe(true)
-    expect(ejecutar).toHaveBeenCalledWith(expect.stringContaining('ESTADO_DESCUENTO = 1'), { idDescuento: 5 })
+    expect(await desactivarDescuento({ idDescuento: 5, ahora: '2026-11-16 08:00' })).toBe(true)
+    const [sql, parametros] = ejecutar.mock.calls[0]
+    expect(sql).toContain('ESTADO_DESCUENTO = 1')
+    expect(sql).toContain('d.FECHA_FIN > TO_DATE(:ahora')
+    expect(parametros).toEqual({ idDescuento: 5, ahora: '2026-11-16 08:00' })
   })
 
   it('devuelve false cuando no existe o ya estaba eliminado', async () => {
     ejecutar.mockResolvedValue({ rowsAffected: 0 })
 
-    expect(await desactivarDescuento(5)).toBe(false)
+    expect(await desactivarDescuento({ idDescuento: 5, ahora: '2026-11-16 08:00' })).toBe(false)
+  })
+})
+
+describe('buscarOfertaDeProyeccion', () => {
+  it('devuelve null cuando la función no tiene oferta', async () => {
+    ejecutar.mockResolvedValue({ rows: [] })
+
+    expect(await buscarOfertaDeProyeccion(7)).toBeNull()
+  })
+
+  it('devuelve el id y el porcentaje de la oferta', async () => {
+    ejecutar.mockResolvedValue({ rows: [[9, 50]] })
+
+    expect(await buscarOfertaDeProyeccion(7)).toEqual({ idDescuento: 9, porcentaje: 50 })
+  })
+
+  it('busca por la fecha de la función, el cine de su sala y su película o todas, con la función como bind', async () => {
+    ejecutar.mockResolvedValue({ rows: [] })
+
+    await buscarOfertaDeProyeccion(7)
+
+    const [sql, parametros] = ejecutar.mock.calls[0]
+    expect(parametros).toEqual({ idProyeccion: 7 })
+    expect(sql).toContain('d.ID_SEDE = s.ID_SEDE')
+    expect(sql).toContain('d.ESTADO_DESCUENTO = 1')
+    expect(sql).toContain('p.FECHA >= d.FECHA_INICIO')
+    expect(sql).toContain('p.FECHA < d.FECHA_FIN')
+    expect(sql).toContain('d.APLICA_TODAS = 1')
+    expect(sql).toContain('dp.ID_PELICULA = p.ID_PELICULA')
   })
 })
