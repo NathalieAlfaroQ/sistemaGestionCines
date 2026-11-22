@@ -59,22 +59,23 @@ export async function insertarFactura(conexion, { idCliente, idMetodo, monto, fe
 
 const sqlInsertarDetalleBoleto = `
   INSERT INTO DETALLES_FACTURA
-    (ID_FACTURA, ID_ASIENTO, ID_PROYECCION, TIPO_FACTURA, CANTIDAD, MONTO, DESCUENTO, ID_TIPO_BOLETO)
+    (ID_FACTURA, ID_ASIENTO, ID_PROYECCION, TIPO_FACTURA, CANTIDAD, MONTO, DESCUENTO, ID_TIPO_BOLETO, ID_DESCUENTO)
   VALUES
-    (:idFactura, :idAsiento, :idProyeccion, '${TIPO_DETALLE_BOLETO}', 1, :monto, :descuento, :idTipoBoleto)
+    (:idFactura, :idAsiento, :idProyeccion, '${TIPO_DETALLE_BOLETO}', 1, :monto, :descuento, :idTipoBoleto, :idDescuento)
 `;
 
-// detalles: [{ idAsiento, idTipoBoleto, monto, descuento }]
+// detalles: [{ idAsiento, idTipoBoleto, monto, descuento, idDescuento? }]; idDescuento es la oferta aplicada, si hubo
 // Mientras la transacción no termine, estas filas sin confirmar bloquean los asientos:
 // otra compra de los mismos asientos espera en el UNIQUE y, si esta se confirma, recibe ORA-00001.
 export async function insertarDetallesBoletos(conexion, idFactura, idProyeccion, detalles) {
-  const filas = detalles.map(({ idAsiento, idTipoBoleto, monto, descuento }) => ({
+  const filas = detalles.map(({ idAsiento, idTipoBoleto, monto, descuento, idDescuento = null }) => ({
     idFactura,
     idAsiento,
     idProyeccion,
     monto,
     descuento,
     idTipoBoleto,
+    idDescuento,
   }));
   await conexion.executeMany(sqlInsertarDetalleBoleto, filas);
 }

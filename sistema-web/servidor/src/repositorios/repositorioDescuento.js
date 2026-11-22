@@ -156,3 +156,34 @@ export async function desactivarDescuento({ idDescuento, ahora }) {
   const resultado = await ejecutar(sqlDesactivarDescuento, { idDescuento, ahora });
   return resultado.rowsAffected > 0;
 }
+
+// Oferta que aplica a una función: la del cine de su sala, vigente en la fecha y hora de la función,
+// para su película o para todas. Por la regla de choques hay una sola; si hubiera más se toma la mayor.
+// Devuelve { idDescuento, porcentaje } o null. La referencia es la fecha de la función, no la de la compra.
+const sqlOfertaDeProyeccion = `
+  SELECT d.ID_DESCUENTO, d.PORCENTAJE
+  FROM PROYECCIONES p
+  JOIN SALAS s ON s.ID_SALA = p.ID_SALA
+  JOIN DESCUENTOS d ON d.ID_SEDE = s.ID_SEDE
+  WHERE p.ID_PROYECCION = :idProyeccion
+    AND d.ESTADO_DESCUENTO = 1
+    AND p.FECHA >= d.FECHA_INICIO
+    AND p.FECHA < d.FECHA_FIN
+    AND (
+      d.APLICA_TODAS = 1
+      OR EXISTS (
+        SELECT 1 FROM DESCUENTOS_PELICULA dp
+        WHERE dp.ID_DESCUENTO = d.ID_DESCUENTO AND dp.ID_PELICULA = p.ID_PELICULA
+      )
+    )
+  ORDER BY d.PORCENTAJE DESC, d.ID_DESCUENTO
+  FETCH FIRST 1 ROWS ONLY
+`;
+
+export async function buscarOfertaDeProyeccion(idProyeccion) {
+  const resultado = await ejecutar(sqlOfertaDeProyeccion, { idProyeccion });
+  if (resultado.rows.length === 0) return null;
+
+  const [idDescuento, porcentaje] = resultado.rows[0];
+  return { idDescuento, porcentaje };
+}
