@@ -46,7 +46,7 @@ const rutasPublicas = [
 ]
 
 // Prefijos de rutas de trabajo (usan DisenoGestion, que ya incluye BarraEmpleado y PiePagina)
-const prefijosTrabajo = ['/dashboard', '/peliculas', '/sedes', '/salas', '/proyecciones', '/empleados']
+const prefijosTrabajo = ['/dashboard', '/peliculas', '/sedes', '/salas', '/proyecciones', '/descuentos', '/empleados']
 
 function App() {
   const { pathname } = useLocation()
