@@ -7,9 +7,11 @@ import { ejecutar, ejecutarTransaccion } from '../../src/configuracion/baseDatos
 import {
   buscarChoqueDeDescuento,
   buscarOfertaDeProyeccion,
+  actualizarDescuento,
   contarPeliculasActivas,
   crearDescuento,
   desactivarDescuento,
+  existeDescuento,
   existeSedeActiva,
   listarDescuentos,
 } from '../../src/repositorios/repositorioDescuento.js'
@@ -66,6 +68,21 @@ describe('listarDescuentos y descuentos vencidos', () => {
   })
 })
 
+describe('existeDescuento', () => {
+  it('es true cuando el descuento existe, esté vigente o no', async () => {
+    ejecutar.mockResolvedValue({ rows: [[1]] })
+
+    expect(await existeDescuento(5)).toBe(true)
+    expect(ejecutar).toHaveBeenCalledWith(expect.stringContaining('FROM DESCUENTOS'), { idDescuento: 5 })
+  })
+
+  it('es false cuando no existe', async () => {
+    ejecutar.mockResolvedValue({ rows: [] })
+
+    expect(await existeDescuento(5)).toBe(false)
+  })
+})
+
 describe('existeSedeActiva', () => {
   it('es verdadero cuando el cine activo existe', async () => {
     ejecutar.mockResolvedValue({ rows: [[1]] })
@@ -106,7 +123,19 @@ describe('buscarChoqueDeDescuento', () => {
     const [sql, parametros] = ejecutar.mock.calls[0]
     expect(sql).toContain('ESTADO_DESCUENTO = 1')
     expect(sql).toContain('d.FECHA_FIN > TO_DATE(:ahora')
-    expect(parametros).toEqual({ ahora: '2099-11-16 07:00', idSede: 4, aplicaTodas: 0, fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00', p0: 7, p1: 9 })
+    expect(parametros).toEqual({ ahora: '2099-11-16 07:00', idSede: 4, aplicaTodas: 0, idDescuentoActual: null, fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00', p0: 7, p1: 9 })
+  })
+})
+
+describe('buscarChoqueDeDescuento al editar', () => {
+  it('excluye al propio descuento con un bind', async () => {
+    ejecutar.mockResolvedValue({ rows: [] })
+
+    await buscarChoqueDeDescuento({ ahora: '2099-11-16 07:00', idSede: 4, idsPeliculas: [7], fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00', idDescuentoActual: 5 })
+
+    const [sql, parametros] = ejecutar.mock.calls[0]
+    expect(sql).toContain('d.ID_DESCUENTO <> :idDescuentoActual')
+    expect(parametros.idDescuentoActual).toBe(5)
   })
 })
 
@@ -118,7 +147,7 @@ describe('buscarChoqueDeDescuento con todas las películas', () => {
 
     const [sql, parametros] = ejecutar.mock.calls[0]
     expect(sql).not.toContain('IN (')
-    expect(parametros).toEqual({ ahora: '2099-11-16 07:00', idSede: 4, aplicaTodas: 1, fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00' })
+    expect(parametros).toEqual({ ahora: '2099-11-16 07:00', idSede: 4, aplicaTodas: 1, idDescuentoActual: null, fechaInicio: '2099-11-16 08:00', fechaFin: '2099-11-22 22:00' })
   })
 })
 
@@ -174,6 +203,113 @@ describe('crearDescuento', () => {
   })
 })
 
+describe('actualizarDescuento', () => {
+  const datos = {
+    idDescuento: 5,
+    idSede: 4,
+    nombre: 'Martes de cine',
+    porcentaje: 25,
+    fechaInicio: '2099-11-16 08:00',
+    fechaFin: '2099-11-22 22:00',
+    idsPeliculas: [7, 9],
+  }
+
+  // peliculasActuales: ids que el descuento ya tiene guardados
+  function prepararConexion({ filasActualizadas = 1, peliculasActuales = [] } = {}) {
+    const conexion = {
+      execute: vi.fn(async (sql) =>
+        sql.includes('SELECT ID_PELICULA') ? { rows: peliculasActuales.map((id) => [id]) } : { rowsAffected: filasActualizadas },
+      ),
+      executeMany: vi.fn().mockResolvedValue({}),
+    }
+    ejecutarTransaccion.mockImplementation(async (trabajo) => await trabajo(conexion))
+    return conexion
+  }
+
+  const sqlsEjecutados = (conexion) => conexion.execute.mock.calls.map(([sql]) => sql)
+
+  it('actualiza el descuento, lo deja vigente y agrega sus películas nuevas en una transacción', async () => {
+    const conexion = prepararConexion()
+
+    expect(await actualizarDescuento(datos)).toBe(true)
+
+    const [sqlActualizar, binds] = conexion.execute.mock.calls[0]
+    expect(sqlActualizar).toContain('UPDATE DESCUENTOS')
+    expect(sqlActualizar).toContain('ESTADO_DESCUENTO = 1')
+    expect(sqlActualizar).toContain('WHERE ID_DESCUENTO = :idDescuento')
+    expect(binds).toEqual({
+      idDescuento: 5,
+      idSede: 4,
+      nombre: 'Martes de cine',
+      porcentaje: 25,
+      aplicaTodas: 0,
+      fechaInicio: '2099-11-16 08:00',
+      fechaFin: '2099-11-22 22:00',
+    })
+    expect(conexion.executeMany).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO DESCUENTOS_PELICULA'),
+      [{ idDescuento: 5, idPelicula: 7 }, { idDescuento: 5, idPelicula: 9 }],
+      expect.anything(),
+    )
+  })
+
+  it('si las películas no cambian (por ejemplo solo cambió el porcentaje) no borra ni inserta ninguna', async () => {
+    const conexion = prepararConexion({ peliculasActuales: [7, 9] })
+
+    await actualizarDescuento(datos)
+
+    expect(sqlsEjecutados(conexion).some((sql) => sql.includes('DELETE'))).toBe(false)
+    expect(conexion.executeMany).not.toHaveBeenCalled()
+  })
+
+  it('al agregar películas inserta solo las nuevas y no vuelve a insertar la que ya tenía', async () => {
+    const conexion = prepararConexion({ peliculasActuales: [7] })
+
+    await actualizarDescuento(datos)
+
+    expect(sqlsEjecutados(conexion).some((sql) => sql.includes('DELETE'))).toBe(false)
+    expect(conexion.executeMany).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO DESCUENTOS_PELICULA'),
+      [{ idDescuento: 5, idPelicula: 9 }],
+      expect.anything(),
+    )
+  })
+
+  it('al cambiar de película borra la anterior con binds y agrega la nueva', async () => {
+    const conexion = prepararConexion({ peliculasActuales: [3] })
+
+    await actualizarDescuento({ ...datos, idsPeliculas: [7] })
+
+    expect(conexion.execute).toHaveBeenCalledWith(
+      expect.stringContaining('DELETE FROM DESCUENTOS_PELICULA WHERE ID_DESCUENTO = :idDescuento AND ID_PELICULA IN (:p0)'),
+      { idDescuento: 5, p0: 3 },
+    )
+    expect(conexion.executeMany).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO DESCUENTOS_PELICULA'),
+      [{ idDescuento: 5, idPelicula: 7 }],
+      expect.anything(),
+    )
+  })
+
+  it('con todas las películas borra las anteriores y no inserta ninguna', async () => {
+    const conexion = prepararConexion({ peliculasActuales: [7, 9] })
+
+    await actualizarDescuento({ ...datos, aplicaTodas: true, idsPeliculas: [] })
+
+    expect(conexion.execute.mock.calls[0][1].aplicaTodas).toBe(1)
+    expect(conexion.execute).toHaveBeenCalledWith(expect.stringContaining('ID_PELICULA IN (:p0, :p1)'), { idDescuento: 5, p0: 7, p1: 9 })
+    expect(conexion.executeMany).not.toHaveBeenCalled()
+  })
+
+  it('devuelve false sin tocar las películas cuando el descuento no existe', async () => {
+    const conexion = prepararConexion({ filasActualizadas: 0 })
+
+    expect(await actualizarDescuento(datos)).toBe(false)
+    expect(conexion.execute).toHaveBeenCalledTimes(1)
+    expect(conexion.executeMany).not.toHaveBeenCalled()
+  })
+})
+
 describe('desactivarDescuento', () => {
   it('devuelve true cuando se desactivó una fila y marca solo los vigentes', async () => {
     ejecutar.mockResolvedValue({ rowsAffected: 1 })
@@ -205,6 +341,18 @@ describe('buscarOfertaDeProyeccion', () => {
     expect(await buscarOfertaDeProyeccion(7)).toEqual({ idDescuento: 9, porcentaje: 50 })
   })
 
+  it('con varias ofertas suma sus porcentajes y deja el id de la mayor (la primera, la consulta las ordena)', async () => {
+    ejecutar.mockResolvedValue({ rows: [[9, 30], [4, 20], [6, 10]] })
+
+    expect(await buscarOfertaDeProyeccion(7)).toEqual({ idDescuento: 9, porcentaje: 60 })
+  })
+
+  it('suma decimales sin restos de coma flotante', async () => {
+    ejecutar.mockResolvedValue({ rows: [[9, 0.2], [4, 0.1]] })
+
+    expect((await buscarOfertaDeProyeccion(7)).porcentaje).toBe(0.3)
+  })
+
   it('busca por la fecha de la función, el cine de su sala y su película o todas, con la función como bind', async () => {
     ejecutar.mockResolvedValue({ rows: [] })
 
@@ -218,5 +366,7 @@ describe('buscarOfertaDeProyeccion', () => {
     expect(sql).toContain('p.FECHA < d.FECHA_FIN')
     expect(sql).toContain('d.APLICA_TODAS = 1')
     expect(sql).toContain('dp.ID_PELICULA = p.ID_PELICULA')
+    expect(sql).toContain('ORDER BY d.PORCENTAJE DESC, d.ID_DESCUENTO')
+    expect(sql).not.toContain('FETCH FIRST')
   })
 })

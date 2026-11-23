@@ -1,5 +1,4 @@
 import {
-  buscarChoqueDeDescuento,
   contarPeliculasActivas,
   actualizarDescuento,
   crearDescuento,
@@ -8,7 +7,7 @@ import {
   existeSedeActiva,
   listarDescuentos,
 } from '../repositorios/repositorioDescuento.js';
-import { ErrorConflicto } from '../errores/ErrorConflicto.js';
+// import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 import { ahoraCostaRica } from '../utilidades/fechas.js';
@@ -135,11 +134,11 @@ async function verificarDescuento(descuento, idDescuentoActual = null) {
     throw new ErrorValidacion('Una de las películas seleccionadas no existe');
   }
 
-  const choque = await buscarChoqueDeDescuento({ ...descuento, ahora: ahoraTexto(), idDescuentoActual });
-  if (choque) {
-    const aplicaA = choque.titulo ? `"${choque.titulo}"` : 'todas las películas';
-    throw new ErrorConflicto(`El descuento "${choque.nombre}" ya aplica a ${aplicaA} en ese cine durante ese periodo`);
-  }
+  // const choque = await buscarChoqueDeDescuento({ ...descuento, ahora: ahoraTexto(), idDescuentoActual });
+  // if (choque) {
+  //   const aplicaA = choque.titulo ? `"${choque.titulo}"` : 'todas las películas';
+  //   throw new ErrorConflicto(`El descuento "${choque.nombre}" ya aplica a ${aplicaA} en ese cine durante ese periodo`);
+  // }
 }
 
 export async function registrarDescuento(datos) {
