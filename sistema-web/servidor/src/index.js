@@ -7,6 +7,7 @@ import rutasProyeccion from './rutas/rutasProyeccion.js'
 import rutasUbicacion from './rutas/rutasUbicacion.js'
 import rutasDescuento from './rutas/rutasDescuento.js'
 import rutasEstadistica from './rutas/rutasEstadistica.js'
+import rutasRecomendacion from './rutas/rutasRecomendacion.js'
 
 import rutasPelicula from './rutas/rutasPelicula.js'
 import rutasCatalogo from './rutas/rutasCatalogo.js'
@@ -61,6 +62,7 @@ app.use('/api/estadisticas', verificarAutenticacion, soloPersonal, rutasEstadist
 app.use('/api/catalogo', verificarAutenticacion, soloPersonal, rutasCatalogo);
 app.use('/api/peliculas',verificarAutenticacion, soloPersonal ,rutasPelicula);
 app.use('/api/cartelera', rutasCartelera);
+app.use('/api/recomendaciones', rutasRecomendacion);
 app.use('/api/reserva', rutasReserva);
 app.use('/api/compras', verificarAutenticacion, autorizarRoles('CLIENTE'), rutasCompra);
 app.use('/api/crear-cuenta', crearCuenta)
