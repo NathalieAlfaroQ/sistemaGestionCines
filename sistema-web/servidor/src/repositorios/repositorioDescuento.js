@@ -92,10 +92,6 @@ export async function contarPeliculasActivas(idsPeliculas) {
   return resultado.rows[0][0];
 }
 
-// Descuento vigente del mismo cine que ya cubre alguna de las películas en un periodo que se cruza.
-// Un descuento para todas las películas choca con cualquier otro del cine y periodo.
-// Al editar, idDescuentoActual excluye al propio descuento.
-// titulo es null cuando el descuento existente aplica a todas las películas.
 export async function buscarChoqueDeDescuento({
   ahora,
   idSede,
@@ -165,6 +161,7 @@ export async function crearDescuento({ idSede, nombre, porcentaje, aplicaTodas =
   });
 }
 
+
 const sqlActualizarDescuento = `
   UPDATE DESCUENTOS
   SET ID_SEDE = :idSede,
@@ -177,7 +174,31 @@ const sqlActualizarDescuento = `
   WHERE ID_DESCUENTO = :idDescuento
 `;
 
-const sqlBorrarPeliculasDeDescuento = `DELETE FROM DESCUENTOS_PELICULA WHERE ID_DESCUENTO = :idDescuento`;
+const sqlPeliculasDeDescuento = `SELECT ID_PELICULA FROM DESCUENTOS_PELICULA WHERE ID_DESCUENTO = :idDescuento`;
+
+async function sincronizarPeliculas(conexion, idDescuento, idsNuevos) {
+  const resultado = await conexion.execute(sqlPeliculasDeDescuento, { idDescuento });
+  const actuales = resultado.rows.map(([idPelicula]) => Number(idPelicula));
+
+  const aQuitar = actuales.filter((idPelicula) => !idsNuevos.includes(idPelicula));
+  const aAgregar = idsNuevos.filter((idPelicula) => !actuales.includes(idPelicula));
+
+  if (aQuitar.length > 0) {
+    const { marcadores, valores } = bindsDeIds(aQuitar);
+    await conexion.execute(
+      `DELETE FROM DESCUENTOS_PELICULA WHERE ID_DESCUENTO = :idDescuento AND ID_PELICULA IN (${marcadores})`,
+      { idDescuento, ...valores },
+    );
+  }
+
+  if (aAgregar.length > 0) {
+    await conexion.executeMany(
+      sqlCrearDescuentoPelicula,
+      aAgregar.map((idPelicula) => ({ idDescuento, idPelicula })),
+      { bindDefs: { idDescuento: { type: oracledb.NUMBER }, idPelicula: { type: oracledb.NUMBER } } },
+    );
+  }
+}
 
 export async function actualizarDescuento({
   idDescuento,
@@ -201,15 +222,7 @@ export async function actualizarDescuento({
     });
     if (resultado.rowsAffected === 0) return false;
 
-    await conexion.execute(sqlBorrarPeliculasDeDescuento, { idDescuento });
-
-    if (idsPeliculas.length > 0) {
-      await conexion.executeMany(
-        sqlCrearDescuentoPelicula,
-        idsPeliculas.map((idPelicula) => ({ idDescuento, idPelicula })),
-        { bindDefs: { idDescuento: { type: oracledb.NUMBER }, idPelicula: { type: oracledb.NUMBER } } },
-      );
-    }
+    await sincronizarPeliculas(conexion, idDescuento, idsPeliculas);
 
     return true;
   });
@@ -228,10 +241,11 @@ export async function desactivarDescuento({ idDescuento, ahora }) {
   return resultado.rowsAffected > 0;
 }
 
-// Oferta que aplica a una función: la del cine de su sala, vigente en la fecha y hora de la función,
-// para su película o para todas. Por la regla de choques hay una sola; si hubiera más se toma la mayor.
-// Devuelve { idDescuento, porcentaje } o null. La referencia es la fecha de la función, no la de la compra.
-const sqlOfertaDeProyeccion = `
+// Ofertas que aplican a una función: las del cine de su sala, vigentes en la fecha y hora de la función,
+// para su película o para todas. Pueden ser varias y se suman.
+// Devuelve { idDescuento, porcentaje } o null: porcentaje es la suma de todas (idDescuento, el de la mayor, es el que
+// queda anotado en el detalle de factura). La referencia es la fecha de la función, no la de la compra.
+const sqlOfertasDeProyeccion = `
   SELECT d.ID_DESCUENTO, d.PORCENTAJE
   FROM PROYECCIONES p
   JOIN SALAS s ON s.ID_SALA = p.ID_SALA
@@ -248,13 +262,13 @@ const sqlOfertaDeProyeccion = `
       )
     )
   ORDER BY d.PORCENTAJE DESC, d.ID_DESCUENTO
-  FETCH FIRST 1 ROWS ONLY
 `;
 
 export async function buscarOfertaDeProyeccion(idProyeccion) {
-  const resultado = await ejecutar(sqlOfertaDeProyeccion, { idProyeccion });
+  const resultado = await ejecutar(sqlOfertasDeProyeccion, { idProyeccion });
   if (resultado.rows.length === 0) return null;
 
-  const [idDescuento, porcentaje] = resultado.rows[0];
-  return { idDescuento, porcentaje };
+  const porcentaje = resultado.rows.reduce((suma, [, valor]) => suma + Number(valor), 0);
+  // El redondeo evita restos de coma flotante al sumar decimales (0.1 + 0.2)
+  return { idDescuento: resultado.rows[0][0], porcentaje: Math.round(porcentaje * 100) / 100 };
 }
