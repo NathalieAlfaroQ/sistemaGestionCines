@@ -20,7 +20,8 @@ function validarCampo(valor, etiqueta, limite) {
 }
 
 async function ubicarFila(usuario) {
-  if (usuario.proveedor === 'GOOGLE') {
+  const sinCredencial = usuario.idCredencial === undefined || usuario.idCredencial === null;
+  if (usuario.proveedor === 'GOOGLE' || sinCredencial) {
     if (usuario.tipoUsuario !== 'CLIENTE' || !Number.isInteger(usuario.idCliente)) throw new ErrorValidacion('Sesión inválida');
     return { tipoUsuario: 'CLIENTE', id: usuario.idCliente };
   }
