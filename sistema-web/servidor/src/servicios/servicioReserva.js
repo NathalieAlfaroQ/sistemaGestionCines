@@ -12,6 +12,7 @@ import {
   obtenerPelicula,
   obtenerProyeccionVigente,
 } from '../repositorios/repositorioReserva.js';
+import { buscarOfertaDeProyeccion } from '../repositorios/repositorioDescuento.js';
 import {
   MINUTOS_RESERVA,
   RESTRICCION_ASIENTO_RESERVADO,
@@ -308,13 +309,15 @@ export async function consultarReserva(usuario) {
 // Así la transacción no pide una segunda conexión al pool mientras tiene la suya: con varias
 // compras a la vez, todas podrían quedarse esperando una conexión que nunca se libera.
 
-// Precio de cada tipo de boleto en la función: Map idTipoBoleto → { monto, descuento }
+// Precio de cada tipo de boleto en la función, con la oferta vigente si la hay (el mismo precio
+// que el cliente vio en el mapa y al reservar): Map idTipoBoleto → { monto, descuento, idDescuento? }
 export async function obtenerPreciosFuncion(idProyeccion) {
   const proyeccion = await obtenerProyeccionVigente(idProyeccion, ahoraCostaRica());
   if (!proyeccion) {
     throw new ErrorNoEncontrado('La función no existe o ya no está disponible');
   }
-  return mapaPrecios(await listarTiposBoleto(), proyeccion[POSICION_MONTO_SALA]);
+  const [tiposBoleto, oferta] = await Promise.all([listarTiposBoleto(), buscarOfertaDeProyeccion(idProyeccion)]);
+  return mapaPrecios(tiposBoleto, proyeccion[POSICION_MONTO_SALA], oferta);
 }
 
 // filas: [[idAsiento, idTipoBoleto, ...]] (bloquearReservaCliente u obtenerReservaCliente ya adaptadas). Devuelve

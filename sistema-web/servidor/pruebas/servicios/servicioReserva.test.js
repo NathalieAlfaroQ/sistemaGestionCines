@@ -12,6 +12,8 @@ vi.mock('../../src/repositorios/repositorioReserva.js', () => ({
 
 vi.mock('../../src/repositorios/repositorioDescuento.js', () => ({
   buscarOfertaDeProyeccion: vi.fn(),
+}));
+
 vi.mock('../../src/repositorios/repositorioReservaAsientos.js', () => ({
   MINUTOS_RESERVA: 5,
   RESTRICCION_ASIENTO_RESERVADO: 'PK_RESERVAS_ASIENTOS',
@@ -250,7 +252,6 @@ describe('ofertas en mapaPrecios', () => {
   });
 });
 
-describe('SCRUM-93 servicioReserva: verificarSeleccion', () => {
 describe('SCRUM-93 servicioReserva: validarSeleccion', () => {
   const seleccionValida = {
     asientos: [10, 11, 12],
@@ -280,7 +281,8 @@ describe('SCRUM-93 servicioReserva: validarSeleccion', () => {
     repositorioDescuento.buscarOfertaDeProyeccion.mockResolvedValue({ idDescuento: 9, porcentaje: 50 });
 
     // 2 adultos a 1650 + 1 niño a 990
-    await expect(verificarSeleccion(7, seleccionValida)).resolves.toEqual({ total: 1650 * 2 + 990 });
+    const { total } = await validarSeleccion(7, seleccionValida);
+    expect(total).toBe(1650 * 2 + 990);
     expect(repositorioDescuento.buscarOfertaDeProyeccion).toHaveBeenCalledWith(7);
   });
 
@@ -509,6 +511,17 @@ describe('SCRUM-93 servicioReserva: obtenerPreciosFuncion', () => {
     expect(repositorio.obtenerProyeccionVigente).toHaveBeenCalledWith(7, AHORA_CR);
   });
 
+  it('aplica la oferta vigente de la función y lleva su idDescuento (lo mismo que ve el cliente)', async () => {
+    repositorio.obtenerProyeccionVigente.mockResolvedValue(PROYECCION);
+    repositorio.listarTiposBoleto.mockResolvedValue(TIPOS_BOLETO);
+    repositorioDescuento.buscarOfertaDeProyeccion.mockResolvedValue({ idDescuento: 9, porcentaje: 50 });
+
+    const precios = await obtenerPreciosFuncion(7);
+
+    expect(repositorioDescuento.buscarOfertaDeProyeccion).toHaveBeenCalledWith(7);
+    expect(precios.get(1)).toEqual({ monto: 1650, descuento: 1650, idDescuento: 9 });
+  });
+
   it('lanza ErrorNoEncontrado si la función ya empezó', async () => {
     repositorio.obtenerProyeccionVigente.mockResolvedValue(null);
     await expect(obtenerPreciosFuncion(7)).rejects.toBeInstanceOf(ErrorNoEncontrado);
@@ -548,5 +561,23 @@ describe('SCRUM-93 servicioReserva: armarCompraReservada', () => {
 
   it('rechaza un tipo de boleto que ya no existe', () => {
     expect(() => armarCompraReservada([[10, 99]], precios)).toThrow('El tipo de boleto no es válido');
+  });
+
+  it('con oferta lleva el idDescuento a cada detalle (queda en DETALLES_FACTURA)', () => {
+    const conOferta = mapaPrecios(TIPOS_BOLETO, 3300, { idDescuento: 9, porcentaje: 50 });
+
+    const { detalles, total } = armarCompraReservada(
+      [
+        [10, 1, 1],
+        [11, 1, 1],
+      ],
+      conOferta
+    );
+
+    expect(detalles).toEqual([
+      { idAsiento: 10, idTipoBoleto: 1, monto: 1650, descuento: 1650, idDescuento: 9 },
+      { idAsiento: 11, idTipoBoleto: 1, monto: 1650, descuento: 1650, idDescuento: 9 },
+    ]);
+    expect(total).toBe(3300);
   });
 });
