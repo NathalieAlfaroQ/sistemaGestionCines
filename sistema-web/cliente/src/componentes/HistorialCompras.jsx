@@ -1,5 +1,6 @@
 import { useHistorialCompras } from '../ganchos/useHistorialCompras.js';
 import { POS_COMPRA } from '../constantes/posicionesHistorialCompras.js';
+import Boton from '../common/Boton.jsx';
 import ErrorCarga from './ErrorCarga.jsx';
 
 const formateadorFecha = new Intl.DateTimeFormat('es-CR', {
@@ -28,39 +29,39 @@ function HistorialCompras() {
   const { compras, cargando, error, recargar } = useHistorialCompras();
 
   return (
-    <section className="historial" aria-labelledby="titulo-historial">
-      <h2 id="titulo-historial" className="historial-titulo">Historial de compras</h2>
+    <section className="w-full max-w-3xl" aria-labelledby="titulo-historial">
+      <h2 id="titulo-historial" className="mb-5 text-2xl text-text-color">Historial de compras</h2>
 
-      {cargando && <p className="historial-vacio">Cargando compras...</p>}
+      {cargando && <p className="text-sm text-text-muted">Cargando compras...</p>}
       <ErrorCarga error={error} alReintentar={recargar} className="mb-4" />
 
       {!cargando && !error && compras.length === 0 && (
-        <p className="historial-vacio">Aún no has realizado compras</p>
+        <p className="text-sm text-text-muted">Aún no has realizado compras</p>
       )}
 
-      <ul className="historial-lista">
+      <ul className="flex flex-col gap-4">
         {compras.map((compra) => (
-          <li key={compra[POS_COMPRA.id]} className="historial-tarjeta">
+          <li key={compra[POS_COMPRA.id]} className="flex flex-wrap items-center gap-6 rounded-lg border border-border bg-surface p-4 sm:flex-nowrap sm:px-6">
             {compra[POS_COMPRA.urlPoster] ? (
               <img
                 src={compra[POS_COMPRA.urlPoster]}
                 alt={`Póster de ${compra[POS_COMPRA.titulo]}`}
-                className="historial-poster"
+                className="aspect-[2/3] w-16 shrink-0 rounded-md object-cover"
               />
             ) : (
-              <div className="historial-poster historial-poster-vacio" aria-hidden="true" />
+              <div className="aspect-[2/3] w-16 shrink-0 rounded-md bg-border" aria-hidden="true" />
             )}
 
-            <div className="historial-datos">
-              <p className="historial-pelicula">{compra[POS_COMPRA.titulo]}</p>
+            <div className="flex flex-1 flex-col gap-1 text-sm text-text-muted">
+              <p className="text-base text-text-color">{compra[POS_COMPRA.titulo]}</p>
               <p>Proyección: {formatearFechaHora(compra[POS_COMPRA.fechaFuncion])}</p>
               <p>Compra: {formatearDia(compra[POS_COMPRA.fechaCompra].split(' ')[0])}</p>
             </div>
 
             {/* Para conectar la cancelación: agregar aquí el onClick cuando esté lista esa función */}
-            <button type="button" className="historial-cancelar">
+            <Boton tamano="sm" className="w-full sm:w-auto">
               Cancelar orden
-            </button>
+            </Boton>
           </li>
         ))}
       </ul>

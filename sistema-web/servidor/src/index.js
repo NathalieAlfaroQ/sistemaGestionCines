@@ -6,6 +6,9 @@ import rutasSala from './rutas/rutasSala.js'
 import rutasProyeccion from './rutas/rutasProyeccion.js'
 import rutasUbicacion from './rutas/rutasUbicacion.js'
 import rutasDescuento from './rutas/rutasDescuento.js'
+import rutasEstadistica from './rutas/rutasEstadistica.js'
+import rutasRecomendacion from './rutas/rutasRecomendacion.js'
+import rutasHistorialCompras from './rutas/rutasHistorialCompras.js'
 
 import rutasPelicula from './rutas/rutasPelicula.js'
 import rutasCatalogo from './rutas/rutasCatalogo.js'
@@ -15,7 +18,7 @@ import crearCuenta from './crearCuenta.js'
 import iniciarSesion from './iniciarSesion.js'
 import recuperarContrasena from './recuperarContrasena.js'
 import cambiarContrasena from './cambiarContrasena.js'
-import perfil from './perfil.js'
+import rutasPerfil from './rutas/rutasPerfil.js'
 import { manejadorErrores } from './middlewares/manejadorErrores.js'
 import { verificarAutenticacion } from './middlewares/autenticacion.js'
 import { autorizarRoles } from './middlewares/autorizacion.js'
@@ -56,16 +59,19 @@ app.use('/api/salas', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), r
 app.use('/api/proyecciones', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasProyeccion);
 app.use('/api/ubicaciones', verificarAutenticacion, autorizarRoles('ADMINISTRADOR'), rutasUbicacion);
 app.use('/api/descuentos', verificarAutenticacion, soloPersonal, rutasDescuento);
+app.use('/api/estadisticas', verificarAutenticacion, soloPersonal, rutasEstadistica);
 app.use('/api/catalogo', verificarAutenticacion, soloPersonal, rutasCatalogo);
 app.use('/api/peliculas',verificarAutenticacion, soloPersonal ,rutasPelicula);
 app.use('/api/cartelera', rutasCartelera);
+app.use('/api/recomendaciones', rutasRecomendacion);
+app.use('/api/historial-compras', verificarAutenticacion, autorizarRoles('CLIENTE'), rutasHistorialCompras);
 app.use('/api/reserva', rutasReserva);
 app.use('/api/compras', verificarAutenticacion, autorizarRoles('CLIENTE'), rutasCompra);
 app.use('/api/crear-cuenta', crearCuenta)
 app.use('/api/iniciar-sesion', iniciarSesion)
 app.use('/api/recuperar-contrasena', recuperarContrasena)
 app.use('/api/cambiar-contrasena', cambiarContrasena)
-app.use('/api/perfil', perfil)
+app.use('/api/perfil', verificarAutenticacion, rutasPerfil)
 app.use('/api/crear-empleado', crearEmpleado) 
 app.use('/api/iniciar-sesion-google', rutasGoogle)
 
