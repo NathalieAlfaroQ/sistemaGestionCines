@@ -17,7 +17,7 @@ import crearCuenta from './crearCuenta.js'
 import iniciarSesion from './iniciarSesion.js'
 import recuperarContrasena from './recuperarContrasena.js'
 import cambiarContrasena from './cambiarContrasena.js'
-import perfil from './perfil.js'
+import rutasPerfil from './rutas/rutasPerfil.js'
 import { manejadorErrores } from './middlewares/manejadorErrores.js'
 import { verificarAutenticacion } from './middlewares/autenticacion.js'
 import { autorizarRoles } from './middlewares/autorizacion.js'
@@ -69,7 +69,7 @@ app.use('/api/crear-cuenta', crearCuenta)
 app.use('/api/iniciar-sesion', iniciarSesion)
 app.use('/api/recuperar-contrasena', recuperarContrasena)
 app.use('/api/cambiar-contrasena', cambiarContrasena)
-app.use('/api/perfil', perfil)
+app.use('/api/perfil', verificarAutenticacion, rutasPerfil)
 app.use('/api/crear-empleado', crearEmpleado) 
 app.use('/api/iniciar-sesion-google', rutasGoogle)
 

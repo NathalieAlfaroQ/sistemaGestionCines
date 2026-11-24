@@ -1,164 +1,140 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import HistorialCompras from './HistorialCompras.jsx'
-import '../estilos/Perfil.css'
+import { useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { Card, TextInput, ThemeProvider } from 'flowbite-react';
+import Boton from '../common/Boton.jsx';
+import { useNotificaciones } from '../ganchos/useNotificaciones.js';
+import { actualizarPerfil } from '../servicios/servicioPerfil.js';
+import { guardarSesion, obtenerToken, obtenerUsuario } from '../servicios/sesion.js';
+import { temaFormulario } from '../temas/temaFormulario.js';
+import { validarNombreOApellido } from '../validaciones/validaciones.js';
+import Campo from './Campo.jsx';
+import MensajeError from './MensajeError.jsx';
+import CampoSoloLectura from './CampoSoloLectura.jsx';
+import ContenedorCliente from './ContenedorCliente.jsx';
+import ContrasenaPerfil from './ContrasenaPerfil.jsx';
+
+// Largo de las columnas en la base de datos: CLIENTES 50, EMPLEADOS y ADMINISTRADORES 20
+const LIMITE_CLIENTE = 50;
+const LIMITE_PERSONAL = 20;
+const CAMPOS = [
+  { clave: 'nombre', etiqueta: 'Nombre' },
+  { clave: 'apellido', etiqueta: 'Apellido' },
+];
 
 export default function Perfil() {
-  const navigate = useNavigate()
-  const usuario = JSON.parse(sessionStorage.getItem('usuario') || 'null')
+  const [usuario, setUsuario] = useState(obtenerUsuario);
+  const [editando, setEditando] = useState(false);
+  const [form, setForm] = useState({ nombre: '', apellido: '' });
+  const [errores, setErrores] = useState({});
+  const [errorGeneral, setErrorGeneral] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const { exito } = useNotificaciones();
 
-  const [editando, setEditando] = useState(false)
-  const [form, setForm] = useState({
-    nombre: usuario?.nombre || '',
-    apellido: usuario?.apellido || '',
-  })
+  // Si presiona Perfil sin sesión iniciada, le pide que inicie sesión
+  if (!usuario) return <Navigate to="/iniciar-sesion" replace />;
 
-  const [cargando, setCargando] = useState(false)
-  const [mensaje, setMensaje] = useState(null)
+  const limite = usuario.tipoUsuario === 'CLIENTE' ? LIMITE_CLIENTE : LIMITE_PERSONAL;
+  // Las cuentas de Google no tienen contraseña ni idCredencial: no se les muestra la opción de cambiarla
+  const esGoogle = usuario.idCredencial === undefined;
 
-  if (!usuario) {
-    // Si presiona Perfil sin sesion iniciada, le pide que inicie sesion
-    navigate('/iniciar-sesion')
-    return null
+  function empezar() {
+    setForm({ nombre: usuario.nombre, apellido: usuario.apellido });
+    setErrores({});
+    setErrorGeneral('');
+    setEditando(true);
   }
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
+  function cambiar(clave, valor) {
+    setForm((anterior) => ({ ...anterior, [clave]: valor }));
+    setErrores((anterior) => ({ ...anterior, [clave]: '' }));
+    setErrorGeneral('');
   }
 
-  const cancelarEdicion = () => {
-    setEditando(false)
-    setForm({ nombre: usuario.nombre, apellido: usuario.apellido })
-    setMensaje(null)
-  }
+  async function guardar(evento) {
+    evento.preventDefault();
 
-  const guardarCambios = async () => {
-    setMensaje(null)
+    // Solo se validan y se envían los campos que cambiaron (el apellido "-" de algunas cuentas de Google no debe bloquear el nombre)
+    const cambios = {};
+    const encontrados = {};
+    for (const { clave } of CAMPOS) {
+      const valor = form[clave].trim();
+      if (valor === usuario[clave]) continue;
+      cambios[clave] = valor;
+      encontrados[clave] = valor ? validarNombreOApellido(valor) : 'Este campo es obligatorio';
+    }
+    setErrores(encontrados);
+    if (Object.values(encontrados).some(Boolean)) return;
 
-    if (!form.nombre.trim() || !form.apellido.trim()) {
-      setMensaje({ tipo: 'error', texto: 'Nombre y apellido no pueden quedar vacíos' })
-      return
+    if (Object.keys(cambios).length === 0) {
+      setEditando(false);
+      return;
     }
 
-    setCargando(true)
-
+    setGuardando(true);
     try {
-      const res = await fetch('/api/perfil', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          idCredencial: usuario.idCredencial,
-          nombre: form.nombre,
-          apellido: form.apellido
-        })
-      })
+      const guardado = await actualizarPerfil(cambios);
+      const actualizado = { ...usuario, nombre: guardado.nombre ?? usuario.nombre, apellido: guardado.apellido ?? usuario.apellido };
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        setMensaje({ tipo: 'error', texto: data.error || 'Error al guardar' })
-        return
-      }
-
-      const usuarioActualizado = { ...usuario, nombre: form.nombre, apellido: form.apellido }
-      sessionStorage.setItem('usuario', JSON.stringify(usuarioActualizado))
-
-      setEditando(false)
-      setMensaje({ tipo: 'ok', texto: 'Datos actualizados correctamente' })
-
-    } catch {
-      setMensaje({ tipo: 'error', texto: 'No se pudo conectar con el servidor' })
+      guardarSesion(obtenerToken(), actualizado);
+      setUsuario(actualizado);
+      setEditando(false);
+      exito('Perfil actualizado');
+    } catch (fallo) {
+      setErrorGeneral(fallo.message);
     } finally {
-      setCargando(false)
+      setGuardando(false);
     }
   }
 
   return (
-    <div className="perfil-container">
-      <div className="perfil-contenido">
-        <div className="perfil-header">
-
-          <h1 className="perfil-titulo">Perfil</h1>
-
-          {!editando ? (
-            <button
-              type="button"
-              className="perfil-editar"
-              onClick={() => setEditando(true)}
-            >
-              Editar
-            </button>
-          ) : (
-            <div className="perfil-acciones">
-              <button
-                type="button"
-                className="perfil-cancelar"
-                onClick={cancelarEdicion}
-                disabled={cargando}
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                className="perfil-guardar"
-                onClick={guardarCambios}
-                disabled={cargando}
-              >
-                {cargando ? 'Guardando...' : 'Guardar'}
-              </button>
+    <main className="min-h-screen bg-background">
+      <ContenedorCliente className="flex flex-col gap-6 py-10">
+        <ThemeProvider theme={temaFormulario}>
+          <Card className="w-full max-w-xl border-border bg-surface dark:border-border dark:bg-surface">
+            <div className="flex items-center justify-between gap-3">
+              <h1 className="text-3xl font-bold text-text-color">Perfil</h1>
+              {!editando && (
+                <Boton tamano="sm" onClick={empezar}>
+                  Editar perfil
+                </Boton>
+              )}
             </div>
-          )}
-        </div>
 
-        <div className="campo">
-          <span>Nombre</span>
+            <form onSubmit={guardar} noValidate className="flex flex-col gap-4">
+              {CAMPOS.map(({ clave, etiqueta }) => (
+                <Campo key={clave} id={clave} etiqueta={etiqueta} error={errores[clave]}>
+                  <TextInput
+                    id={clave}
+                    value={editando ? form[clave] : usuario[clave]}
+                    maxLength={limite}
+                    disabled={!editando || guardando}
+                    color={errores[clave] ? 'failure' : 'gray'}
+                    onChange={(evento) => cambiar(clave, evento.target.value)}
+                  />
+                </Campo>
+              ))}
 
-          <input
-            type="text"
-            name="nombre"
-            value={form.nombre}
-            onChange={handleChange}
-            disabled={!editando}
-          />
-        </div>
+              {editando && (
+                <>
+                  <MensajeError mensaje={errorGeneral} />
+                  <div className="flex gap-3">
+                    <Boton type="submit" tamano="sm" disabled={guardando}>
+                      {guardando ? 'Guardando...' : 'Guardar'}
+                    </Boton>
+                    <Boton variante="contorno" tamano="sm" disabled={guardando} onClick={() => setEditando(false)}>
+                      Cancelar
+                    </Boton>
+                  </div>
+                </>
+              )}
+            </form>
 
-        <div className="campo">
-          <span>Apellido</span>
+            <CampoSoloLectura id="correo" etiqueta="Correo" valor={usuario.correo} />
 
-          <input
-            type="text"
-            name="apellido"
-            value={form.apellido}
-            onChange={handleChange}
-            disabled={!editando}
-          />
-        </div>
-
-        <div className="campo">
-          <span>Correo</span>
-          
-          <input
-            type="email"
-            value={usuario.correo}
-            disabled
-          />
-        </div>
-
-        <button
-          type="button"
-          className="boton-cambiar-contrasena"
-          onClick={() => navigate('/cambiar-contrasena')}
-        >
-          Cambiar contraseña
-        </button>
-
-        {mensaje && (
-          <p className={`mensaje ${mensaje.tipo}`}>{mensaje.texto}</p>
-        )}
-      </div>
-
-      {usuario.tipoUsuario === 'CLIENTE' && <HistorialCompras />}
-    </div>
-  )
+            {!esGoogle && <ContrasenaPerfil correo={usuario.correo} />}
+          </Card>
+        </ThemeProvider>
+      </ContenedorCliente>
+    </main>
+  );
 }
