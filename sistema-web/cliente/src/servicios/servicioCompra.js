@@ -53,8 +53,8 @@ export async function registrarTarjeta({ titular, numero, mesVencimiento, anioVe
   throw crearError(MENSAJE_ERROR_PASARELA, TIPOS_ERROR.conexion);
 }
 
-// compra = { idProyeccion, asientos, boletos } más
-//   { idMetodoPago, guardarMetodo } para una tarjeta nueva, o { usarTarjetaGuardada: true }
+// compra = { idProyeccion } más { idMetodoPago, guardarMetodo } para una tarjeta nueva,
+//   o { usarTarjetaGuardada: true }. Los asientos y boletos salen de la reserva del cliente.
 // Devuelve { idFactura, total, referencia, correoEnviado, metodoGuardado }
 export async function comprar(compra) {
   return await pedir(
@@ -68,7 +68,7 @@ export async function comprar(compra) {
   );
 }
 
-// PayPal. seleccion = { idProyeccion, asientos, boletos }
+// PayPal. seleccion = { idProyeccion }: el servidor usa la reserva del cliente
 export const MENSAJE_PAYPAL_NO_COMPLETADO = 'La transacción fue cancelada o no pudo completarse.';
 
 // Paso 1 (al presionar el botón de PayPal): el servidor crea la orden. Devuelve { idOrden }.

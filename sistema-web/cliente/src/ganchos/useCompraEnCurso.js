@@ -32,7 +32,7 @@ export function useCompraEnCurso() {
   return esValida(compra) ? compra : null;
 }
 
-// Al terminar la compra la selección ya no sirve (esos asientos ya están vendidos)
+// Al terminar o abandonar la compra la selección ya no sirve (vendidos o liberados)
 export function terminarCompraEnCurso() {
   sessionStorage.removeItem(CLAVE);
 }
