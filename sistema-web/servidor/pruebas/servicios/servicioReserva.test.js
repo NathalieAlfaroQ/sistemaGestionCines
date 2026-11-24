@@ -14,12 +14,30 @@ vi.mock('../../src/repositorios/repositorioDescuento.js', () => ({
   buscarOfertaDeProyeccion: vi.fn(),
 }));
 
+vi.mock('../../src/repositorios/repositorioReservaAsientos.js', () => ({
+  MINUTOS_RESERVA: 5,
+  RESTRICCION_ASIENTO_RESERVADO: 'PK_RESERVAS_ASIENTOS',
+  borrarReservaCliente: vi.fn(),
+  borrarReservasVencidas: vi.fn(),
+  insertarReserva: vi.fn(),
+  obtenerReservaCliente: vi.fn(),
+}));
+
+// La transacción falsa ejecuta las operaciones con una conexión de mentira
+const conexion = { falsa: true };
+vi.mock('../../src/configuracion/baseDatos.js', () => ({
+  ejecutarTransaccion: vi.fn(async (operaciones) => operaciones(conexion)),
+}));
+
 vi.mock('../../src/servicios/almacenamientoImagenes.js', () => ({
   obtenerUrlImagen: vi.fn((clave) => (clave ? `https://bucket/${clave}` : null)),
 }));
 
 const repositorio = await import('../../src/repositorios/repositorioReserva.js');
 const repositorioDescuento = await import('../../src/repositorios/repositorioDescuento.js');
+const reservas = await import('../../src/repositorios/repositorioReservaAsientos.js');
+const { ejecutarTransaccion } = await import('../../src/configuracion/baseDatos.js');
+const { ErrorNoAutenticado } = await import('../../src/errores/ErrorNoAutenticado.js');
 const { ErrorConflicto } = await import('../../src/errores/ErrorConflicto.js');
 const { ErrorNoEncontrado } = await import('../../src/errores/ErrorNoEncontrado.js');
 const { ErrorValidacion } = await import('../../src/errores/ErrorValidacion.js');
@@ -30,8 +48,15 @@ const {
   consultarHorarios,
   consultarPelicula,
   calcularPrecios,
+  armarCompraReservada,
+  cancelarReserva,
+  consultarReserva,
+  crearReserva,
   mapaPrecios,
-  verificarSeleccion,
+  obtenerIdCliente,
+  obtenerPreciosFuncion,
+  repartirBoletos,
+  validarSeleccion,
 } = await import('../../src/servicios/servicioReserva.js');
 
 // 08:00 UTC = 02:00 en Costa Rica (UTC-6)
@@ -227,7 +252,7 @@ describe('ofertas en mapaPrecios', () => {
   });
 });
 
-describe('SCRUM-93 servicioReserva: verificarSeleccion', () => {
+describe('SCRUM-93 servicioReserva: validarSeleccion', () => {
   const seleccionValida = {
     asientos: [10, 11, 12],
     boletos: [
@@ -246,7 +271,8 @@ describe('SCRUM-93 servicioReserva: verificarSeleccion', () => {
 
   it('devuelve el total calculado con los precios de la BD', async () => {
     prepararBdValida();
-    await expect(verificarSeleccion(7, seleccionValida)).resolves.toEqual({ total: 3300 * 2 + 2640 });
+    const { total } = await validarSeleccion(7, seleccionValida);
+    expect(total).toBe(3300 * 2 + 2640);
     expect(repositorio.contarAsientosDeSala).toHaveBeenCalledWith(7, [10, 11, 12]);
   });
 
@@ -255,20 +281,21 @@ describe('SCRUM-93 servicioReserva: verificarSeleccion', () => {
     repositorioDescuento.buscarOfertaDeProyeccion.mockResolvedValue({ idDescuento: 9, porcentaje: 50 });
 
     // 2 adultos a 1650 + 1 niño a 990
-    await expect(verificarSeleccion(7, seleccionValida)).resolves.toEqual({ total: 1650 * 2 + 990 });
+    const { total } = await validarSeleccion(7, seleccionValida);
+    expect(total).toBe(1650 * 2 + 990);
     expect(repositorioDescuento.buscarOfertaDeProyeccion).toHaveBeenCalledWith(7);
   });
 
   it('muestra "Te faltan asientos por seleccionar" si hay menos asientos que boletos', async () => {
     await expect(
-      verificarSeleccion(7, { ...seleccionValida, asientos: [10, 11] })
+      validarSeleccion(7, { ...seleccionValida, asientos: [10, 11] })
     ).rejects.toThrow(MENSAJE_FALTAN_ASIENTOS);
     expect(repositorio.obtenerProyeccionVigente).not.toHaveBeenCalled();
   });
 
   it('rechaza más asientos que boletos', async () => {
     await expect(
-      verificarSeleccion(7, { ...seleccionValida, asientos: [10, 11, 12, 13] })
+      validarSeleccion(7, { ...seleccionValida, asientos: [10, 11, 12, 13] })
     ).rejects.toThrow('Seleccionaste más asientos que boletos');
   });
 
@@ -284,24 +311,24 @@ describe('SCRUM-93 servicioReserva: verificarSeleccion', () => {
     ],
     ['todas las cantidades en cero', { boletos: [{ idTipoBoleto: 1, cantidad: 0 }] }, 'Debes elegir al menos un boleto'],
   ])('rechaza %s', async (_caso, cambios, mensaje) => {
-    await expect(verificarSeleccion(7, { ...seleccionValida, ...cambios })).rejects.toThrow(mensaje);
+    await expect(validarSeleccion(7, { ...seleccionValida, ...cambios })).rejects.toThrow(mensaje);
   });
 
   it('lanza ErrorNoEncontrado si la función ya empezó o no existe', async () => {
     repositorio.obtenerProyeccionVigente.mockResolvedValue(null);
-    await expect(verificarSeleccion(7, seleccionValida)).rejects.toBeInstanceOf(ErrorNoEncontrado);
+    await expect(validarSeleccion(7, seleccionValida)).rejects.toBeInstanceOf(ErrorNoEncontrado);
   });
 
   it('rechaza un tipo de boleto que no existe en la BD', async () => {
     prepararBdValida();
     const seleccion = { asientos: [10], boletos: [{ idTipoBoleto: 99, cantidad: 1 }] };
-    await expect(verificarSeleccion(7, seleccion)).rejects.toThrow('El tipo de boleto no es válido');
+    await expect(validarSeleccion(7, seleccion)).rejects.toThrow('El tipo de boleto no es válido');
   });
 
   it('rechaza asientos de otra sala', async () => {
     prepararBdValida();
     repositorio.contarAsientosDeSala.mockResolvedValue(2);
-    await expect(verificarSeleccion(7, seleccionValida)).rejects.toThrow(
+    await expect(validarSeleccion(7, seleccionValida)).rejects.toThrow(
       'Algún asiento no pertenece a la sala de la función'
     );
     expect(repositorio.listarAsientosOcupados).not.toHaveBeenCalled();
@@ -311,8 +338,246 @@ describe('SCRUM-93 servicioReserva: verificarSeleccion', () => {
     prepararBdValida();
     repositorio.listarAsientosOcupados.mockResolvedValue([11]);
 
-    const promesa = verificarSeleccion(7, seleccionValida);
+    const promesa = validarSeleccion(7, seleccionValida);
     await expect(promesa).rejects.toBeInstanceOf(ErrorConflicto);
     await expect(promesa).rejects.toThrow(MENSAJE_ASIENTO_NO_DISPONIBLE);
+  });
+});
+
+describe('SCRUM-93 servicioReserva: obtenerIdCliente', () => {
+  it('devuelve el idCliente del token', () => {
+    expect(obtenerIdCliente({ idCliente: 4 })).toBe(4);
+  });
+
+  it.each([
+    ['sin usuario', undefined],
+    ['sin idCliente (personal o token viejo)', { tipoUsuario: 'EMPLEADO' }],
+    ['idCliente inválido', { idCliente: 0 }],
+  ])('rechaza %s', (_caso, usuario) => {
+    expect(() => obtenerIdCliente(usuario)).toThrow(ErrorNoAutenticado);
+  });
+});
+
+describe('SCRUM-93 servicioReserva: repartirBoletos', () => {
+  it('asigna los tipos en orden y devuelve los asientos ordenados por id', () => {
+    const boletos = [
+      { idTipoBoleto: 1, cantidad: 2 },
+      { idTipoBoleto: 2, cantidad: 1 },
+    ];
+    expect(repartirBoletos([12, 10, 11], boletos)).toEqual([
+      { idAsiento: 10, idTipoBoleto: 1 },
+      { idAsiento: 11, idTipoBoleto: 2 },
+      { idAsiento: 12, idTipoBoleto: 1 },
+    ]);
+  });
+});
+
+describe('SCRUM-93 servicioReserva: crearReserva', () => {
+  const usuario = { idCliente: 4 };
+  const seleccion = {
+    asientos: [11, 10],
+    boletos: [
+      { idTipoBoleto: 1, cantidad: 1 },
+      { idTipoBoleto: 2, cantidad: 1 },
+    ],
+  };
+
+  function prepararBdValida() {
+    repositorio.obtenerProyeccionVigente.mockResolvedValue(PROYECCION);
+    repositorio.listarTiposBoleto.mockResolvedValue(TIPOS_BOLETO);
+    repositorio.contarAsientosDeSala.mockResolvedValue(2);
+    repositorio.listarAsientosOcupados.mockResolvedValue([]);
+  }
+
+  it('borra vencidas y la reserva anterior, inserta la nueva y devuelve total y segundos', async () => {
+    prepararBdValida();
+
+    await expect(crearReserva(usuario, 7, seleccion)).resolves.toEqual({
+      total: 3300 + 2640,
+      segundosRestantes: 300,
+    });
+
+    expect(repositorio.listarAsientosOcupados).toHaveBeenCalledWith(7, [11, 10], 4);
+    // Solo las vencidas de los asientos que se reservan, no las de todo el cine
+    expect(reservas.borrarReservasVencidas).toHaveBeenCalledWith(conexion, 7, [11, 10]);
+    expect(reservas.borrarReservaCliente).toHaveBeenCalledWith(conexion, 4);
+    expect(reservas.insertarReserva).toHaveBeenCalledWith(
+      conexion,
+      4,
+      7,
+      [
+        { idAsiento: 10, idTipoBoleto: 2 },
+        { idAsiento: 11, idTipoBoleto: 1 },
+      ],
+      5
+    );
+
+    // El orden importa: primero se libera, después se inserta
+    const orden = [
+      reservas.borrarReservasVencidas.mock.invocationCallOrder[0],
+      reservas.borrarReservaCliente.mock.invocationCallOrder[0],
+      reservas.insertarReserva.mock.invocationCallOrder[0],
+    ];
+    expect(orden).toEqual([...orden].sort((a, b) => a - b));
+  });
+
+  it('no abre la transacción si la selección no es válida', async () => {
+    prepararBdValida();
+    repositorio.listarAsientosOcupados.mockResolvedValue([10]);
+
+    await expect(crearReserva(usuario, 7, seleccion)).rejects.toBeInstanceOf(ErrorConflicto);
+    expect(ejecutarTransaccion).not.toHaveBeenCalled();
+  });
+
+  it('no deja reservar sin un cliente en la sesión', async () => {
+    await expect(crearReserva({}, 7, seleccion)).rejects.toBeInstanceOf(ErrorNoAutenticado);
+    expect(repositorio.obtenerProyeccionVigente).not.toHaveBeenCalled();
+  });
+
+  it('convierte el ORA-00001 de la PK en 409 con el mensaje de asiento no disponible', async () => {
+    prepararBdValida();
+    const duplicado = Object.assign(new Error('ORA-00001: unique constraint (X.PK_RESERVAS_ASIENTOS) violated'), {
+      errorNum: 1,
+    });
+    reservas.insertarReserva.mockRejectedValueOnce(duplicado);
+
+    const promesa = crearReserva(usuario, 7, seleccion);
+    await expect(promesa).rejects.toBeInstanceOf(ErrorConflicto);
+    await expect(promesa).rejects.toThrow(MENSAJE_ASIENTO_NO_DISPONIBLE);
+  });
+
+  it('deja pasar otros errores de la BD', async () => {
+    prepararBdValida();
+    const otro = Object.assign(new Error('ORA-12541: no listener'), { errorNum: 12541 });
+    reservas.insertarReserva.mockRejectedValueOnce(otro);
+
+    await expect(crearReserva(usuario, 7, seleccion)).rejects.toBe(otro);
+  });
+});
+
+describe('SCRUM-93 servicioReserva: consultarReserva', () => {
+  it('devuelve null si no hay reserva vigente', async () => {
+    reservas.obtenerReservaCliente.mockResolvedValue([]);
+    await expect(consultarReserva({ idCliente: 4 })).resolves.toBeNull();
+    expect(reservas.obtenerReservaCliente).toHaveBeenCalledWith(4);
+  });
+
+  it('agrupa los boletos por tipo y toma los segundos más bajos', async () => {
+    reservas.obtenerReservaCliente.mockResolvedValue([
+      [7, 10, 1, 120],
+      [7, 11, 1, 119],
+      [7, 12, 2, 120],
+    ]);
+
+    await expect(consultarReserva({ idCliente: 4 })).resolves.toEqual({
+      idProyeccion: 7,
+      asientos: [10, 11, 12],
+      boletos: [
+        { idTipoBoleto: 1, cantidad: 2 },
+        { idTipoBoleto: 2, cantidad: 1 },
+      ],
+      segundosRestantes: 119,
+    });
+  });
+
+  it('nunca devuelve segundos negativos', async () => {
+    reservas.obtenerReservaCliente.mockResolvedValue([[7, 10, 1, -1]]);
+    const reserva = await consultarReserva({ idCliente: 4 });
+    expect(reserva.segundosRestantes).toBe(0);
+  });
+});
+
+describe('SCRUM-93 servicioReserva: cancelarReserva', () => {
+  it('borra la reserva del cliente en una transacción', async () => {
+    await cancelarReserva({ idCliente: 4 });
+    expect(reservas.borrarReservaCliente).toHaveBeenCalledWith(conexion, 4);
+  });
+
+  it('exige un cliente en la sesión', async () => {
+    await expect(cancelarReserva({})).rejects.toBeInstanceOf(ErrorNoAutenticado);
+    expect(ejecutarTransaccion).not.toHaveBeenCalled();
+  });
+});
+
+describe('SCRUM-93 servicioReserva: obtenerPreciosFuncion', () => {
+  it('devuelve el precio de cada tipo de boleto con el monto de la sala', async () => {
+    repositorio.obtenerProyeccionVigente.mockResolvedValue(PROYECCION);
+    repositorio.listarTiposBoleto.mockResolvedValue(TIPOS_BOLETO);
+
+    const precios = await obtenerPreciosFuncion(7);
+
+    expect(precios.get(1)).toEqual({ monto: 3300, descuento: 0 });
+    expect(precios.get(2)).toEqual({ monto: 2640, descuento: 660 });
+    expect(repositorio.obtenerProyeccionVigente).toHaveBeenCalledWith(7, AHORA_CR);
+  });
+
+  it('aplica la oferta vigente de la función y lleva su idDescuento (lo mismo que ve el cliente)', async () => {
+    repositorio.obtenerProyeccionVigente.mockResolvedValue(PROYECCION);
+    repositorio.listarTiposBoleto.mockResolvedValue(TIPOS_BOLETO);
+    repositorioDescuento.buscarOfertaDeProyeccion.mockResolvedValue({ idDescuento: 9, porcentaje: 50 });
+
+    const precios = await obtenerPreciosFuncion(7);
+
+    expect(repositorioDescuento.buscarOfertaDeProyeccion).toHaveBeenCalledWith(7);
+    expect(precios.get(1)).toEqual({ monto: 1650, descuento: 1650, idDescuento: 9 });
+  });
+
+  it('lanza ErrorNoEncontrado si la función ya empezó', async () => {
+    repositorio.obtenerProyeccionVigente.mockResolvedValue(null);
+    await expect(obtenerPreciosFuncion(7)).rejects.toBeInstanceOf(ErrorNoEncontrado);
+    expect(repositorio.listarTiposBoleto).not.toHaveBeenCalled();
+  });
+});
+
+describe('SCRUM-93 servicioReserva: armarCompraReservada', () => {
+  const precios = mapaPrecios(TIPOS_BOLETO, 3300);
+
+  it('pone el precio a cada asiento reservado y calcula el total, sin tocar la BD', () => {
+    expect(
+      armarCompraReservada(
+        [
+          [10, 1, 1],
+          [11, 2, 1],
+          [12, 1, 1],
+        ],
+        precios
+      )
+    ).toEqual({
+      asientos: [10, 11, 12],
+      boletos: [
+        { idTipoBoleto: 1, cantidad: 2 },
+        { idTipoBoleto: 2, cantidad: 1 },
+      ],
+      detalles: [
+        { idAsiento: 10, idTipoBoleto: 1, monto: 3300, descuento: 0 },
+        { idAsiento: 11, idTipoBoleto: 2, monto: 2640, descuento: 660 },
+        { idAsiento: 12, idTipoBoleto: 1, monto: 3300, descuento: 0 },
+      ],
+      total: 3300 * 2 + 2640,
+    });
+    expect(repositorio.obtenerProyeccionVigente).not.toHaveBeenCalled();
+    expect(repositorio.listarTiposBoleto).not.toHaveBeenCalled();
+  });
+
+  it('rechaza un tipo de boleto que ya no existe', () => {
+    expect(() => armarCompraReservada([[10, 99]], precios)).toThrow('El tipo de boleto no es válido');
+  });
+
+  it('con oferta lleva el idDescuento a cada detalle (queda en DETALLES_FACTURA)', () => {
+    const conOferta = mapaPrecios(TIPOS_BOLETO, 3300, { idDescuento: 9, porcentaje: 50 });
+
+    const { detalles, total } = armarCompraReservada(
+      [
+        [10, 1, 1],
+        [11, 1, 1],
+      ],
+      conOferta
+    );
+
+    expect(detalles).toEqual([
+      { idAsiento: 10, idTipoBoleto: 1, monto: 1650, descuento: 1650, idDescuento: 9 },
+      { idAsiento: 11, idTipoBoleto: 1, monto: 1650, descuento: 1650, idDescuento: 9 },
+    ]);
+    expect(total).toBe(3300);
   });
 });

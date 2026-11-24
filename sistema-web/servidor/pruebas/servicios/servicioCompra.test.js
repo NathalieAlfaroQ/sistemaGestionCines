@@ -13,10 +13,25 @@ vi.mock('../../src/repositorios/repositorioCompra.js', () => ({
   obtenerMetodoPagoCliente: vi.fn(),
   guardarMetodoPagoCliente: vi.fn(),
 }));
-vi.mock('../../src/servicios/servicioReserva.js', () => ({
-  MENSAJE_ASIENTO_NO_DISPONIBLE: 'El asiento seleccionado ya no está disponible. Por favor, elige otro.',
-  validarSeleccion: vi.fn(),
+vi.mock('../../src/repositorios/repositorioReservaAsientos.js', () => ({
+  bloquearReservaCliente: vi.fn(),
+  borrarReservaCliente: vi.fn(),
+  obtenerReservaCliente: vi.fn(),
 }));
+vi.mock('../../src/servicios/servicioReserva.js', async () => {
+  const { ErrorNoAutenticado } = await import('../../src/errores/ErrorNoAutenticado.js');
+  return {
+    MENSAJE_ASIENTO_NO_DISPONIBLE: 'El asiento seleccionado ya no está disponible. Por favor, elige otro.',
+    MENSAJE_RESERVA_VENCIDA: 'Tu tiempo para pagar terminó y los asientos se liberaron. Vuelve a elegir tus asientos.',
+    armarCompraReservada: vi.fn(),
+    obtenerPreciosFuncion: vi.fn(),
+    // Igual que la real: sin idCliente válido no se compra
+    obtenerIdCliente: (usuario) => {
+      if (!Number.isInteger(usuario?.idCliente) || usuario.idCliente <= 0) throw new ErrorNoAutenticado('Sesión no válida');
+      return usuario.idCliente;
+    },
+  };
+});
 vi.mock('../../src/servicios/pasarelaPago.js', () => ({
   cobrar: vi.fn(),
   reembolsar: vi.fn(),
@@ -38,10 +53,10 @@ vi.mock('../../src/utilidades/fechas.js', () => ({
 }));
 
 import {
-  asignarBoletos,
   calcularHuella,
   comprarBoletos,
   completarPagoPayPal,
+  iniciarPagoPayPal,
 } from '../../src/servicios/servicioCompra.js';
 import { ejecutarTransaccion } from '../../src/configuracion/baseDatos.js';
 import {
@@ -53,12 +68,19 @@ import {
   obtenerMetodoPagoCliente,
   registrarIntencionPago,
 } from '../../src/repositorios/repositorioCompra.js';
-import { validarSeleccion } from '../../src/servicios/servicioReserva.js';
+import { armarCompraReservada, obtenerPreciosFuncion } from '../../src/servicios/servicioReserva.js';
+import {
+  bloquearReservaCliente,
+  borrarReservaCliente,
+  obtenerReservaCliente,
+} from '../../src/repositorios/repositorioReservaAsientos.js';
+import { ErrorNoAutenticado } from '../../src/errores/ErrorNoAutenticado.js';
 import { cobrar, obtenerTarjeta, reembolsar } from '../../src/servicios/pasarelaPago.js';
 import {
   capturarOrden,
   consultarOrden,
   convertirADolares,
+  crearOrden,
   reembolsarCaptura,
 } from '../../src/servicios/pasarelaPayPal.js';
 import { enviarComprobante } from '../../src/servicios/servicioComprobante.js';
@@ -78,18 +100,44 @@ const NINO = 2;
 const usuarioCliente = { idCliente: 21, tipoUsuario: 'CLIENTE' };
 const conexion = { nombre: 'conexion de prueba' };
 
+// La reserva bloqueada del cliente: [[idAsiento, idTipoBoleto, vigente]]
+const filasReserva = [
+  [101, ADULTO, 1],
+  [102, ADULTO, 1],
+  [103, NINO, 1],
+];
+
+// La misma reserva leída sin bloquear (PayPal paso 1), ya adaptada: [[idAsiento, idTipoBoleto]]
+const filasReservaConsulta = [
+  [101, ADULTO],
+  [102, ADULTO],
+  [103, NINO],
+];
+
 const precios = new Map([
   [ADULTO, { monto: 3300, descuento: 0 }],
   [NINO, { monto: 2600, descuento: 0 }],
 ]);
 
-const datosCompra = {
-  idProyeccion: ID_PROYECCION,
+const detalles = [
+  { idAsiento: 101, idTipoBoleto: ADULTO, monto: 3300, descuento: 0 },
+  { idAsiento: 102, idTipoBoleto: ADULTO, monto: 3300, descuento: 0 },
+  { idAsiento: 103, idTipoBoleto: NINO, monto: 2600, descuento: 0 },
+];
+
+const compraReservada = {
   asientos: [101, 102, 103],
   boletos: [
     { idTipoBoleto: ADULTO, cantidad: 2 },
     { idTipoBoleto: NINO, cantidad: 1 },
   ],
+  detalles,
+  total: 9200,
+};
+
+// El cuerpo ya no trae asientos ni boletos: salen de la reserva
+const datosCompra = {
+  idProyeccion: ID_PROYECCION,
   idMetodoPago: ID_METODO_PAGO,
 };
 
@@ -103,12 +151,9 @@ describe('SCRUM-94-95 servicioCompra', () => {
   beforeEach(() => {
     vi.resetAllMocks();
 
-    validarSeleccion.mockResolvedValue({
-      asientos: [101, 102, 103],
-      boletos: datosCompra.boletos,
-      precios,
-      total: 9200,
-    });
+    bloquearReservaCliente.mockResolvedValue(filasReserva);
+    obtenerPreciosFuncion.mockResolvedValue(precios);
+    armarCompraReservada.mockReturnValue(compraReservada);
     obtenerDatosCliente.mockResolvedValue(['Ana', 'Mora', 'ana@correo.com']);
     obtenerIdMetodoPago.mockResolvedValue(1);
     insertarFactura.mockResolvedValue(ID_FACTURA);
@@ -124,27 +169,6 @@ describe('SCRUM-94-95 servicioCompra', () => {
 
     // Simula ejecutarTransaccion: corre las operaciones y propaga sus errores (rollback)
     ejecutarTransaccion.mockImplementation(async (operaciones) => operaciones(conexion));
-  });
-
-  describe('asignarBoletos', () => {
-    it('reparte los tipos de boleto entre los asientos en orden, con su precio', () => {
-      expect(asignarBoletos([101, 102, 103], datosCompra.boletos, precios)).toEqual([
-        { idAsiento: 101, idTipoBoleto: ADULTO, monto: 3300, descuento: 0 },
-        { idAsiento: 102, idTipoBoleto: ADULTO, monto: 3300, descuento: 0 },
-        { idAsiento: 103, idTipoBoleto: NINO, monto: 2600, descuento: 0 },
-      ]);
-    });
-  });
-
-  describe('asignarBoletos con oferta', () => {
-    it('lleva el idDescuento de la oferta a cada detalle', () => {
-      const conOferta = new Map([[ADULTO, { monto: 1650, descuento: 1650, idDescuento: 9 }]]);
-
-      expect(asignarBoletos([101, 102], [{ idTipoBoleto: ADULTO, cantidad: 2 }], conOferta)).toEqual([
-        { idAsiento: 101, idTipoBoleto: ADULTO, monto: 1650, descuento: 1650, idDescuento: 9 },
-        { idAsiento: 102, idTipoBoleto: ADULTO, monto: 1650, descuento: 1650, idDescuento: 9 },
-      ]);
-    });
   });
 
   describe('comprarBoletos', () => {
@@ -167,17 +191,17 @@ describe('SCRUM-94-95 servicioCompra', () => {
         monto: 9200,
         fecha: '2026-11-02 20:15:00',
       });
-      expect(insertarDetallesBoletos).toHaveBeenCalledWith(conexion, ID_FACTURA, ID_PROYECCION, [
-        { idAsiento: 101, idTipoBoleto: ADULTO, monto: 3300, descuento: 0 },
-        { idAsiento: 102, idTipoBoleto: ADULTO, monto: 3300, descuento: 0 },
-        { idAsiento: 103, idTipoBoleto: NINO, monto: 2600, descuento: 0 },
-      ]);
+      expect(bloquearReservaCliente).toHaveBeenCalledWith(conexion, 21, ID_PROYECCION);
+      expect(obtenerPreciosFuncion).toHaveBeenCalledWith(ID_PROYECCION);
+      expect(armarCompraReservada).toHaveBeenCalledWith(filasReserva, precios);
+      expect(insertarDetallesBoletos).toHaveBeenCalledWith(conexion, ID_FACTURA, ID_PROYECCION, detalles);
       expect(cobrar).toHaveBeenCalledWith({
         monto: 9200,
         idMetodoPago: ID_METODO_PAGO,
         descripcion: `Cine Aurora - Factura ${ID_FACTURA}`,
       });
       expect(registrarIntencionPago).toHaveBeenCalledWith(conexion, ID_FACTURA, ID_INTENCION);
+      expect(borrarReservaCliente).toHaveBeenCalledWith(conexion, 21);
 
       expect(compra).toEqual({
         idFactura: ID_FACTURA,
@@ -188,6 +212,85 @@ describe('SCRUM-94-95 servicioCompra', () => {
       });
       expect(guardarMetodoPagoCliente).not.toHaveBeenCalled();
       expect(enviarComprobante).toHaveBeenCalledWith(ID_FACTURA, { idCliente: 21, nombre: 'Ana', correo: 'ana@correo.com' });
+    });
+
+    it('si la reserva venció responde 409 sin facturar ni cobrar', async () => {
+      bloquearReservaCliente.mockResolvedValue([]);
+
+      const promesa = comprarBoletos(usuarioCliente, ID_PROYECCION, datosCompra);
+      await expect(promesa).rejects.toBeInstanceOf(ErrorConflicto);
+      await expect(promesa).rejects.toThrow('Tu tiempo para pagar terminó');
+      expect(insertarFactura).not.toHaveBeenCalled();
+      expect(cobrar).not.toHaveBeenCalled();
+      expect(borrarReservaCliente).not.toHaveBeenCalled();
+    });
+
+    it('lee los precios antes de abrir la transacción (no pide otra conexión dentro)', async () => {
+      await comprarBoletos(usuarioCliente, ID_PROYECCION, datosCompra);
+
+      expect(obtenerPreciosFuncion.mock.invocationCallOrder[0]).toBeLessThan(
+        ejecutarTransaccion.mock.invocationCallOrder[0]
+      );
+    });
+
+    it('si la función ya empezó, falla sin abrir la transacción', async () => {
+      obtenerPreciosFuncion.mockRejectedValue(new ErrorNoEncontrado('La función no existe o ya no está disponible'));
+
+      await expect(comprarBoletos(usuarioCliente, ID_PROYECCION, datosCompra)).rejects.toBeInstanceOf(ErrorNoEncontrado);
+      expect(ejecutarTransaccion).not.toHaveBeenCalled();
+      expect(cobrar).not.toHaveBeenCalled();
+    });
+
+    it('si una parte de la reserva venció, la trata entera como vencida y no cobra', async () => {
+      bloquearReservaCliente.mockResolvedValue([
+        [101, ADULTO, 1],
+        [102, ADULTO, 0],
+        [103, NINO, 1],
+      ]);
+
+      const promesa = comprarBoletos(usuarioCliente, ID_PROYECCION, datosCompra);
+      await expect(promesa).rejects.toBeInstanceOf(ErrorConflicto);
+      await expect(promesa).rejects.toThrow('Tu tiempo para pagar terminó');
+      expect(armarCompraReservada).not.toHaveBeenCalled();
+      expect(insertarFactura).not.toHaveBeenCalled();
+      expect(cobrar).not.toHaveBeenCalled();
+    });
+
+    it('ignora asientos y boletos del cuerpo: usa los de la reserva', async () => {
+      await comprarBoletos(usuarioCliente, ID_PROYECCION, {
+        ...datosCompra,
+        asientos: [999],
+        boletos: [{ idTipoBoleto: ADULTO, cantidad: 1 }],
+      });
+
+      expect(insertarDetallesBoletos).toHaveBeenCalledWith(conexion, ID_FACTURA, ID_PROYECCION, detalles);
+      expect(cobrar).toHaveBeenCalledWith(expect.objectContaining({ monto: 9200 }));
+    });
+
+    it('borra la reserva después de cobrar y registrar el pago', async () => {
+      await comprarBoletos(usuarioCliente, ID_PROYECCION, datosCompra);
+
+      expect(registrarIntencionPago.mock.invocationCallOrder[0]).toBeLessThan(
+        borrarReservaCliente.mock.invocationCallOrder[0]
+      );
+    });
+
+    it('si el cobro falla, la reserva no se borra (sigue hasta que venza)', async () => {
+      cobrar.mockRejectedValue(new ErrorPagoRechazado('El pago no pudo ser procesado.'));
+
+      await expect(comprarBoletos(usuarioCliente, ID_PROYECCION, datosCompra)).rejects.toBeInstanceOf(ErrorPagoRechazado);
+      expect(borrarReservaCliente).not.toHaveBeenCalled();
+    });
+
+    it.each([undefined, 0, -3, 1.5, Number.NaN])('rechaza el id de función %s sin tocar la BD', async (idProyeccion) => {
+      await expect(comprarBoletos(usuarioCliente, idProyeccion, datosCompra)).rejects.toBeInstanceOf(ErrorValidacion);
+      expect(ejecutarTransaccion).not.toHaveBeenCalled();
+    });
+
+    it('exige un cliente en la sesión', async () => {
+      await expect(comprarBoletos({ tipoUsuario: 'EMPLEADO' }, ID_PROYECCION, datosCompra)).rejects.toBeInstanceOf(
+        ErrorNoAutenticado
+      );
     });
 
     it('no manda correo si la compra falla', async () => {
@@ -329,7 +432,7 @@ describe('SCRUM-94-95 servicioCompra', () => {
   describe('PayPal', () => {
     const ID_ORDEN = '7YJ07784CA3167202';
     const ID_CAPTURA = '2XM6716424273201D';
-    const seleccion = { asientos: [101, 102, 103], boletos: datosCompra.boletos };
+    const seleccion = { asientos: compraReservada.asientos, boletos: compraReservada.boletos };
     const huella = () => calcularHuella(21, ID_PROYECCION, seleccion.asientos, seleccion.boletos);
 
     beforeEach(() => {
@@ -347,7 +450,7 @@ describe('SCRUM-94-95 servicioCompra', () => {
 
     describe('calcularHuella', () => {
       it('no depende del orden en que llegan los asientos y los boletos', () => {
-        const otraForma = calcularHuella(21, ID_PROYECCION, [103, 101, 102], [...datosCompra.boletos].reverse());
+        const otraForma = calcularHuella(21, ID_PROYECCION, [103, 101, 102], [...seleccion.boletos].reverse());
         expect(otraForma).toBe(huella());
       });
 
@@ -362,14 +465,44 @@ describe('SCRUM-94-95 servicioCompra', () => {
       });
     });
 
+    describe('iniciarPagoPayPal', () => {
+      it('crea la orden con el total y la huella de la reserva vigente de esa función', async () => {
+        obtenerReservaCliente.mockResolvedValue([
+          [ID_PROYECCION, 101, ADULTO, 250],
+          [ID_PROYECCION, 102, ADULTO, 250],
+          [ID_PROYECCION, 103, NINO, 250],
+        ]);
+        crearOrden.mockResolvedValue(ID_ORDEN);
+
+        await expect(iniciarPagoPayPal(usuarioCliente, ID_PROYECCION)).resolves.toEqual({ idOrden: ID_ORDEN });
+
+        expect(obtenerPreciosFuncion).toHaveBeenCalledWith(ID_PROYECCION);
+        expect(armarCompraReservada).toHaveBeenCalledWith(filasReservaConsulta, precios);
+        expect(convertirADolares).toHaveBeenCalledWith(9200);
+        expect(crearOrden).toHaveBeenCalledWith({
+          montoDolares: '18.22',
+          huella: huella(),
+          descripcion: 'Cine Aurora - 3 boletos',
+        });
+      });
+
+      it('responde 409 sin crear la orden si no hay reserva vigente para esa función', async () => {
+        obtenerReservaCliente.mockResolvedValue([[99, 101, ADULTO, 250]]);
+
+        await expect(iniciarPagoPayPal(usuarioCliente, ID_PROYECCION)).rejects.toBeInstanceOf(ErrorConflicto);
+        expect(crearOrden).not.toHaveBeenCalled();
+      });
+    });
+
     describe('completarPagoPayPal', () => {
       it('verifica la orden, guarda la compra como PayPal y captura', async () => {
-        const compra = await completarPagoPayPal(usuarioCliente, ID_PROYECCION, ID_ORDEN, datosCompra);
+        const compra = await completarPagoPayPal(usuarioCliente, ID_PROYECCION, ID_ORDEN);
 
         expect(consultarOrden).toHaveBeenCalledWith(ID_ORDEN);
         expect(insertarFactura).toHaveBeenCalledWith(conexion, expect.objectContaining({ idMetodo: 2, monto: 9200 }));
         expect(capturarOrden).toHaveBeenCalledWith(ID_ORDEN);
         expect(registrarIntencionPago).toHaveBeenCalledWith(conexion, ID_FACTURA, ID_CAPTURA);
+        expect(borrarReservaCliente).toHaveBeenCalledWith(conexion, 21);
         expect(compra).toEqual({ idFactura: ID_FACTURA, total: 9200, referencia: ID_CAPTURA, correoEnviado: true });
         expect(cobrar).not.toHaveBeenCalled();
       });
@@ -377,10 +510,29 @@ describe('SCRUM-94-95 servicioCompra', () => {
       it('no captura una orden cuya huella no corresponde a la selección', async () => {
         consultarOrden.mockResolvedValue({ estado: 'APPROVED', huella: 'huella-de-otra-seleccion', moneda: 'USD', montoDolares: '18.22' });
 
-        await expect(completarPagoPayPal(usuarioCliente, ID_PROYECCION, ID_ORDEN, datosCompra)).rejects.toThrow(
+        await expect(completarPagoPayPal(usuarioCliente, ID_PROYECCION, ID_ORDEN)).rejects.toThrow(
           'La orden de PayPal no corresponde a esta compra'
         );
         expect(capturarOrden).not.toHaveBeenCalled();
+      });
+
+      it('no captura si la reserva venció mientras el cliente estaba en PayPal', async () => {
+        bloquearReservaCliente.mockResolvedValue([]);
+
+        await expect(completarPagoPayPal(usuarioCliente, ID_PROYECCION, ID_ORDEN)).rejects.toBeInstanceOf(
+          ErrorConflicto
+        );
+        expect(capturarOrden).not.toHaveBeenCalled();
+        expect(insertarFactura).not.toHaveBeenCalled();
+      });
+
+      it('no captura si el cliente no aprobó la orden', async () => {
+        consultarOrden.mockResolvedValue({ estado: 'CREATED', huella: huella(), moneda: 'USD', montoDolares: '18.22' });
+
+        await expect(completarPagoPayPal(usuarioCliente, ID_PROYECCION, ID_ORDEN)).rejects.toBeInstanceOf(
+          ErrorPagoRechazado
+        );
+        expect(ejecutarTransaccion).not.toHaveBeenCalled();
       });
 
       it('reembolsa la captura si la compra no se pudo guardar después de capturar', async () => {
@@ -390,7 +542,7 @@ describe('SCRUM-94-95 servicioCompra', () => {
           throw errorCommit;
         });
 
-        await expect(completarPagoPayPal(usuarioCliente, ID_PROYECCION, ID_ORDEN, datosCompra)).rejects.toBe(errorCommit);
+        await expect(completarPagoPayPal(usuarioCliente, ID_PROYECCION, ID_ORDEN)).rejects.toBe(errorCommit);
         expect(reembolsarCaptura).toHaveBeenCalledWith(ID_CAPTURA);
         expect(reembolsar).not.toHaveBeenCalled();
       });

@@ -67,15 +67,33 @@ export async function obtenerAsientos(idProyeccion) {
   );
 }
 
+// Botón Continuar: aparta los asientos por unos minutos mientras el cliente paga.
 // seleccion = { asientos: [idAsiento, ...], boletos: [{ idTipoBoleto, cantidad }, ...] }
-export async function verificarSeleccion(idProyeccion, seleccion) {
+// Devuelve { total, segundosRestantes }. Si otro cliente ya tiene un asiento: error de tipo conflicto.
+export async function crearReserva(idProyeccion, seleccion) {
   return await pedir(
-    `${URL_BASE}/proyecciones/${encodeURIComponent(idProyeccion)}/verificacion`,
+    `${URL_BASE}/proyecciones/${encodeURIComponent(idProyeccion)}/reservas`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(seleccion),
     },
-    'No se pudo verificar la selección'
+    'No se pudieron reservar los asientos'
   );
+}
+
+// Reserva vigente del cliente: { idProyeccion, asientos, boletos, segundosRestantes } o null si venció
+export async function obtenerMiReserva() {
+  const { reserva } = await pedir(`${URL_BASE}/mi-reserva`, {}, 'No se pudo consultar tu reserva');
+  return reserva;
+}
+
+// Libera los asientos reservados. No lanza errores: si falla, la reserva vence sola en unos minutos.
+// No usa pedir(): la respuesta es 204, sin cuerpo JSON.
+export async function cancelarReserva() {
+  try {
+    await peticionApi(`${URL_BASE}/mi-reserva`, { method: 'DELETE' });
+  } catch {
+    // Sin conexión: no hay nada más que hacer
+  }
 }
