@@ -12,6 +12,7 @@ import MensajeError from './MensajeError.jsx';
 import CampoSoloLectura from './CampoSoloLectura.jsx';
 import ContenedorCliente from './ContenedorCliente.jsx';
 import ContrasenaPerfil from './ContrasenaPerfil.jsx';
+import HistorialCompras from './HistorialCompras.jsx';
 
 // Largo de las columnas en la base de datos: CLIENTES 50, EMPLEADOS y ADMINISTRADORES 20
 const LIMITE_CLIENTE = 50;
@@ -134,6 +135,9 @@ export default function Perfil() {
             {!esGoogle && <ContrasenaPerfil correo={usuario.correo} />}
           </Card>
         </ThemeProvider>
+
+        {/* Solo los clientes tienen compras */}
+        {usuario.tipoUsuario === 'CLIENTE' && <HistorialCompras />}
       </ContenedorCliente>
     </main>
   );
