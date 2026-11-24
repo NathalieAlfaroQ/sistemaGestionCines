@@ -15,19 +15,18 @@ function idDelCliente(usuario) {
 
 // Películas de la cartelera del cine, en el mismo formato que la cartelera, de la que más a la que menos le gustaría
 // al cliente. Solo entran las que tienen puntaje; si empatan, queda primero la de la cartelera (orden por título).
-// Sin sesión, sin compras o sin ninguna coincidencia se devuelve la cartelera completa, sin cálculo.
+// Sin sesión de cliente, sin compras o sin ninguna coincidencia con la cartelera la lista queda vacía: no hay nada que recomendar.
+// Para restaurar que en esos casos se muestre la cartelera completa, devolver `cartelera` en lugar de [].
 export async function consultarRecomendaciones(usuario, idSede) {
-  const cartelera = await consultarCartelera(idSede);
-
   const idCliente = idDelCliente(usuario);
-  if (idCliente === null) return cartelera;
+  if (idCliente === null) return [];
+
+  const cartelera = await consultarCartelera(idSede);
 
   const puntajes = new Map(
     (await puntajesDePeliculas(idCliente)).map(([idPelicula, puntaje]) => [Number(idPelicula), redondear(Number(puntaje))]),
   );
   const puntajeDe = (pelicula) => puntajes.get(pelicula[POS_ID_PELICULA]) ?? 0;
 
-  const recomendadas = cartelera.filter((pelicula) => puntajeDe(pelicula) > 0).sort((a, b) => puntajeDe(b) - puntajeDe(a));
-
-  return recomendadas.length > 0 ? recomendadas : cartelera;
+  return cartelera.filter((pelicula) => puntajeDe(pelicula) > 0).sort((a, b) => puntajeDe(b) - puntajeDe(a));
 }

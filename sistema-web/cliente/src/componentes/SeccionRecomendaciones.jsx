@@ -19,7 +19,7 @@ function SeccionRecomendaciones({ idSede }) {
   function contenido() {
     if (error) return <ErrorCarga error={error} alReintentar={recargar} />;
     if (cargando) return <p className="text-text-color">Cargando recomendaciones...</p>;
-    if (peliculas.length === 0) return <p className="text-text-color">No hay películas para recomendar por el momento.</p>;
+    if (peliculas.length === 0) return <p className="text-text-color">Realiza una compra para recibir recomendaciones.</p>;
 
     return (
       <>
