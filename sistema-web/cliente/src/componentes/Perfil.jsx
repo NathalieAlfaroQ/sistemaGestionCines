@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import HistorialCompras from './HistorialCompras.jsx'
 import '../estilos/Perfil.css'
 
 export default function Perfil() {
@@ -156,6 +157,8 @@ export default function Perfil() {
           <p className={`mensaje ${mensaje.tipo}`}>{mensaje.texto}</p>
         )}
       </div>
+
+      {usuario.tipoUsuario === 'CLIENTE' && <HistorialCompras />}
     </div>
   )
 }
