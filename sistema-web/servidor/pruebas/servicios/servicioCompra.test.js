@@ -171,6 +171,27 @@ describe('SCRUM-94-95 servicioCompra', () => {
     ejecutarTransaccion.mockImplementation(async (operaciones) => operaciones(conexion));
   });
 
+  describe('asignarBoletos', () => {
+    it('reparte los tipos de boleto entre los asientos en orden, con su precio', () => {
+      expect(asignarBoletos([101, 102, 103], datosCompra.boletos, precios)).toEqual([
+        { idAsiento: 101, idTipoBoleto: ADULTO, monto: 3300, descuento: 0 },
+        { idAsiento: 102, idTipoBoleto: ADULTO, monto: 3300, descuento: 0 },
+        { idAsiento: 103, idTipoBoleto: NINO, monto: 2600, descuento: 0 },
+      ]);
+    });
+  });
+
+  describe('asignarBoletos con oferta', () => {
+    it('lleva el idDescuento de la oferta a cada detalle', () => {
+      const conOferta = new Map([[ADULTO, { monto: 1650, descuento: 1650, idDescuento: 9 }]]);
+
+      expect(asignarBoletos([101, 102], [{ idTipoBoleto: ADULTO, cantidad: 2 }], conOferta)).toEqual([
+        { idAsiento: 101, idTipoBoleto: ADULTO, monto: 1650, descuento: 1650, idDescuento: 9 },
+        { idAsiento: 102, idTipoBoleto: ADULTO, monto: 1650, descuento: 1650, idDescuento: 9 },
+      ]);
+    });
+  });
+
   describe('comprarBoletos', () => {
     it.each([undefined, '', 'abc', 'id con espacios y símbolos!!', 12345678901])(
       'rechaza el método de pago inválido %s sin cobrar',

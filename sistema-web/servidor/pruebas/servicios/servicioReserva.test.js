@@ -10,6 +10,8 @@ vi.mock('../../src/repositorios/repositorioReserva.js', () => ({
   obtenerProyeccionVigente: vi.fn(),
 }));
 
+vi.mock('../../src/repositorios/repositorioDescuento.js', () => ({
+  buscarOfertaDeProyeccion: vi.fn(),
 vi.mock('../../src/repositorios/repositorioReservaAsientos.js', () => ({
   MINUTOS_RESERVA: 5,
   RESTRICCION_ASIENTO_RESERVADO: 'PK_RESERVAS_ASIENTOS',
@@ -30,6 +32,7 @@ vi.mock('../../src/servicios/almacenamientoImagenes.js', () => ({
 }));
 
 const repositorio = await import('../../src/repositorios/repositorioReserva.js');
+const repositorioDescuento = await import('../../src/repositorios/repositorioDescuento.js');
 const reservas = await import('../../src/repositorios/repositorioReservaAsientos.js');
 const { ejecutarTransaccion } = await import('../../src/configuracion/baseDatos.js');
 const { ErrorNoAutenticado } = await import('../../src/errores/ErrorNoAutenticado.js');
@@ -69,6 +72,7 @@ const TIPOS_BOLETO = [
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(AHORA_UTC);
+  repositorioDescuento.buscarOfertaDeProyeccion.mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -176,12 +180,53 @@ describe('SCRUM-93 servicioReserva: consultarAsientos', () => {
   });
 });
 
+describe('ofertas en consultarAsientos', () => {
+  it('suma la oferta de la función al descuento de cada tipo de boleto', async () => {
+    repositorio.obtenerProyeccionVigente.mockResolvedValue(PROYECCION);
+    repositorio.listarAsientos.mockResolvedValue([]);
+    repositorio.listarTiposBoleto.mockResolvedValue(TIPOS_BOLETO);
+    repositorioDescuento.buscarOfertaDeProyeccion.mockResolvedValue({ idDescuento: 9, porcentaje: 50 });
+
+    const { tiposBoleto } = await consultarAsientos(7);
+
+    expect(repositorioDescuento.buscarOfertaDeProyeccion).toHaveBeenCalledWith(7);
+    expect(tiposBoleto).toEqual([
+      [1, 'Adulto', 1650],
+      [2, 'Niño', 990],
+      [3, 'Tercera edad', 990],
+    ]);
+  });
+});
+
 describe('SCRUM-93 servicioReserva: calcularPrecios', () => {
   it('aplica el descuento de cada tipo sobre el monto de la sala y redondea al colón', () => {
     expect(calcularPrecios([[1, 'Adulto', 0], [2, 'Niño', 20]], 3333)).toEqual([
       [1, 'Adulto', 3333],
       [2, 'Niño', 2666],
     ]);
+  });
+});
+
+describe('ofertas en calcularPrecios', () => {
+  const tipos = [[1, 'Adulto', 0], [2, 'Niño', 20]];
+
+  it('sin oferta deja el precio del tipo de boleto', () => {
+    expect(calcularPrecios(tipos, 3300, null)).toEqual([[1, 'Adulto', 3300], [2, 'Niño', 2640]]);
+  });
+
+  it('suma los porcentajes: 20% del tipo + 50% de la oferta = 70% de descuento, no 60%', () => {
+    expect(calcularPrecios(tipos, 3300, { idDescuento: 9, porcentaje: 50 })).toEqual([
+      [1, 'Adulto', 1650],
+      [2, 'Niño', 990],
+    ]);
+  });
+
+  it('el descuento total nunca pasa de 100%: el boleto queda en 0, no negativo', () => {
+    expect(calcularPrecios([[2, 'Niño', 20]], 3300, { idDescuento: 9, porcentaje: 90 })).toEqual([[2, 'Niño', 0]]);
+  });
+
+  it('redondea al colón', () => {
+    expect(calcularPrecios([[2, 'Niño', 20]], 3333, { idDescuento: 9, porcentaje: 15 })).toEqual([[2, 'Niño', 2166]]);
   });
 });
 
@@ -193,6 +238,19 @@ describe('SCRUM-93 servicioReserva: mapaPrecios', () => {
   });
 });
 
+describe('ofertas en mapaPrecios', () => {
+  it('con oferta guarda el descuento total en colones y el id de la oferta', () => {
+    const precios = mapaPrecios([[1, 'Adulto', 0], [2, 'Niño', 20]], 3300, { idDescuento: 9, porcentaje: 50 });
+    expect(precios.get(1)).toEqual({ monto: 1650, descuento: 1650, idDescuento: 9 });
+    expect(precios.get(2)).toEqual({ monto: 990, descuento: 2310, idDescuento: 9 });
+  });
+
+  it('sin oferta no agrega idDescuento', () => {
+    expect(mapaPrecios([[1, 'Adulto', 0]], 3300, null).get(1)).toEqual({ monto: 3300, descuento: 0 });
+  });
+});
+
+describe('SCRUM-93 servicioReserva: verificarSeleccion', () => {
 describe('SCRUM-93 servicioReserva: validarSeleccion', () => {
   const seleccionValida = {
     asientos: [10, 11, 12],
@@ -215,6 +273,15 @@ describe('SCRUM-93 servicioReserva: validarSeleccion', () => {
     const { total } = await validarSeleccion(7, seleccionValida);
     expect(total).toBe(3300 * 2 + 2640);
     expect(repositorio.contarAsientosDeSala).toHaveBeenCalledWith(7, [10, 11, 12]);
+  });
+
+  it('aplica la oferta de la función al total que se cobra', async () => {
+    prepararBdValida();
+    repositorioDescuento.buscarOfertaDeProyeccion.mockResolvedValue({ idDescuento: 9, porcentaje: 50 });
+
+    // 2 adultos a 1650 + 1 niño a 990
+    await expect(verificarSeleccion(7, seleccionValida)).resolves.toEqual({ total: 1650 * 2 + 990 });
+    expect(repositorioDescuento.buscarOfertaDeProyeccion).toHaveBeenCalledWith(7);
   });
 
   it('muestra "Te faltan asientos por seleccionar" si hay menos asientos que boletos', async () => {

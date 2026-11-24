@@ -110,23 +110,26 @@ function validarBoletos(boletos) {
   return conCantidad;
 }
 
-// Precio de cada tipo de boleto en una sala: el monto de la sala menos el descuento del tipo,
-// redondeado al colón. [[id, nombre, descuento %]] → [[id, nombre, precio]] (lo que recibe el cliente)
-export function calcularPrecios(tiposBoleto, montoSala) {
+// Precio de cada tipo de boleto en una sala: el monto de la sala menos el descuento del tipo y, si la función
+// tiene una oferta, menos el de la oferta. Los porcentajes se suman (con tope de 100%) y el precio se redondea al colón.
+// [[id, nombre, descuento %]] → [[id, nombre, precio]] (lo que recibe el cliente)
+export function calcularPrecios(tiposBoleto, montoSala, oferta = null) {
+  const porcentajeOferta = oferta?.porcentaje ?? 0;
   return tiposBoleto.map(([idTipoBoleto, nombre, descuento]) => [
     idTipoBoleto,
     nombre,
-    Math.round((montoSala * (100 - descuento)) / 100),
+    Math.round((montoSala * (100 - Math.min(100, descuento + porcentajeOferta))) / 100),
   ]);
 }
 
 // Los mismos precios por id, para la compra: monto a cobrar y descuento en colones
 // (lo que va en MONTO y DESCUENTO de DETALLES_FACTURA). monto + descuento = monto de la sala.
-export function mapaPrecios(tiposBoleto, montoSala) {
+// Con oferta también lleva su idDescuento, para dejarlo en el detalle de factura.
+export function mapaPrecios(tiposBoleto, montoSala, oferta = null) {
   return new Map(
-    calcularPrecios(tiposBoleto, montoSala).map(([idTipoBoleto, , precio]) => [
+    calcularPrecios(tiposBoleto, montoSala, oferta).map(([idTipoBoleto, , precio]) => [
       idTipoBoleto,
-      { monto: precio, descuento: montoSala - precio },
+      { monto: precio, descuento: montoSala - precio, ...(oferta ? { idDescuento: oferta.idDescuento } : {}) },
     ])
   );
 }
@@ -177,9 +180,13 @@ export async function consultarAsientos(idProyeccion) {
     throw new ErrorNoEncontrado('La función no existe o ya no está disponible');
   }
 
-  const [asientos, tiposBoleto] = await Promise.all([listarAsientos(idProyeccion), listarTiposBoleto()]);
+  const [asientos, tiposBoleto, oferta] = await Promise.all([
+    listarAsientos(idProyeccion),
+    listarTiposBoleto(),
+    buscarOfertaDeProyeccion(idProyeccion),
+  ]);
 
-  return { proyeccion, asientos, tiposBoleto: calcularPrecios(tiposBoleto, proyeccion[POSICION_MONTO_SALA]) };
+  return { proyeccion, asientos, tiposBoleto: calcularPrecios(tiposBoleto, proyeccion[POSICION_MONTO_SALA], oferta) };
 }
 
 // Solo revisa, no reserva. idCliente: su propia reserva no cuenta como ocupada (ver listarAsientosOcupados).
@@ -203,7 +210,8 @@ export async function validarSeleccion(idProyeccion, datos, idCliente) {
     throw new ErrorNoEncontrado('La función no existe o ya no está disponible');
   }
 
-  const precios = mapaPrecios(await listarTiposBoleto(), proyeccion[POSICION_MONTO_SALA]);
+  const oferta = await buscarOfertaDeProyeccion(idProyeccion);
+  const precios = mapaPrecios(await listarTiposBoleto(), proyeccion[POSICION_MONTO_SALA], oferta);
   if (!boletos.every(({ idTipoBoleto }) => precios.has(idTipoBoleto))) {
     throw new ErrorValidacion('El tipo de boleto no es válido');
   }
