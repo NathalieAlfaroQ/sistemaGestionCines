@@ -365,3 +365,8 @@ II Ciclo 2026
 ## Créditos
  
 - **Plantilla de los correos** (`servidor/src/plantillas/plantillaCorreo.js`): basada en [Free Responsive HTML Email Template](https://github.com/leemunroe/responsive-html-email-template) de Lee Munroe, con licencia MIT. Se le agregó el encabezado con la marca del cine y se quitaron el botón de llamada a la acción y el enlace para darse de baja. El aviso de la licencia está al inicio del archivo.
+
+
+## Pruebas
+En la carpeta servidor ejecutar: npm install --save-dev jest supertest
+Luego: npm test

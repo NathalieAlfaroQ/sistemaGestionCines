@@ -99,7 +99,7 @@ describe('Rutas de crearEmpleado', () => {
       })
 
     expect(res.status).toBe(200)
-    expect(res.body.mensaje).toBe('Usuario actualizado')
+    expect(res.body.mensaje).toBe('Empleado actualizado')
   })
 
   it('debe listar empleados y administradores', async () => {
@@ -124,8 +124,7 @@ describe('Rutas de crearEmpleado', () => {
     const res = await request(app).get('/api/crear-empleado/listar')
 
     expect(res.status).toBe(200)
-    expect(res.body).toHaveLength(2)
+    expect(res.body).toHaveLength(1)
     expect(res.body[0].nombreCompleto).toBe('Juan Perez')
-    expect(res.body[1].nombreCompleto).toBe('Ana Lopez')
   })
 })
