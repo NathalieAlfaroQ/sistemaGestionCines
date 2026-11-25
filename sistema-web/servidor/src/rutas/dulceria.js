@@ -36,7 +36,6 @@ async function verificarPermisoDulceria(connection, idCredencial) {
   return { tipoUsuario, idSede }
 }
 
-// GET /api/dulceria/listar?idCredencial=X
 router.get('/listar', async (req, res) => {
   const { idCredencial } = req.query
   let connection
@@ -71,7 +70,6 @@ router.get('/listar', async (req, res) => {
   }
 })
 
-// POST /api/dulceria/crear
 router.post('/crear', async (req, res) => {
   const { idCredencial, nombre, precio, cantidad } = req.body
   let connection
@@ -80,7 +78,6 @@ router.post('/crear', async (req, res) => {
     const permiso = await verificarPermisoDulceria(connection, idCredencial)
     if (!permiso) return res.status(403).json({ error: 'No tienes permisos' })
 
-    // Validaciones de servidor
     if (!nombre || typeof nombre !== 'string' || nombre.trim().length === 0 || nombre.length > 20) {
       return res.status(400).json({ error: 'Nombre inválido (máx 20 caracteres)' })
     }
@@ -93,7 +90,6 @@ router.post('/crear', async (req, res) => {
       return res.status(400).json({ error: 'Cantidad inválida' })
     }
 
-    // ¿Existe ya el producto en el catálogo global?
     const existente = await connection.execute(
       `SELECT ID_PRODUCTO FROM PRODUCTOS WHERE UPPER(NOMBRE_PRODUCTO) = UPPER(:nombre)`,
       { nombre: nombre.trim() }
@@ -101,7 +97,6 @@ router.post('/crear', async (req, res) => {
     let idProducto
     if (existente.rows.length > 0) {
       idProducto = existente.rows[0][0]
-      // ¿Ya está asociado a esta sede?
       const yaEnSede = await connection.execute(
         `SELECT 1 FROM CANTIDADES_PRODUCTOS WHERE ID_SEDE = :idSede AND ID_PRODUCTO = :idProducto`,
         { idSede: permiso.idSede, idProducto }
@@ -110,7 +105,6 @@ router.post('/crear', async (req, res) => {
         return res.status(409).json({ error: 'Este producto ya existe en tu sucursal' })
       }
     } else {
-      // Crear el producto en el catálogo
       const rProd = await connection.execute(
         `INSERT INTO PRODUCTOS (NOMBRE_PRODUCTO) VALUES (:nombre)
          RETURNING ID_PRODUCTO INTO :idProducto`,
@@ -123,7 +117,6 @@ router.post('/crear', async (req, res) => {
       idProducto = rProd.outBinds.idProducto[0]
     }
 
-    // Insertar stock y precio para la sede
     await connection.execute(
       `INSERT INTO CANTIDADES_PRODUCTOS (ID_SEDE, ID_PRODUCTO, CANTIDAD, PRECIO)
        VALUES (:idSede, :idProducto, :cantidad, :precio)`,
@@ -141,7 +134,6 @@ router.post('/crear', async (req, res) => {
   }
 })
 
-// PUT /api/dulceria/editar/:idCantidadProducto
 router.put('/editar/:idCantidadProducto', async (req, res) => {
   const { idCantidadProducto } = req.params
   const { idCredencial, nombre, precio, cantidad } = req.body
@@ -151,7 +143,6 @@ router.put('/editar/:idCantidadProducto', async (req, res) => {
     const permiso = await verificarPermisoDulceria(connection, idCredencial)
     if (!permiso) return res.status(403).json({ error: 'No tienes permisos' })
 
-    // Verificar que la fila pertenece a la sede del usuario
     const pertenece = await connection.execute(
       `SELECT ID_PRODUCTO, PRECIO FROM CANTIDADES_PRODUCTOS
        WHERE ID_CANTIDAD_PRODUCTO = :id AND ID_SEDE = :idSede`,
