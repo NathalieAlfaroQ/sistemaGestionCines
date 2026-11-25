@@ -13,6 +13,7 @@ const sqlPuntajesDePeliculas = `
     SELECT DISTINCT f.ID_FACTURA, p.ID_PELICULA
     FROM FACTURAS_FINALES f
     JOIN DETALLES_FACTURA df ON df.ID_FACTURA = f.ID_FACTURA AND df.TIPO_FACTURA = '${TIPO_DETALLE_BOLETO}'
+      AND df.ESTADO_DETALLE = 'ACTIVO' -- una compra cancelada no cuenta para los gustos del cliente
     JOIN PROYECCIONES p ON p.ID_PROYECCION = df.ID_PROYECCION
     WHERE f.ID_CLIENTE = :idCliente
   ),

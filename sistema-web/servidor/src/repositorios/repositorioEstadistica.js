@@ -5,9 +5,11 @@ const TIPO_DETALLE_BOLETO = 'BOLETO';
 // Cuántas películas muestra el ranking
 export const LIMITE_RANKING = 5;
 
+// Solo boletos ACTIVOS: uno devuelto no cuenta como venta ni como ingreso
 const desdeBoletosVendidos = `
   FROM FACTURAS_FINALES f
   JOIN DETALLES_FACTURA df ON df.ID_FACTURA = f.ID_FACTURA AND df.TIPO_FACTURA = '${TIPO_DETALLE_BOLETO}'
+    AND df.ESTADO_DETALLE = 'ACTIVO'
   JOIN PROYECCIONES p ON p.ID_PROYECCION = df.ID_PROYECCION
   JOIN PELICULAS pe ON pe.ID_PELICULA = p.ID_PELICULA
   JOIN SALAS s ON s.ID_SALA = p.ID_SALA

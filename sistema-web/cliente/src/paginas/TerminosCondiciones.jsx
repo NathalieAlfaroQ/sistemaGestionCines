@@ -22,7 +22,7 @@ const secciones = [
   {
     titulo: '5. Cambios y devoluciones',
     texto:
-      'Las entradas adquiridas no son reembolsables, salvo que la función sea cancelada o reprogramada por Cine Aurora. En ese caso se ofrecerá el reembolso o el cambio a otra función disponible.',
+      'Puedes cancelar tu compra de entradas desde tu perfil hasta 5 días antes de la función. Se cancela la compra completa: el dinero se devuelve por el mismo medio con el que pagaste (tarjeta o PayPal) y puede tardar unos días hábiles en verse reflejado, según tu banco o PayPal. Al cancelar recibirás un correo de confirmación y las entradas y sus códigos QR dejarán de ser válidos. Pasado ese plazo, las entradas no son reembolsables, salvo que la función sea cancelada o reprogramada por Cine Aurora; en ese caso se ofrecerá el reembolso o el cambio a otra función disponible.',
   },
   {
     titulo: '6. Protección de datos personales',

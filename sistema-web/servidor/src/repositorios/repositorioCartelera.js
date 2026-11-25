@@ -10,6 +10,11 @@ const sqlSedesActivas = `
   ORDER BY NOMBRE_SEDE
 `;
 
+// Días que el cliente puede elegir para comprar (hoy y los 9 siguientes): debe coincidir con
+// DIAS_SELECCIONABLES de cliente/src/paginas/HorariosPelicula.jsx. Una película cuyas funciones son
+// todas más adelante no se muestra: el cliente no podría elegir ninguna fecha para comprarla.
+export const DIAS_CARTELERA = 10;
+
 const sqlExisteSedeActiva = `SELECT 1 FROM SEDES WHERE ID_SEDE = :idSede AND ESTADO_SEDE = 1`;
 
 const sqlCartelera = `
@@ -25,6 +30,7 @@ const sqlCartelera = `
         AND s.ESTADO_SALA = 1
         AND p.ESTADO_PROYECCION = 1
         AND p.FECHA > TO_DATE(:ahora, '${FORMATO_AHORA}')
+        AND p.FECHA < TRUNC(TO_DATE(:ahora, '${FORMATO_AHORA}')) + ${DIAS_CARTELERA}
     )
   ORDER BY pe.TITULO
 `;

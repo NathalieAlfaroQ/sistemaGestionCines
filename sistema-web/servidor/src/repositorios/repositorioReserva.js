@@ -119,9 +119,11 @@ export async function obtenerProyeccionVigente(idProyeccion, ahora) {
 }
 
 // Mapa de asientos de la proyección, indicando cuáles están ocupados.
-// Ocupado = vendido (DETALLES_FACTURA) o apartado por una reserva vigente (RESERVAS_ASIENTOS).
-// Como en un cine, el cliente ve igual un asiento vendido que uno reservado.
-// La PK de RESERVAS_ASIENTOS es (ID_PROYECCION, ID_ASIENTO): el LEFT JOIN no duplica filas.
+// Ocupado = vendido (boleto ACTIVO en DETALLES_FACTURA) o apartado por una reserva vigente (RESERVAS_ASIENTOS).
+// Un boleto devuelto no ocupa el asiento. Como en un cine, el cliente ve igual un asiento vendido que uno reservado.
+// Los LEFT JOIN no duplican filas: el índice UQ_DETALLES_FACTURA_ASIENTO_ACTIVO permite un solo boleto ACTIVO
+// por asiento y función (puede haber varios DEVUELTOS, por eso el filtro va en el ON), y la PK de
+// RESERVAS_ASIENTOS es (ID_PROYECCION, ID_ASIENTO).
 // La expiración se compara con SYSDATE, el mismo reloj con que se guardó (ver repositorioReservaAsientos.js).
 
 const sqlAsientos = `
@@ -131,6 +133,7 @@ const sqlAsientos = `
   JOIN ASIENTOS a ON a.ID_SALA = p.ID_SALA
   LEFT JOIN DETALLES_FACTURA df
     ON df.ID_PROYECCION = p.ID_PROYECCION AND df.ID_ASIENTO = a.ID_ASIENTO
+    AND df.ESTADO_DETALLE = 'ACTIVO'
   LEFT JOIN RESERVAS_ASIENTOS r
     ON r.ID_PROYECCION = p.ID_PROYECCION AND r.ID_ASIENTO = a.ID_ASIENTO
     AND r.FECHA_EXPIRACION > SYSDATE
@@ -168,7 +171,7 @@ export async function contarAsientosDeSala(idProyeccion, idsAsientos) {
   return resultado.rows[0][0];
 }
 
-// Cuáles de los asientos pedidos ya están vendidos o reservados (reserva vigente) para la proyección.
+// Cuáles de los asientos pedidos ya están vendidos (boleto ACTIVO) o reservados (reserva vigente) para la proyección.
 // La reserva del propio cliente (idCliente) no cuenta: si vuelve a reservar los mismos asientos,
 // la suya se reemplaza. Sin idCliente (0, ningún cliente tiene ese id) cuentan todas las reservas.
 export async function listarAsientosOcupados(idProyeccion, idsAsientos, idCliente = 0) {
@@ -177,6 +180,7 @@ export async function listarAsientosOcupados(idProyeccion, idsAsientos, idClient
     SELECT ID_ASIENTO
     FROM DETALLES_FACTURA
     WHERE ID_PROYECCION = :idProyeccion AND ID_ASIENTO IN (${marcadores})
+      AND ESTADO_DETALLE = 'ACTIVO'
     UNION
     SELECT ID_ASIENTO
     FROM RESERVAS_ASIENTOS

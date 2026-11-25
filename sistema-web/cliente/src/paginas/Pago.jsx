@@ -93,7 +93,7 @@ function PantallaPago({ compraEnCurso, usuario, compraHecha, alTerminar, alVolve
   const sinReserva = !cargandoReserva && !errorReserva && !reservaValida;
   const tiempoAgotado = !compraHecha && !procesando && (sinReserva || segundosRestantes === 0);
 
-  // El botón de pagar queda abajo: se trae a la vista la alerta de "procesando" o del rechazo
+  // Los avisos quedan debajo del botón de pagar: se traen a la vista si no se alcanzan a ver
   useEffect(() => {
     if (procesando || errorPago) refAvisos.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [procesando, errorPago]);
@@ -169,30 +169,35 @@ function PantallaPago({ compraEnCurso, usuario, compraHecha, alTerminar, alVolve
         {pelicula.detalle && <EncabezadoPelicula detalle={pelicula.detalle} />}
 
         <ContenedorCliente className="py-10 flex flex-col gap-6">
-          {!compraHecha && (
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <BotonVolver alVolver={elegirOtrosAsientos} />
-              {reservaValida && segundosRestantes !== null && <CuentaRegresiva segundos={segundosRestantes} />}
-            </div>
-          )}
-
-          <div ref={refAvisos} className="flex flex-col gap-4 empty:hidden">
-            {errorReserva && <ErrorCarga error={errorReserva} alReintentar={recargarReserva} />}
-            {procesando && (
-              <p role="alert" className="rounded-md border border-warning px-4 py-3 text-warning">
-                {MENSAJE_PROCESANDO}
-              </p>
+          {/* Una sola columna en todos los tamaños: detalles, datos de pago, botón y, debajo, los avisos.
+              Se lee de arriba hacia abajo y el botón queda al final, después de llenar el formulario. */}
+          <div className="mx-auto flex w-full max-w-2xl flex-col gap-10">
+            {!compraHecha && (
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <BotonVolver alVolver={elegirOtrosAsientos} />
+                {reservaValida && segundosRestantes !== null && <CuentaRegresiva segundos={segundosRestantes} />}
+              </div>
             )}
-            {errorPago && <ErrorCarga error={errorPago} />}
-          </div>
 
-          <div className="grid gap-12 lg:grid-cols-[22rem_1fr] lg:items-start">
             <ResumenCompra
               proyeccion={mapa.proyeccion}
               etiquetas={compraEnCurso.etiquetas ?? []}
               boletos={compraEnCurso.boletos}
               tiposBoleto={mapa.tiposBoleto}
-            >
+            />
+
+            <FormularioPago
+              id={ID_FORMULARIO}
+              usuario={usuario}
+              metodoGuardado={metodoGuardado}
+              metodo={metodo}
+              setMetodo={setMetodo}
+              tarjeta={tarjeta}
+              deshabilitado={procesando}
+              alEnviar={pagar}
+            />
+
+            <div className="flex flex-col gap-4">
               {metodo === METODOS.paypal ? (
                 <BotonPayPal
                   seleccion={datosCompra}
@@ -212,18 +217,18 @@ function PantallaPago({ compraEnCurso, usuario, compraHecha, alTerminar, alVolve
                   {procesando ? 'Procesando pago...' : 'Completar pago'}
                 </Boton>
               )}
-            </ResumenCompra>
 
-            <FormularioPago
-              id={ID_FORMULARIO}
-              usuario={usuario}
-              metodoGuardado={metodoGuardado}
-              metodo={metodo}
-              setMetodo={setMetodo}
-              tarjeta={tarjeta}
-              deshabilitado={procesando}
-              alEnviar={pagar}
-            />
+              {/* Avisos debajo del botón, donde el cliente está mirando al pagar */}
+              <div ref={refAvisos} className="flex flex-col gap-4 empty:hidden">
+                {errorReserva && <ErrorCarga error={errorReserva} alReintentar={recargarReserva} />}
+                {procesando && (
+                  <p role="alert" className="rounded-md border border-warning px-4 py-3 text-warning">
+                    {MENSAJE_PROCESANDO}
+                  </p>
+                )}
+                {errorPago && <ErrorCarga error={errorPago} />}
+              </div>
+            </div>
           </div>
         </ContenedorCliente>
 

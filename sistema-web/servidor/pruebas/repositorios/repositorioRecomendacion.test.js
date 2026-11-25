@@ -30,6 +30,15 @@ describe('puntajesDePeliculas', () => {
     expect(sql).toContain('SELECT DISTINCT f.ID_FACTURA, p.ID_PELICULA')
   })
 
+  it('una compra cancelada no cuenta: solo boletos ACTIVOS', async () => {
+    ejecutar.mockResolvedValue({ rows: [] })
+
+    await puntajesDePeliculas(4)
+
+    const [sql] = ejecutar.mock.calls[0]
+    expect(sql).toContain(`AND df.ESTADO_DETALLE = 'ACTIVO'`)
+  })
+
   it('cada compra reparte 1 punto entre los géneros de su película y el peso es su parte del total', async () => {
     ejecutar.mockResolvedValue({ rows: [] })
 

@@ -191,7 +191,8 @@ export async function consultarAsientos(idProyeccion) {
 }
 
 // Solo revisa, no reserva. idCliente: su propia reserva no cuenta como ocupada (ver listarAsientosOcupados).
-// Las garantías contra la doble venta son la PK de RESERVAS_ASIENTOS y el UNIQUE de DETALLES_FACTURA.
+// Las garantías contra la doble venta son la PK de RESERVAS_ASIENTOS y el índice único de boletos
+// activos de DETALLES_FACTURA (UQ_DETALLES_FACTURA_ASIENTO_ACTIVO).
 export async function validarSeleccion(idProyeccion, datos, idCliente) {
   validarId(idProyeccion, 'la función');
 
