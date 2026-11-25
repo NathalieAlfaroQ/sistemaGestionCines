@@ -27,6 +27,8 @@ import crearEmpleado from './crearEmpleado.js'
 import rutasGoogle from './rutas/rutasGoogle.js'
 import rutasCompra from './rutas/rutasCompra.js'
 
+import dulceriaRouter from './rutas/dulceria.js'
+
 dotenv.config()
 
 const app = express()
@@ -74,9 +76,9 @@ app.use('/api/cambiar-contrasena', cambiarContrasena)
 app.use('/api/perfil', verificarAutenticacion, rutasPerfil)
 app.use('/api/crear-empleado', crearEmpleado) 
 app.use('/api/iniciar-sesion-google', rutasGoogle)
+app.use('/api/dulceria', dulceriaRouter)
 
 app.use(manejadorErrores)
-
 
 app.listen(PORT, () => {
   console.log(`Servidor Express listo en http://localhost:${PORT}`)

@@ -25,7 +25,7 @@ export async function enviarCorreoContrasena(correo, nombre, contrasena, tipoUsu
   let cuerpoHTML = ''
   const nombreSeguro = escaparHTML(nombre) 
   // CAMBIAR A ENLACE CORRECTO
-  const enlaceLogin = `${process.env.CLIENT_URL || 'http://localhost:5173'}/iniciar-sesion`
+  const enlaceLogin = 'https://152.70.200.39/iniciar-sesion'
 
   if (motivo === 'RECUPERACION') {
     asunto = 'Contraseña temporal'

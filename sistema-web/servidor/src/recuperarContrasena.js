@@ -11,7 +11,7 @@ router.post('/', async (req, res) => {
   const { correo } = req.body
 
   if (!correo) {
-    return res.status(400).json({ error: 'El correo es obligatorio' })
+    return res.status(400).json({ error: 'Espacio obligatorio' })
   }
 
   let connection
@@ -27,7 +27,7 @@ router.post('/', async (req, res) => {
     )
 
     if (result.rows.length === 0) {
-      return res.json({ mensaje: 'Si el correo está registrado, recibirás una contraseña temporal.' })
+      return res.status(404).json({ error: 'X Correo inválido' })
     }
 
     const [idCredencial, tipoUsuario, idCliente, idEmpleado, idAdministrador] = result.rows[0]
@@ -39,25 +39,21 @@ router.post('/', async (req, res) => {
         'SELECT NOMBRE FROM CLIENTES WHERE ID_CLIENTE = :id',
         { id: idCliente }
       )
-
       if (r.rows.length > 0) nombre = r.rows[0][0]
     } else if (tipoUsuario === 'EMPLEADO' && idEmpleado) {
       const r = await connection.execute(
         'SELECT NOMBRE_EMPLEADO FROM EMPLEADOS WHERE ID_EMPLEADO = :id',
         { id: idEmpleado }
       )
-
       if (r.rows.length > 0) nombre = r.rows[0][0]
     } else if (tipoUsuario === 'ADMINISTRADOR' && idAdministrador) {
       const r = await connection.execute(
         'SELECT NOMBRE FROM ADMINISTRADORES WHERE ID_ADMINISTRADOR = :id',
         { id: idAdministrador }
       )
-
       if (r.rows.length > 0) nombre = r.rows[0][0]
     }
 
-    // Cuando se hace la contrasena, se le hace el hash
     const contrasenaTemp = generarContrasena()
     const salt = await bcrypt.genSalt(10)
     const hash = await bcrypt.hash(contrasenaTemp, salt)
@@ -76,12 +72,11 @@ router.post('/', async (req, res) => {
     await enviarCorreoContrasena(correo, nombre || 'usuario', contrasenaTemp, tipoUsuario)
 
     return res.json({
-      mensaje: 'Si el correo está registrado, recibirás una contraseña temporal.'
+      mensaje: 'Contraseña temporal enviada. Revisa tu correo.'
     })
   } catch (error) {
     console.error('Error en /recuperar-contrasena:', error)
-
-    return res.status(500).json({ error: 'Error interno del servidor' })
+    return res.status(500).json({ error: 'Error al cargar la pantalla, intenta luego.' })
   } finally {
     if (connection) await connection.close()
   }

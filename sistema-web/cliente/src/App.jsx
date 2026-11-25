@@ -1,6 +1,5 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 
-// Layout y páginas del compañero
 import DisenoGestion from './common/DisenoGestion.jsx'
 import Sedes from './paginas/Sedes.jsx'
 import CrearSede from './paginas/CrearSede.jsx'
@@ -17,7 +16,7 @@ import Empleados from './paginas/Empleados.jsx'
 import Estadisticas from './paginas/Estadisticas.jsx'
 import RutaProtegida from './rutas/RutaProtegida.jsx'
 import TerminosCondiciones from './paginas/TerminosCondiciones.jsx'
-
+import Dulceria from './paginas/Dulceria.jsx';
 
 // Componentes y pantallas tuyas
 import CrearCuenta from './componentes/CrearCuenta'
@@ -46,7 +45,7 @@ const rutasPublicas = [
 ]
 
 // Prefijos de rutas de trabajo (usan DisenoGestion, que ya incluye BarraEmpleado y PiePagina)
-const prefijosTrabajo = ['/dashboard', '/peliculas', '/sedes', '/salas', '/proyecciones', '/descuentos', '/empleados']
+const prefijosTrabajo = ['/dashboard', '/peliculas', '/sedes', '/salas', '/proyecciones', '/descuentos', '/empleados', '/dulceria']
 
 function App() {
   const { pathname } = useLocation()
@@ -86,6 +85,7 @@ function App() {
             <Route path="/peliculas/:id/editar" element={<EditarPelicula />} />
             <Route path="/sedes" element={<Sedes />} />
             <Route path="/sedes/nueva" element={<CrearSede />} />
+            <Route path="/dulceria" element={<Dulceria />} /> 
             
             {/* RUTA DE EMPLEADOS */}
             <Route path="/empleados" element={<Empleados />} />
@@ -99,7 +99,6 @@ function App() {
         </Route>
 
         {/* --- Rutas de cliente --- */}
-        <Route path="/dulceria" element={<div>Dulcería</div>} />
         <Route path="/cartelera" element={<div>Cartelera</div>} />
         <Route path="/cartelera/:idPelicula" element={<HorariosPelicula />} />
         <Route path="/funciones/:idProyeccion/asientos" element={<SeleccionAsientos />} />
@@ -110,6 +109,7 @@ function App() {
         <Route path="/proyecciones" element={<div>Proyecciones</div>} />
         {/* Rutas de trabajo que aún no tienen componente, quedan como placeholder */}
         <Route path="/empleados" element={<div>Empleados</div>} />
+
 
         {/* --- Inicio y cartelera --- */}
         <Route path="/" element={<Inicio />} />
