@@ -55,16 +55,8 @@ function validarIds(idFactura, idCliente) {
   }
 }
 
-async function obtenerComprobante(idFactura, idCliente) {
-  const filas = await listarBoletosDeFactura(idFactura, idCliente);
-  if (filas.length === 0) {
-    throw new ErrorNoEncontrado('La compra no existe');
-  }
-  // Se devuelve la compra completa: si no le queda ningún boleto activo, fue cancelada
-  if (!filas.some((fila) => fila[16] === ESTADO_BOLETO_ACTIVO)) {
-    throw new ErrorConflicto(MENSAJE_COMPRA_CANCELADA);
-  }
-
+// Datos de la compra a partir de las filas de listarBoletosDeFactura, sin revisar su estado
+function armarComprobante(idFactura, filas) {
   const [, total, fechaCompra, codigoPago, titulo, clasificacion, fechaFuncion, sede, sala, formato] = filas[0];
 
   return {
@@ -85,6 +77,26 @@ async function obtenerComprobante(idFactura, idCliente) {
       textoQr: textoQr(fila[17], fila[10], fila[11]),
     })),
   };
+}
+
+async function obtenerComprobante(idFactura, idCliente) {
+  const filas = await listarBoletosDeFactura(idFactura, idCliente);
+  if (filas.length === 0) {
+    throw new ErrorNoEncontrado('La compra no existe');
+  }
+  // Se devuelve la compra completa: si no le queda ningún boleto activo, fue cancelada
+  if (!filas.some((fila) => fila[16] === ESTADO_BOLETO_ACTIVO)) {
+    throw new ErrorConflicto(MENSAJE_COMPRA_CANCELADA);
+  }
+  return armarComprobante(idFactura, filas);
+}
+
+// Para el correo de la devolución: los datos de la compra se leen ANTES de cancelarla (fuera de la
+// transacción, para no pedir otra conexión al pool desde adentro). Devuelve null si la factura no
+// existe o es de otro cliente.
+export async function obtenerCompraParaDevolucion(idFactura, idCliente) {
+  const filas = await listarBoletosDeFactura(idFactura, idCliente);
+  return filas.length === 0 ? null : armarComprobante(idFactura, filas);
 }
 
 // Imagen PNG del QR de cada boleto, en el mismo orden que comprobante.boletos
@@ -267,4 +279,58 @@ export async function generarPdfBoletos(idFactura, idCliente) {
   const qrs = await generarQrs(comprobante.boletos);
 
   return { nombreArchivo: nombreArchivoPdf(idFactura), pdf: await generarPdf(comprobante, qrs) };
+}
+
+// Correo de confirmación de la devolución (SCRUM-51)
+
+// Igual a NOMBRE_METODO_TARJETA de servicioCompra.js (no se importa de ahí: servicioCompra ya importa
+// este archivo y se formaría una dependencia circular)
+const METODO_TARJETA = 'Tarjeta';
+
+// Hacia dónde va el dinero y cuánto puede tardar, según cómo se pagó
+function textoReembolso(metodo) {
+  return metodo === METODO_TARJETA
+    ? 'a la tarjeta con la que pagaste. Según tu banco, puede tardar unos días hábiles en verse reflejado.'
+    : 'a tu cuenta de PayPal. Puede tardar unos días hábiles en verse reflejado.';
+}
+
+function generarHtmlDevolucion(compra, nombreCliente, monto, metodo) {
+  const asientos = compra.boletos.map((boleto) => escaparHtml(boleto.asiento)).join(', ');
+  const reembolso =
+    monto > 0
+      ? `Te devolvimos <strong>${escaparHtml(formatearMonto(monto))}</strong> ${textoReembolso(metodo)}`
+      : 'Esta compra no tenía un monto por devolver.';
+
+  const contenido = `
+    <p style="${ESTILO_PARRAFO}">Hola ${escaparHtml(nombreCliente)},</p>
+    <p style="${ESTILO_PARRAFO}">Cancelamos tu compra. ${reembolso}</p>
+    <p style="${ESTILO_PARRAFO} margin-bottom: 4px; font-size: 20px; font-weight: bold;">${escaparHtml(compra.titulo)}</p>
+    <p style="${ESTILO_PARRAFO} color: ${COLOR_TEXTO_SECUNDARIO};">
+      ${escaparHtml(compra.fechaFuncion)}<br>
+      ${escaparHtml(compra.sede)} · ${escaparHtml(compra.sala)} · ${escaparHtml(compra.formato)}<br>
+      Asientos: ${asientos}
+    </p>
+    <p style="${ESTILO_PARRAFO} font-weight: bold; color: ${COLOR_MARCA};">
+      Los boletos y los códigos QR de esta compra ya no son válidos.
+    </p>
+    <p style="${ESTILO_PARRAFO} margin-bottom: 0; font-size: 14px; color: ${COLOR_TEXTO_SECUNDARIO};">
+      Factura N.º ${compra.idFactura} · Fecha de compra: ${escaparHtml(compra.fechaCompra)}
+    </p>`;
+
+  return plantillaCorreo({
+    titulo: `Compra cancelada - ${NOMBRE_CINE}`,
+    preencabezado: `Cancelamos tu compra para ${escaparHtml(compra.titulo)}`,
+    contenido,
+    pie: `${NOMBRE_CINE} · Este correo confirma la cancelación de tu compra.`,
+  });
+}
+
+// compra: lo que devuelve obtenerCompraParaDevolucion. cliente: { nombre, correo }.
+// monto y metodo: lo que devolvió PR_SOLICITAR_DEVOLUCION.
+export async function enviarConfirmacionDevolucion({ compra, cliente, monto, metodo }) {
+  await enviarCorreo({
+    para: cliente.correo,
+    asunto: `Cancelaste tu compra para ${compra.titulo} - ${NOMBRE_CINE}`,
+    html: generarHtmlDevolucion(compra, cliente.nombre, monto, metodo),
+  });
 }
