@@ -19,10 +19,10 @@ const ESTILO_BOTON = { layout: 'vertical', color: 'gold', shape: 'rect', label: 
 // - onApprove: el cliente aprobó -> el servidor verifica y captura (aquí se cobra)
 // - onCancel: el cliente cerró la ventana o canceló
 // - onError: cualquier otro fallo (incluido un error de createOrder)
-// seleccion = { idProyeccion, asientos, boletos }
+// seleccion = { idProyeccion }: los asientos y boletos los toma el servidor de la reserva del cliente
 function BotonPayPal({ seleccion, deshabilitado, alEmpezarCaptura, alTerminar, alFallar }) {
   // createOrder no puede pasarle su error a onError (PayPal lo reemplaza por uno genérico):
-  // se guarda aquí para saber, por ejemplo, si fue un asiento ya vendido (409)
+  // se guarda aquí para saber, por ejemplo, si la reserva venció (409)
   const errorAlCrear = useRef(null);
 
   async function crearOrden() {

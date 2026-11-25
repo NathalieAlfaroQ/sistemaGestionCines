@@ -1,16 +1,20 @@
 import {
-  buscarChoqueDeDescuento,
   contarPeliculasActivas,
+  actualizarDescuento,
   crearDescuento,
   desactivarDescuento as desactivarDescuentoEnRepositorio,
+  existeDescuento,
   existeSedeActiva,
   listarDescuentos,
 } from '../repositorios/repositorioDescuento.js';
-import { ErrorConflicto } from '../errores/ErrorConflicto.js';
+// import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
 import { ahoraCostaRica } from '../utilidades/fechas.js';
 import { estadoDeFiltro, exigirObjeto, idDeFiltro, idObligatorio } from '../utilidades/validaciones.js';
+
+// 'AAAA-MM-DD HH:MM' en hora de Costa Rica
+const ahoraTexto = () => ahoraCostaRica().slice(0, 16);
 
 const ESTADOS_DESCUENTO = { activos: 1, eliminados: 0, todos: null };
 
@@ -47,6 +51,7 @@ export async function obtenerDescuentos({ busqueda, idSede, idPelicula, fechaIni
     fechaInicio: fechaDeFiltro(fechaInicio, 'fecha de inicio'),
     fechaFin: fechaDeFiltro(fechaFin, 'fecha de fin'),
     estado: idEstado,
+    ahora: ahoraTexto(),
   });
 }
 
@@ -115,11 +120,12 @@ function validarDatosDescuento(datos) {
   return { nombre, idSede, aplicaTodas, idsPeliculas, porcentaje, fechaInicio, fechaFin };
 }
 
-export async function registrarDescuento(datos) {
-  const descuento = validarDatosDescuento(datos);
-
-  if (descuento.fechaFin <= ahoraCostaRica().slice(0, 16)) {
+async function verificarDescuento(descuento, idDescuentoActual = null) {
+  if (descuento.fechaFin <= ahoraTexto()) {
     throw new ErrorValidacion('La fecha y hora de fin debe ser posterior a la fecha y hora actuales');
+  }
+  if (idDescuentoActual !== null && !(await existeDescuento(idDescuentoActual))) {
+    throw new ErrorNoEncontrado('El descuento no existe');
   }
 
   if (!(await existeSedeActiva(descuento.idSede))) throw new ErrorValidacion('El cine seleccionado no existe');
@@ -128,19 +134,35 @@ export async function registrarDescuento(datos) {
     throw new ErrorValidacion('Una de las películas seleccionadas no existe');
   }
 
-  const choque = await buscarChoqueDeDescuento(descuento);
-  if (choque) {
-    const aplicaA = choque.titulo ? `"${choque.titulo}"` : 'todas las películas';
-    throw new ErrorConflicto(`El descuento "${choque.nombre}" ya aplica a ${aplicaA} en ese cine durante ese periodo`);
-  }
+  // const choque = await buscarChoqueDeDescuento({ ...descuento, ahora: ahoraTexto(), idDescuentoActual });
+  // if (choque) {
+  //   const aplicaA = choque.titulo ? `"${choque.titulo}"` : 'todas las películas';
+  //   throw new ErrorConflicto(`El descuento "${choque.nombre}" ya aplica a ${aplicaA} en ese cine durante ese periodo`);
+  // }
+}
+
+export async function registrarDescuento(datos) {
+  const descuento = validarDatosDescuento(datos);
+  await verificarDescuento(descuento);
 
   return await crearDescuento(descuento);
+}
+
+export async function modificarDescuento(idDescuento, datos) {
+  const id = idObligatorio(idDescuento, 'El identificador del descuento no es válido');
+  const descuento = validarDatosDescuento(datos);
+  await verificarDescuento(descuento, id);
+
+  if (!(await actualizarDescuento({ idDescuento: id, ...descuento }))) {
+    throw new ErrorNoEncontrado('El descuento no existe');
+  }
+  return id;
 }
 
 export async function desactivarDescuento(idDescuento) {
   const id = idObligatorio(idDescuento, 'El identificador del descuento no es válido');
 
-  if (!(await desactivarDescuentoEnRepositorio(id))) {
+  if (!(await desactivarDescuentoEnRepositorio({ idDescuento: id, ahora: ahoraTexto() }))) {
     throw new ErrorNoEncontrado('El descuento no existe o ya fue eliminado');
   }
 }

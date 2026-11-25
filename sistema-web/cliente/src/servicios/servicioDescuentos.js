@@ -14,9 +14,9 @@ export async function obtenerDescuentos(filtros = {}) {
   );
 }
 
-export async function crearDescuento(descuento) {
-  const respuesta = await peticionApi('/api/descuentos', {
-    method: 'POST',
+async function enviarDescuento(url, metodo, descuento, mensajeError) {
+  const respuesta = await peticionApi(url, {
+    method: metodo,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(descuento),
   });
@@ -24,10 +24,18 @@ export async function crearDescuento(descuento) {
   const cuerpo = await respuesta.json().catch(() => ({}));
 
   if (!respuesta.ok) {
-    throw new Error(cuerpo.mensaje ?? 'No se pudo crear el descuento');
+    throw new Error(cuerpo.mensaje ?? mensajeError);
   }
 
   return cuerpo;
+}
+
+export function crearDescuento(descuento) {
+  return enviarDescuento('/api/descuentos', 'POST', descuento, 'No se pudo crear el descuento');
+}
+
+export function editarDescuento(idDescuento, descuento) {
+  return enviarDescuento(`/api/descuentos/${idDescuento}`, 'PUT', descuento, 'No se pudo editar el descuento');
 }
 
 export async function eliminarDescuento(idDescuento) {

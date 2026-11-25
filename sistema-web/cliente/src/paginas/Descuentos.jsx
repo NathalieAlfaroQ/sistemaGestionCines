@@ -11,6 +11,7 @@ import { formatearFecha } from '../utilidades/formatearFecha.js';
 import Tabla from '../common/Tabla.jsx';
 import ErrorCarga from '../componentes/ErrorCarga.jsx';
 import CrearDescuento from '../componentes/CrearDescuento.jsx';
+import EditarDescuento from '../componentes/EditarDescuento.jsx';
 import ModalConfirmacion from '../common/ModalConfirmacion.jsx';
 import { eliminarDescuento } from '../servicios/servicioDescuentos.js';
 import { useNotificaciones } from '../ganchos/useNotificaciones.js';
@@ -36,6 +37,7 @@ function Descuentos() {
   const busquedaRetrasada = useDebounce(busqueda, 400);
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
   const [creando, setCreando] = useState(false);
+  const [descuentoAEditar, setDescuentoAEditar] = useState(null);
   const notificaciones = useNotificaciones();
 
   const { descuentos, cargando, error, recargar } = useDescuentos({
@@ -59,6 +61,12 @@ function Descuentos() {
   function descuentoCreado() {
     setCreando(false);
     notificaciones.exito('Descuento creado con éxito');
+    recargar();
+  }
+
+  function descuentoEditado() {
+    setDescuentoAEditar(null);
+    notificaciones.exito('Descuento editado con éxito');
     recargar();
   }
 
@@ -133,7 +141,7 @@ function Descuentos() {
   return (
     <main className="flex-1 bg-background text-text-color">
       <div className="max-w-screen-2xl mx-auto px-8 py-8">
-        <div className="mb-5 flex items-center gap-4">
+        <div className="mb-5 flex items-center gap-11">
           <h1 className="text-4xl font-bold">Descuentos</h1>
 
           <button type="button" onClick={() => setCreando(true)} className={claseBoton}>
@@ -160,7 +168,8 @@ function Descuentos() {
         <ErrorCarga error={error} alReintentar={recargar} className="mb-4" />
         <ErrorCarga error={errorCatalogo} alReintentar={recargarCatalogo} className="mb-4" />
 
-        {/* Si la carga falla no se muestra la tabla ni el mensaje de lista vacía */}
+        {/* Si la carga falla no se muestra la tabla ni el mensaje de lista vacía.
+            Un descuento eliminado o vencido se puede editar (guardarlo con un fin futuro lo reactiva), pero no volver a eliminar */}
         {!error && (
           <Tabla
             columnas={columnas}
@@ -169,19 +178,28 @@ function Descuentos() {
             filtros={filtros}
             alCambiarFiltros={setFiltros}
             textoVacio={cargando ? '' : textoVacio}
+            onEditar={setDescuentoAEditar}
             onEliminar={setDescuentoAEliminar}
-            accionesDeshabilitadas={descuentoEliminado}
+            eliminarDeshabilitado={descuentoEliminado}
           />
         )}
       </div>
 
       {creando && <CrearDescuento alCancelar={() => setCreando(false)} alCrear={descuentoCreado} />}
 
+      {descuentoAEditar && (
+        <EditarDescuento
+          descuento={descuentoAEditar}
+          alCancelar={() => setDescuentoAEditar(null)}
+          alEditar={descuentoEditado}
+        />
+      )}
+
       {descuentoAEliminar && (
         <ModalConfirmacion
           peligrosa
           titulo="Eliminar descuento"
-          mensaje={`¿Está seguro de que desea eliminar el descuento "${descuentoAEliminar[POS_DESCUENTO.nombre]}" de ${descuentoAEliminar[POS_DESCUENTO.cine]}? Esta acción es permanente.`}
+          mensaje={`¿Está seguro de que desea eliminar el descuento "${descuentoAEliminar[POS_DESCUENTO.nombre]}" de ${descuentoAEliminar[POS_DESCUENTO.cine]}? Podrá reactivarlo editándolo con una fecha de fin futura.`}
           textoConfirmar="Eliminar"
           alConfirmar={confirmarEliminacion}
           alCancelar={() => setDescuentoAEliminar(null)}

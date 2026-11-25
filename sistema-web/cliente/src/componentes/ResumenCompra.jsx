@@ -24,7 +24,7 @@ function lineasBoletos(boletos, tiposBoleto) {
   });
 }
 
-// Columna izquierda de la pantalla de pago: función, asientos y detalle de la orden.
+// Primera parte de la pantalla de pago: función, asientos y detalle de la orden.
 // El total que se muestra es informativo; el servidor lo vuelve a calcular al cobrar.
 function ResumenCompra({ proyeccion, etiquetas, boletos, tiposBoleto, children }) {
   const fechaHora = proyeccion[POS_PROYECCION.fecha];

@@ -3,15 +3,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('../../src/repositorios/repositorioDescuento.js', () => ({
   buscarChoqueDeDescuento: vi.fn(),
   contarPeliculasActivas: vi.fn(),
+  actualizarDescuento: vi.fn(),
   crearDescuento: vi.fn(),
   desactivarDescuento: vi.fn(),
+  existeDescuento: vi.fn(),
   existeSedeActiva: vi.fn(),
   listarDescuentos: vi.fn(),
 }))
 
 import * as repositorio from '../../src/repositorios/repositorioDescuento.js'
-import { desactivarDescuento, obtenerDescuentos, registrarDescuento } from '../../src/servicios/servicioDescuento.js'
-import { ErrorConflicto } from '../../src/errores/ErrorConflicto.js'
+import { desactivarDescuento, modificarDescuento, obtenerDescuentos, registrarDescuento } from '../../src/servicios/servicioDescuento.js'
 import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js'
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js'
 
@@ -24,6 +25,8 @@ beforeEach(() => {
   repositorio.contarPeliculasActivas.mockResolvedValue(2)
   repositorio.buscarChoqueDeDescuento.mockResolvedValue(null)
   repositorio.crearDescuento.mockResolvedValue(15)
+  repositorio.existeDescuento.mockResolvedValue(true)
+  repositorio.actualizarDescuento.mockResolvedValue(true)
 })
 
 describe('obtenerDescuentos', () => {
@@ -31,6 +34,7 @@ describe('obtenerDescuentos', () => {
     await obtenerDescuentos()
 
     expect(listarDescuentos).toHaveBeenCalledWith({
+      ahora: listarDescuentos.mock.calls[0][0].ahora,
       busqueda: null,
       idSede: null,
       idPelicula: null,
@@ -40,13 +44,11 @@ describe('obtenerDescuentos', () => {
     })
   })
 
-  /* Para restaurar el vencimiento automático: quitar este comentario (y cambiar la prueba anterior a objectContaining)
   it('manda la fecha y hora actuales (AAAA-MM-DD HH:MM) para que los vencidos cuenten como eliminados', async () => {
     await obtenerDescuentos()
 
     expect(listarDescuentos.mock.calls[0][0].ahora).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
   })
-  */
 
   it('devuelve lo que entrega el repositorio', async () => {
     listarDescuentos.mockResolvedValue([[1, 'Lunes de cine']])
@@ -66,6 +68,7 @@ describe('obtenerDescuentos', () => {
     await obtenerDescuentos({ idSede: '4', idPelicula: '7', fechaInicio: '2026-11-16', fechaFin: '2026-11-22', estado: 'todos' })
 
     expect(listarDescuentos).toHaveBeenCalledWith({
+      ahora: listarDescuentos.mock.calls[0][0].ahora,
       busqueda: null,
       idSede: 4,
       idPelicula: 7,
@@ -165,28 +168,15 @@ describe('registrarDescuento', () => {
     )
   })
 
-  it('con "todas" también busca choques', async () => {
+  it('permite una oferta que se cruza con otra del mismo cine y periodo, también con "todas": se suman al cobrar', async () => {
     repositorio.buscarChoqueDeDescuento.mockResolvedValue({ nombre: 'Semana de estrenos', titulo: 'Clayface' })
 
-    await expect(registrarDescuento({ ...VALIDO, aplicaTodas: true })).rejects.toThrow('ya aplica a "Clayface"')
-    expect(repositorio.buscarChoqueDeDescuento).toHaveBeenCalledWith(expect.objectContaining({ aplicaTodas: true }))
-  })
-
-  it('indica "todas las películas" cuando el descuento que choca aplica a todas', async () => {
-    repositorio.buscarChoqueDeDescuento.mockResolvedValue({ nombre: 'Día del cine', titulo: null })
-
-    await expect(registrarDescuento(VALIDO)).rejects.toThrow(
-      'El descuento "Día del cine" ya aplica a todas las películas en ese cine durante ese periodo',
-    )
-  })
-
-  /* Para restaurar el vencimiento automático: quitar este comentario
-  it('al buscar choques manda la hora actual, para que un descuento vencido no bloquee', async () => {
     await registrarDescuento(VALIDO)
+    await registrarDescuento({ ...VALIDO, aplicaTodas: true })
 
-    expect(repositorio.buscarChoqueDeDescuento.mock.calls[0][0].ahora).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
+    expect(repositorio.crearDescuento).toHaveBeenCalledTimes(2)
+    expect(repositorio.buscarChoqueDeDescuento).not.toHaveBeenCalled()
   })
-  */
 
   it('rechaza datos que no son un objeto', async () => {
     await expect(registrarDescuento(null)).rejects.toThrow('Los datos del descuento no son válidos')
@@ -206,14 +196,100 @@ describe('registrarDescuento', () => {
     expect(repositorio.crearDescuento).not.toHaveBeenCalled()
   })
 
-  it('responde con conflicto cuando otro descuento ya cubre la película en ese cine y periodo', async () => {
-    repositorio.buscarChoqueDeDescuento.mockResolvedValue({ nombre: 'Semana de estrenos', titulo: 'Clayface' })
+})
 
-    const error = await registrarDescuento(VALIDO).catch((fallo) => fallo)
+describe('modificarDescuento', () => {
+  it('actualiza todos los datos con los valores limpios y devuelve el id', async () => {
+    expect(await modificarDescuento('12', { ...VALIDO, nombre: '  Martes de cine ' })).toBe(12)
 
-    expect(error instanceof ErrorConflicto).toBe(true)
-    expect(error.message).toBe('El descuento "Semana de estrenos" ya aplica a "Clayface" en ese cine durante ese periodo')
-    expect(repositorio.crearDescuento).not.toHaveBeenCalled()
+    expect(repositorio.actualizarDescuento).toHaveBeenCalledWith({
+      idDescuento: 12,
+      nombre: 'Martes de cine',
+      idSede: 4,
+      aplicaTodas: false,
+      idsPeliculas: [7, 9],
+      porcentaje: 20,
+      fechaInicio: '2099-11-16 08:00',
+      fechaFin: '2099-11-22 22:00',
+    })
+  })
+
+  it('permite cambiar cine, películas, porcentaje y fechas', async () => {
+    await modificarDescuento(12, {
+      ...VALIDO,
+      idSede: 2,
+      aplicaTodas: true,
+      idsPeliculas: [],
+      porcentaje: 50,
+      fechaInicio: '2099-12-01',
+      fechaFin: '2099-12-02',
+    })
+
+    expect(repositorio.actualizarDescuento).toHaveBeenCalledWith(
+      expect.objectContaining({ idSede: 2, aplicaTodas: true, idsPeliculas: [], porcentaje: 50, fechaInicio: '2099-12-01 08:00', fechaFin: '2099-12-02 22:00' }),
+    )
+  })
+
+  it.each([
+    [{ nombre: '   ' }, 'El nombre es obligatorio'],
+    [{ porcentaje: 0 }, 'El porcentaje debe ser mayor que 0 y no mayor que 100'],
+    [{ porcentaje: 12.345 }, 'El porcentaje admite máximo dos decimales'],
+    [{ idSede: 'abc' }, 'El cine es obligatorio'],
+    [{ idsPeliculas: [] }, 'Debe seleccionar al menos una película'],
+    [{ fechaFin: '2099-11-16', horaFin: '08:00' }, 'La fecha y hora de fin debe ser posterior a la de inicio'],
+  ])('aplica las mismas validaciones que al crear: %j', async (cambio, mensaje) => {
+    await expect(modificarDescuento(12, { ...VALIDO, ...cambio })).rejects.toThrow(mensaje)
+    expect(repositorio.actualizarDescuento).not.toHaveBeenCalled()
+  })
+
+  it('rechaza un identificador inválido sin tocar la base de datos', async () => {
+    await expect(modificarDescuento('abc', VALIDO)).rejects.toThrow('El identificador del descuento no es válido')
+    expect(repositorio.existeDescuento).not.toHaveBeenCalled()
+  })
+
+  it('rechaza un fin que ya pasó: no se puede reactivar con una fecha vencida', async () => {
+    await expect(modificarDescuento(12, { ...VALIDO, fechaInicio: '2020-01-01', fechaFin: '2020-01-02' })).rejects.toThrow(
+      'La fecha y hora de fin debe ser posterior a la fecha y hora actuales',
+    )
+    expect(repositorio.actualizarDescuento).not.toHaveBeenCalled()
+  })
+
+  it('lanza no encontrado si el descuento no existe', async () => {
+    repositorio.existeDescuento.mockResolvedValue(false)
+
+    const error = await modificarDescuento(12, VALIDO).catch((fallo) => fallo)
+
+    expect(error instanceof ErrorNoEncontrado).toBe(true)
+    expect(repositorio.actualizarDescuento).not.toHaveBeenCalled()
+  })
+
+  it('lanza no encontrado si desaparece entre la verificación y la actualización', async () => {
+    repositorio.actualizarDescuento.mockResolvedValue(false)
+
+    await expect(modificarDescuento(12, VALIDO)).rejects.toBeInstanceOf(ErrorNoEncontrado)
+  })
+
+  it('rechaza un cine que no existe o está eliminado', async () => {
+    repositorio.existeSedeActiva.mockResolvedValue(false)
+
+    await expect(modificarDescuento(12, VALIDO)).rejects.toThrow('El cine seleccionado no existe')
+    expect(repositorio.actualizarDescuento).not.toHaveBeenCalled()
+  })
+
+  it('rechaza si alguna película no existe o está eliminada', async () => {
+    repositorio.contarPeliculasActivas.mockResolvedValue(1)
+
+    await expect(modificarDescuento(12, VALIDO)).rejects.toThrow('Una de las películas seleccionadas no existe')
+    expect(repositorio.actualizarDescuento).not.toHaveBeenCalled()
+  })
+
+  it('permite editarlo aunque se cruce con otra oferta del mismo cine y periodo: se suman al cobrar', async () => {
+    repositorio.buscarChoqueDeDescuento.mockResolvedValue({ nombre: 'Semana de estrenos', titulo: null })
+
+    expect(await modificarDescuento(12, VALIDO)).toBe(12)
+
+    expect(repositorio.actualizarDescuento).toHaveBeenCalledTimes(1)
+    expect(repositorio.buscarChoqueDeDescuento).not.toHaveBeenCalled()
   })
 })
 
@@ -223,7 +299,9 @@ describe('desactivarDescuento', () => {
 
     await desactivarDescuento('7')
 
-    expect(repositorio.desactivarDescuento).toHaveBeenCalledWith(7)
+    const [parametros] = repositorio.desactivarDescuento.mock.calls[0]
+    expect(parametros.idDescuento).toBe(7)
+    expect(parametros.ahora).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
   })
 
   it('rechaza un identificador inválido sin tocar la base de datos', async () => {

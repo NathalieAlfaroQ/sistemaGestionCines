@@ -6,6 +6,7 @@ import {
   descargarBoletos,
   verMetodoPagoGuardado,
 } from '../controladores/controladorCompra.js';
+import { devolver } from '../controladores/controladorDevolucion.js';
 
 // La autenticación y el rol CLIENTE se exigen en index.js para todo /api/compras
 const enrutador = Router();
@@ -15,5 +16,6 @@ enrutador.post('/paypal/ordenes', crearOrdenPayPal);
 enrutador.post('/paypal/ordenes/:idOrden/captura', capturarOrdenPayPal);
 enrutador.get('/metodo-pago', verMetodoPagoGuardado);
 enrutador.get('/:idFactura/boletos', descargarBoletos);
+enrutador.post('/:idFactura/devolucion', devolver);
 
 export default enrutador;

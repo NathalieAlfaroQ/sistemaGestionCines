@@ -1,4 +1,4 @@
-import { desactivarDescuento, obtenerDescuentos, registrarDescuento } from '../servicios/servicioDescuento.js';
+import { desactivarDescuento, modificarDescuento, obtenerDescuentos, registrarDescuento } from '../servicios/servicioDescuento.js';
 import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
@@ -46,5 +46,24 @@ export async function eliminarDescuento(req, res) {
     }
     console.error('Error al eliminar descuento:', error);
     res.status(500).json({ mensaje: 'No se pudo eliminar el descuento' });
+  }
+}
+
+export async function editarDescuento(req, res) {
+  try {
+    const idDescuento = await modificarDescuento(req.params.id, req.body);
+    res.json({ idDescuento });
+  } catch (error) {
+    if (error instanceof ErrorValidacion) {
+      return res.status(400).json({ mensaje: error.message });
+    }
+    if (error instanceof ErrorNoEncontrado) {
+      return res.status(404).json({ mensaje: error.message });
+    }
+    if (error instanceof ErrorConflicto) {
+      return res.status(409).json({ mensaje: error.message });
+    }
+    console.error('Error al editar descuento:', error);
+    res.status(500).json({ mensaje: 'No se pudo editar el descuento' });
   }
 }

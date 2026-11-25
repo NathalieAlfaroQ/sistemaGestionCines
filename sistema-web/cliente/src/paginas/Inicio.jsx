@@ -4,6 +4,7 @@ import CarruselPeliculas from '../componentes/CarruselPeliculas.jsx';
 import TarjetaPelicula from '../componentes/TarjetaPelicula.jsx';
 import ContenedorCliente from '../componentes/ContenedorCliente.jsx';
 import ErrorCarga from '../componentes/ErrorCarga.jsx';
+import SeccionRecomendaciones from '../componentes/SeccionRecomendaciones.jsx';
 
 const claseSelector = 'rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-color focus:border-brand-soft focus:ring-brand-soft';
 
@@ -66,6 +67,8 @@ function Inicio() {
         </div>
 
         {contenidoCartelera()}
+
+        <SeccionRecomendaciones key={idSede} idSede={idSede} />
       </ContenedorCliente>
     </main>
   );

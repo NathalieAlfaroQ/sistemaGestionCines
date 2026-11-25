@@ -11,6 +11,8 @@ import TarjetaSede from '../componentes/TarjetaSede.jsx';
 import ErrorCarga from '../componentes/ErrorCarga.jsx';
 import ContenedorCliente from '../componentes/ContenedorCliente.jsx';
 
+// Debe coincidir con DIAS_CARTELERA de servidor/src/repositorios/repositorioCartelera.js:
+// la cartelera solo muestra películas con funciones dentro de estos días
 const DIAS_SELECCIONABLES = 10;
 const SIN_FILTROS = { idSede: '', idFormato: '' };
 

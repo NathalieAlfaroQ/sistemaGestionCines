@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMapaAsientos } from '../ganchos/useMapaAsientos.js';
 import { usePeliculaCartelera } from '../ganchos/usePeliculaCartelera.js';
 import { useSeleccionAsientos } from '../ganchos/useSeleccionAsientos.js';
 import { useVolver } from '../ganchos/useVolver.js';
 import { POS_PROYECCION } from '../constantes/posicionesReserva.js';
-import { TIPOS_ERROR, verificarSeleccion } from '../servicios/servicioReserva.js';
+import { TIPOS_ERROR, cancelarReserva, crearReserva } from '../servicios/servicioReserva.js';
 import { obtenerToken, obtenerUsuario } from '../servicios/sesion.js';
 import { formatearFechaFuncion } from '../utilidades/fechas.js';
 import EncabezadoPelicula from '../componentes/EncabezadoPelicula.jsx';
@@ -30,6 +30,26 @@ function SeleccionAsientos() {
   const [pedirSesion, setPedirSesion] = useState(false);
   const [soloClientes, setSoloClientes] = useState(false);
 
+  // Si el cliente vuelve aquí desde el pago (por ejemplo, con el botón Atrás del navegador),
+  // su reserva anterior se libera; si no, vería sus propios asientos como ocupados.
+  // Luego se recarga el mapa, por si se pidió antes de que la reserva se borrara.
+  // continuar() espera a que termine: si el borrado llegara después, se llevaría la reserva nueva.
+  const { recargar: recargarMapa } = mapa;
+  const liberandoReserva = useRef(Promise.resolve());
+  useEffect(() => {
+    if (!obtenerToken() || obtenerUsuario()?.tipoUsuario !== 'CLIENTE') return undefined;
+
+    let vigente = true;
+    liberandoReserva.current = cancelarReserva();
+    void liberandoReserva.current.then(() => {
+      if (vigente) recargarMapa();
+    });
+    return () => {
+      vigente = false;
+    };
+    // Solo al entrar a la pantalla de una función
+  }, [idProyeccion]);
+
   async function continuar() {
     setErrorVerificacion(null);
 
@@ -51,14 +71,17 @@ function SeleccionAsientos() {
     setVerificando(true);
     const datos = seleccion.datosVerificacion();
     try {
-      const { total } = await verificarSeleccion(idProyeccion, datos);
-      // La pantalla de pago recibe la selección por el estado de la navegación
+      await liberandoReserva.current;
+      // Aparta los asientos: desde aquí corren los minutos para pagar
+      const { total } = await crearReserva(idProyeccion, datos);
+      // La pantalla de pago recibe la selección por el estado de la navegación.
+      // El tiempo restante no va aquí: Pago se lo pide al servidor (también sirve si recarga la página).
       void navegar('/pago', {
         state: { idProyeccion: Number(idProyeccion), ...datos, etiquetas: seleccion.etiquetasSeleccionados, total },
       });
     } catch (error) {
       if (error.tipo === TIPOS_ERROR.conflicto) {
-        // Otro usuario compró algún asiento: se muestra el mensaje y se recarga el mapa.
+        // Otro usuario compró o reservó algún asiento: se muestra el mensaje y se recarga el mapa.
         // Los asientos vendidos salen solos de la selección (ver useSeleccionAsientos).
         seleccion.setAviso(error.message);
         mapa.recargar();

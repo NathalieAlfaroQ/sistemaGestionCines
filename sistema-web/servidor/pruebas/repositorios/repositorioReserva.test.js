@@ -86,3 +86,64 @@ describe('SCRUM-93 repositorioReserva: consultas', () => {
     await expect(listarAsientosOcupados(7, [10, 11, 12])).resolves.toEqual([11, 12]);
   });
 });
+
+describe('SCRUM-93 repositorioReserva: reservas temporales cuentan como ocupadas', () => {
+  it('el mapa marca ocupado lo vendido y lo reservado vigente', async () => {
+    ejecutar.mockResolvedValueOnce({ rows: [] });
+    await listarAsientos(7);
+
+    const [sql, binds] = ejecutar.mock.calls[0];
+    expect(sql).toMatch(/LEFT JOIN DETALLES_FACTURA df/);
+    expect(sql).toMatch(/LEFT JOIN RESERVAS_ASIENTOS r/);
+    expect(sql).toMatch(/r\.FECHA_EXPIRACION > SYSDATE/);
+    expect(sql).toMatch(/df\.ID_ASIENTO IS NULL AND r\.ID_ASIENTO IS NULL THEN 0 ELSE 1/);
+    expect(binds).toEqual({ idProyeccion: 7 });
+  });
+
+  it('listarAsientosOcupados busca en las facturas y en las reservas vigentes', async () => {
+    ejecutar.mockResolvedValueOnce({ rows: [] });
+    await listarAsientosOcupados(7, [10, 11]);
+
+    const [sql] = ejecutar.mock.calls[0];
+    expect(sql).toMatch(/FROM DETALLES_FACTURA/);
+    expect(sql).toMatch(/UNION/);
+    expect(sql).toMatch(/FROM RESERVAS_ASIENTOS/);
+    expect(sql).toMatch(/FECHA_EXPIRACION > SYSDATE/);
+    expect(sql.match(/ID_ASIENTO IN \(:asiento0, :asiento1\)/g)).toHaveLength(2);
+  });
+
+  it('listarAsientosOcupados no cuenta la reserva del propio cliente', async () => {
+    ejecutar.mockResolvedValueOnce({ rows: [] });
+    await listarAsientosOcupados(7, [10, 11], 4);
+
+    const [sql, binds] = ejecutar.mock.calls[0];
+    expect(sql).toMatch(/ID_CLIENTE <> :idCliente/);
+    expect(binds).toEqual({ idProyeccion: 7, idCliente: 4, asiento0: 10, asiento1: 11 });
+  });
+
+  it('listarAsientosOcupados sin cliente cuenta todas las reservas (idCliente 0)', async () => {
+    ejecutar.mockResolvedValueOnce({ rows: [] });
+    await listarAsientosOcupados(7, [10]);
+
+    const [, binds] = ejecutar.mock.calls[0];
+    expect(binds.idCliente).toBe(0);
+  });
+});
+
+describe('SCRUM-49 repositorioReserva: un boleto devuelto no ocupa el asiento', () => {
+  it('el mapa solo une los boletos ACTIVOS (el filtro va en el ON para no duplicar asientos)', async () => {
+    ejecutar.mockResolvedValueOnce({ rows: [] });
+    await listarAsientos(7);
+
+    const [sql] = ejecutar.mock.calls[0];
+    expect(sql).toMatch(/LEFT JOIN DETALLES_FACTURA df\s+ON df\.ID_PROYECCION = p\.ID_PROYECCION AND df\.ID_ASIENTO = a\.ID_ASIENTO\s+AND df\.ESTADO_DETALLE = 'ACTIVO'/);
+  });
+
+  it('listarAsientosOcupados solo cuenta como vendidos los boletos ACTIVOS', async () => {
+    ejecutar.mockResolvedValueOnce({ rows: [] });
+    await listarAsientosOcupados(7, [10]);
+
+    const [sql] = ejecutar.mock.calls[0];
+    expect(sql).toMatch(/FROM DETALLES_FACTURA\s+WHERE ID_PROYECCION = :idProyeccion AND ID_ASIENTO IN \(:asiento0\)\s+AND ESTADO_DETALLE = 'ACTIVO'/);
+  });
+});

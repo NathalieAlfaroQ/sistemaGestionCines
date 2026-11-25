@@ -10,6 +10,8 @@ export const POS_DESCUENTO = {
   estado: 8,
   idCine: 9,
   peliculas: 10,
+  aplicaTodas: 11,
+  idsPeliculas: 12,
 };
 
 export const ESTADO_DESCUENTO = { eliminado: 0, activo: 1 };
