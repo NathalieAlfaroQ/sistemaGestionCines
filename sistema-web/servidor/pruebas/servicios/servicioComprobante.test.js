@@ -15,6 +15,7 @@ import {
 } from '../../src/servicios/servicioComprobante.js';
 import { listarBoletosDeFactura } from '../../src/repositorios/repositorioCompra.js';
 import { enviarCorreo } from '../../src/servicios/servicioCorreo.js';
+import { ErrorConflicto } from '../../src/errores/ErrorConflicto.js';
 import { ErrorNoAutenticado } from '../../src/errores/ErrorNoAutenticado.js';
 import { ErrorNoEncontrado } from '../../src/errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../../src/errores/ErrorValidacion.js';
@@ -23,10 +24,12 @@ const ID_FACTURA = 15;
 const ID_CLIENTE = 21;
 
 // Filas como las devuelve listarBoletosDeFactura (ver el orden de columnas en repositorioCompra.js)
-function fila(idAsiento, fila, numero, tipo, monto) {
+// El id del detalle es 500 + el id del asiento, para que cada boleto tenga uno distinto
+function fila(idAsiento, fila, numero, tipo, monto, estado = 'ACTIVO') {
   return [
     ID_FACTURA, 9200, '2026-11-02 20:15', 'cmvyv4g1q0lc3k7017mehiy0h', 'F1: La Película', 'PG',
     '2026-11-05 21:10', 'Cine Aurora Alba', 'Sala 3', '3D', 7, idAsiento, fila, numero, tipo, monto,
+    estado, 500 + idAsiento,
   ];
 }
 
@@ -45,8 +48,12 @@ describe('SCRUM-XX servicioComprobante', () => {
   });
 
   describe('textoQr', () => {
-    it('identifica la función y el asiento del boleto', () => {
-      expect(textoQr(7, 101)).toBe('CINEAURORA-P7-A101');
+    it('identifica la venta, la función y el asiento del boleto', () => {
+      expect(textoQr(601, 7, 101)).toBe('CINEAURORA-B601-P7-A101');
+    });
+
+    it('un boleto devuelto y el que se vende después en el mismo asiento tienen QR distintos', () => {
+      expect(textoQr(601, 7, 101)).not.toBe(textoQr(950, 7, 101));
     });
   });
 
@@ -76,6 +83,17 @@ describe('SCRUM-XX servicioComprobante', () => {
       listarBoletosDeFactura.mockResolvedValue([]);
 
       await expect(generarPdfBoletos(ID_FACTURA, ID_CLIENTE)).rejects.toBeInstanceOf(ErrorNoEncontrado);
+    });
+
+    it('no deja descargar los boletos de una compra cancelada (409)', async () => {
+      listarBoletosDeFactura.mockResolvedValue([
+        fila(101, 'B', 5, 'Adulto', 3300, 'DEVUELTO'),
+        fila(102, 'B', 6, 'Adulto', 3300, 'DEVUELTO'),
+      ]);
+
+      const promesa = generarPdfBoletos(ID_FACTURA, ID_CLIENTE);
+      await expect(promesa).rejects.toBeInstanceOf(ErrorConflicto);
+      await expect(promesa).rejects.toThrow('Esta compra fue cancelada y sus boletos ya no son válidos');
     });
 
     it('rechaza una sesión sin idCliente sin consultar la BD', async () => {

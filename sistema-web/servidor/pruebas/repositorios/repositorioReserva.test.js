@@ -129,3 +129,21 @@ describe('SCRUM-93 repositorioReserva: reservas temporales cuentan como ocupadas
     expect(binds.idCliente).toBe(0);
   });
 });
+
+describe('SCRUM-49 repositorioReserva: un boleto devuelto no ocupa el asiento', () => {
+  it('el mapa solo une los boletos ACTIVOS (el filtro va en el ON para no duplicar asientos)', async () => {
+    ejecutar.mockResolvedValueOnce({ rows: [] });
+    await listarAsientos(7);
+
+    const [sql] = ejecutar.mock.calls[0];
+    expect(sql).toMatch(/LEFT JOIN DETALLES_FACTURA df\s+ON df\.ID_PROYECCION = p\.ID_PROYECCION AND df\.ID_ASIENTO = a\.ID_ASIENTO\s+AND df\.ESTADO_DETALLE = 'ACTIVO'/);
+  });
+
+  it('listarAsientosOcupados solo cuenta como vendidos los boletos ACTIVOS', async () => {
+    ejecutar.mockResolvedValueOnce({ rows: [] });
+    await listarAsientosOcupados(7, [10]);
+
+    const [sql] = ejecutar.mock.calls[0];
+    expect(sql).toMatch(/FROM DETALLES_FACTURA\s+WHERE ID_PROYECCION = :idProyeccion AND ID_ASIENTO IN \(:asiento0\)\s+AND ESTADO_DETALLE = 'ACTIVO'/);
+  });
+});
