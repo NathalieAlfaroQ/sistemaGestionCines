@@ -15,8 +15,11 @@ export async function crearUsuarioInterno(datos) {
 
 export async function obtenerEmpleados() {
   const res = await fetch(`${API_URL}/listar`);
-  if (!res.ok) throw new Error('Error al cargar los empleados');
-  return await res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detalle || data.error || 'Error al cargar los empleados');
+  }
+  return data;
 }
 
 export async function editarEmpleado(idEmpleado, datos) {
@@ -46,4 +49,3 @@ export async function eliminarEmpleado(idEmpleado) {
   if (!res.ok) throw new Error(data.error || 'Error al eliminar');
   return data;
 }
-

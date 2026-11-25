@@ -1,16 +1,21 @@
 import { useState } from 'react';
 import { editarEmpleado } from '../servicios/servicioEmpleados.js';
 import FormularioEmpleado from './FormularioUsuario.jsx';
-import Modal from '../common/Modal.jsx'; 
+import ModalFormulario from '../common/ModalFormulario.jsx'; 
+import { useSedes } from '../ganchos/useSedes.js';
 
 function EditarEmpleado({ empleado, alCancelar, alEditar }) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+  const { sedes = [] } = useSedes() || {};
+  const nombreCompleto = empleado?.nombreCompleto || '';
+  const partesNombre = nombreCompleto.trim().split(' ');
+  const nombre = partesNombre[0] || '';
+  const apellido = partesNombre.slice(1).join(' ') || '';
 
   async function guardar(datos) {
     setGuardando(true);
     setError(null);
-
     try {
       await editarEmpleado(empleado.idEmpleado, datos);
       alEditar();
@@ -22,13 +27,15 @@ function EditarEmpleado({ empleado, alCancelar, alEditar }) {
   }
 
   return (
-    <Modal titulo="Editar Empleado" alCerrar={alCancelar}>
+    <ModalFormulario titulo="Editar Empleado" alCerrar={alCancelar}>
       <FormularioEmpleado
+        sedes={sedes}
         valorInicial={{
-          nombre: empleado.nombreCompleto.split(' ')[0],
-          apellido: empleado.nombreCompleto.split(' ').slice(1).join(' '),
-          correo: empleado.correo,
-          tipoUsuario: empleado.tipoUsuario,
+          nombre: nombre,
+          apellido: apellido,
+          correo: empleado?.correo || '',
+          tipoUsuario: 'EMPLEADO',
+          idSede: empleado?.idSede ? String(empleado.idSede) : '',
         }}
         textoGuardar="Guardar cambios"
         alEnviar={guardar}
@@ -36,7 +43,7 @@ function EditarEmpleado({ empleado, alCancelar, alEditar }) {
         guardando={guardando}
         error={error}
       />
-    </Modal>
+    </ModalFormulario>
   );
 }
 

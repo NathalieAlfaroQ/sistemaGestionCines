@@ -5,7 +5,6 @@ import { obtenerUsuario } from '../servicios/sesion.js';
 const ROLES_PERSONAL = new Set(['EMPLEADO', 'ADMINISTRADOR']);
 
 const enlaces = [
-  { texto: 'Dulcería', ruta: '/dulceria' },
   { texto: 'Cartelera', ruta: '/' },
 ];
 

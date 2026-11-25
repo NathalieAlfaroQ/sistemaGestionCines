@@ -26,6 +26,7 @@ function Empleados() {
   const cargarEmpleados = async () => {
     setCargando(true);
     setError(null);
+
     try {
       const data = await obtenerEmpleados(); 
       
@@ -37,6 +38,7 @@ function Empleados() {
         : data;
 
       setEmpleados(filtrados);
+      
     } catch (err) {
       setError(err.message);
     } finally {
@@ -58,7 +60,7 @@ function Empleados() {
   function usuarioCreado() {
     setCreando(false);
     notificaciones.exito('Usuario creado con éxito');
-    cargarEmpleados();
+    void cargarEmpleados();
   }
 
   async function confirmarEliminacion() {
@@ -121,7 +123,7 @@ function Empleados() {
           alEditar={() => {
             setEmpleadoAEditar(null);
             notificaciones.exito('Empleado editado con éxito');
-            cargarEmpleados();
+            void cargarEmpleados();
           }}
         />
       )}

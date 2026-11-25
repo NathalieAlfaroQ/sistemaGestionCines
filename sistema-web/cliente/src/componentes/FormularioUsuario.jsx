@@ -8,7 +8,7 @@ function FormularioUsuario({ valorInicial, textoGuardar = 'Crear', sedes = [], a
     nombre: valorInicial?.nombre ?? '',
     apellido: valorInicial?.apellido ?? '',
     correo: valorInicial?.correo ?? '',
-    tipoUsuario: valorInicial?.tipoUsuario ?? '',
+    tipoUsuario: valorInicial?.tipoUsuario ?? 'EMPLEADO', 
     idSede: valorInicial?.idSede ? String(valorInicial.idSede) : ''
   })
 
@@ -47,6 +47,8 @@ function FormularioUsuario({ valorInicial, textoGuardar = 'Crear', sedes = [], a
 
     alEnviar(form)
   }
+
+  const sedesValidas = Array.isArray(sedes) ? sedes : [];
 
   return (
     <form onSubmit={manejarEnvio} className="flex max-w-sm flex-col gap-6">
@@ -97,9 +99,7 @@ function FormularioUsuario({ valorInicial, textoGuardar = 'Crear', sedes = [], a
           onBlur={handleBlur}
           className="bg-gray-800 border border-gray-600 text-white text-sm rounded-md block w-full p-2.5"
         >
-          <option value="">Seleccione un rol</option>
           <option value="EMPLEADO">Empleado</option>
-          <option value="ADMINISTRADOR">Administrador</option>
         </select>
         {errores.tipoUsuario && <p className="text-red-500 text-xs mt-1">{errores.tipoUsuario}</p>}
       </div>
@@ -114,7 +114,7 @@ function FormularioUsuario({ valorInicial, textoGuardar = 'Crear', sedes = [], a
           className="bg-gray-800 border border-gray-600 text-white text-sm rounded-md block w-full p-2.5"
         >
           <option value="">Seleccione una sede</option>
-          {sedes.map((sede) => (
+          {sedesValidas.map((sede) => (
             <option key={sede[POS_SEDE.id]} value={sede[POS_SEDE.id]}>
               {sede[POS_SEDE.nombre]}
             </option>

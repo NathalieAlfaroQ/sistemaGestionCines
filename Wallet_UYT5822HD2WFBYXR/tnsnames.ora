@@ -1,0 +1,12 @@
+uyt5822hd2wfbyxr_high = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.us-ashburn-1.oraclecloud.com))(connect_data=(service_name=g63976fb8e65bdd_uyt5822hd2wfbyxr_high.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
+
+uyt5822hd2wfbyxr_medium = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.us-ashburn-1.oraclecloud.com))(connect_data=(service_name=g63976fb8e65bdd_uyt5822hd2wfbyxr_medium.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
+
+uyt5822hd2wfbyxr_low = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.us-ashburn-1.oraclecloud.com))(connect_data=(service_name=g63976fb8e65bdd_uyt5822hd2wfbyxr_low.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
+
+uyt5822hd2wfbyxr_tp = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.us-ashburn-1.oraclecloud.com))(connect_data=(service_name=g63976fb8e65bdd_uyt5822hd2wfbyxr_tp.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
+
+uyt5822hd2wfbyxr_tpurgent = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.us-ashburn-1.oraclecloud.com))(connect_data=(service_name=g63976fb8e65bdd_uyt5822hd2wfbyxr_tpurgent.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
+
+
+
