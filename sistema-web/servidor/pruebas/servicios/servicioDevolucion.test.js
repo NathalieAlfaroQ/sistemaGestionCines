@@ -14,6 +14,13 @@ vi.mock('../../src/repositorios/repositorioDevolucion.js', () => ({
   solicitarDevolucion: vi.fn(),
   confirmarDevolucion: vi.fn(),
 }));
+vi.mock('../../src/repositorios/repositorioCompra.js', () => ({
+  obtenerDatosCliente: vi.fn(),
+}));
+vi.mock('../../src/servicios/servicioComprobante.js', () => ({
+  obtenerCompraParaDevolucion: vi.fn(),
+  enviarConfirmacionDevolucion: vi.fn(),
+}));
 vi.mock('../../src/servicios/pasarelaPago.js', () => ({
   reembolsar: vi.fn(),
 }));
@@ -38,6 +45,10 @@ vi.mock('../../src/servicios/servicioReserva.js', async () => {
 const { ejecutarTransaccion } = await import('../../src/configuracion/baseDatos.js');
 const { solicitarDevolucion, confirmarDevolucion } = await import('../../src/repositorios/repositorioDevolucion.js');
 const { reembolsar } = await import('../../src/servicios/pasarelaPago.js');
+const { obtenerDatosCliente } = await import('../../src/repositorios/repositorioCompra.js');
+const { obtenerCompraParaDevolucion, enviarConfirmacionDevolucion } = await import(
+  '../../src/servicios/servicioComprobante.js'
+);
 const { reembolsarCaptura } = await import('../../src/servicios/pasarelaPayPal.js');
 const { ErrorConflicto } = await import('../../src/errores/ErrorConflicto.js');
 const { ErrorNoAutenticado } = await import('../../src/errores/ErrorNoAutenticado.js');
@@ -57,6 +68,7 @@ const conexion = { nombre: 'conexion de prueba' };
 
 const solicitudTarjeta = { monto: 1250, idPago: 'cmwuigolj1avxka01dcv6q3ql', metodo: 'Tarjeta' };
 const solicitudPayPal = { monto: 1000, idPago: '4LS21320XF3825229', metodo: 'PayPal' };
+const compra = { idFactura: 41, titulo: 'La Odisea', boletos: [{ asiento: 'B5' }] };
 
 function errorOracle(numero, mensaje = 'error de la BD') {
   return Object.assign(new Error(`ORA-${numero}: ${mensaje}`), { errorNum: numero });
@@ -71,11 +83,19 @@ beforeEach(() => {
   confirmarDevolucion.mockResolvedValue();
   reembolsar.mockResolvedValue('reembolso-onvo-1');
   reembolsarCaptura.mockResolvedValue('reembolso-paypal-1');
+  obtenerDatosCliente.mockResolvedValue(['Ana', 'Mora', 'ana@correo.com']);
+  obtenerCompraParaDevolucion.mockResolvedValue(compra);
+  enviarConfirmacionDevolucion.mockResolvedValue();
 });
 
 describe('SCRUM-49 servicioDevolucion: devolverCompra', () => {
   it('con tarjeta: solicita, reembolsa en ONVO por el monto, confirma con el id del reembolso y responde', async () => {
-    await expect(devolverCompra(usuario, 41)).resolves.toEqual({ idFactura: 41, monto: 1250, metodo: 'Tarjeta' });
+    await expect(devolverCompra(usuario, 41)).resolves.toEqual({
+      idFactura: 41,
+      monto: 1250,
+      metodo: 'Tarjeta',
+      correoEnviado: true,
+    });
 
     expect(solicitarDevolucion).toHaveBeenCalledWith(conexion, 41, 141);
     expect(reembolsar).toHaveBeenCalledWith('cmwuigolj1avxka01dcv6q3ql', 1250);
@@ -86,7 +106,12 @@ describe('SCRUM-49 servicioDevolucion: devolverCompra', () => {
   it('con PayPal: reembolsa la captura completa', async () => {
     solicitarDevolucion.mockResolvedValue(solicitudPayPal);
 
-    await expect(devolverCompra(usuario, 6)).resolves.toEqual({ idFactura: 6, monto: 1000, metodo: 'PayPal' });
+    await expect(devolverCompra(usuario, 6)).resolves.toEqual({
+      idFactura: 6,
+      monto: 1000,
+      metodo: 'PayPal',
+      correoEnviado: true,
+    });
 
     expect(reembolsarCaptura).toHaveBeenCalledWith('4LS21320XF3825229');
     expect(reembolsar).not.toHaveBeenCalled();
@@ -183,6 +208,68 @@ describe('SCRUM-49 servicioDevolucion: devolverCompra', () => {
 
   it('exige un cliente en la sesión', async () => {
     await expect(devolverCompra({ tipoUsuario: 'EMPLEADO' }, 41)).rejects.toBeInstanceOf(ErrorNoAutenticado);
+    expect(ejecutarTransaccion).not.toHaveBeenCalled();
+  });
+});
+
+describe('SCRUM-51 servicioDevolucion: correo de confirmación', () => {
+  it('lee el cliente y la compra antes de abrir la transacción (no pide otra conexión adentro)', async () => {
+    await devolverCompra(usuario, 41);
+
+    expect(obtenerDatosCliente).toHaveBeenCalledWith(141);
+    expect(obtenerCompraParaDevolucion).toHaveBeenCalledWith(41, 141);
+    expect(obtenerCompraParaDevolucion.mock.invocationCallOrder[0]).toBeLessThan(
+      ejecutarTransaccion.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('con la devolución confirmada envía el correo con la compra, el cliente, el monto y el método', async () => {
+    await devolverCompra(usuario, 41);
+
+    expect(enviarConfirmacionDevolucion).toHaveBeenCalledWith({
+      compra,
+      cliente: { nombre: 'Ana', correo: 'ana@correo.com' },
+      monto: 1250,
+      metodo: 'Tarjeta',
+    });
+    expect(enviarConfirmacionDevolucion.mock.invocationCallOrder[0]).toBeGreaterThan(
+      confirmarDevolucion.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('si el correo falla, la devolución sigue siendo válida y responde correoEnviado: false', async () => {
+    enviarConfirmacionDevolucion.mockRejectedValue(new Error('SMTP caído'));
+
+    await expect(devolverCompra(usuario, 41)).resolves.toEqual({
+      idFactura: 41,
+      monto: 1250,
+      metodo: 'Tarjeta',
+      correoEnviado: false,
+    });
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('No se pudo enviar la confirmación de la devolución de la factura 41'),
+      expect.any(Error)
+    );
+  });
+
+  it('no envía correo si la devolución falla', async () => {
+    solicitarDevolucion.mockRejectedValue(errorOracle(20022));
+
+    await expect(devolverCompra(usuario, 41)).rejects.toBeInstanceOf(ErrorConflicto);
+    expect(enviarConfirmacionDevolucion).not.toHaveBeenCalled();
+  });
+
+  it('si la compra no existe o es de otro cliente responde 404 sin abrir la transacción', async () => {
+    obtenerCompraParaDevolucion.mockResolvedValue(null);
+
+    await expect(devolverCompra(usuario, 41)).rejects.toThrow(MENSAJE_COMPRA_NO_EXISTE);
+    expect(ejecutarTransaccion).not.toHaveBeenCalled();
+  });
+
+  it('si el cliente del token ya no existe responde 404 sin abrir la transacción', async () => {
+    obtenerDatosCliente.mockResolvedValue(null);
+
+    await expect(devolverCompra(usuario, 41)).rejects.toBeInstanceOf(ErrorNoEncontrado);
     expect(ejecutarTransaccion).not.toHaveBeenCalled();
   });
 });

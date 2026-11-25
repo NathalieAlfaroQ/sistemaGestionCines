@@ -9,8 +9,10 @@ vi.mock('../../src/servicios/servicioCorreo.js', () => ({
 
 import {
   enviarComprobante,
+  enviarConfirmacionDevolucion,
   formatearMonto,
   generarPdfBoletos,
+  obtenerCompraParaDevolucion,
   textoQr,
 } from '../../src/servicios/servicioComprobante.js';
 import { listarBoletosDeFactura } from '../../src/repositorios/repositorioCompra.js';
@@ -166,6 +168,78 @@ describe('SCRUM-XX servicioComprobante', () => {
       enviarCorreo.mockRejectedValue(new Error('SMTP caído'));
 
       await expect(enviarComprobante(ID_FACTURA, cliente)).rejects.toThrow('SMTP caído');
+    });
+  });
+
+  describe('SCRUM-51 obtenerCompraParaDevolucion', () => {
+    it('arma los datos de la compra filtrando por el cliente, aunque ya esté cancelada', async () => {
+      listarBoletosDeFactura.mockResolvedValue([fila(101, 'B', 5, 'Adulto', 3300, 'DEVUELTO')]);
+
+      const compra = await obtenerCompraParaDevolucion(ID_FACTURA, ID_CLIENTE);
+
+      expect(listarBoletosDeFactura).toHaveBeenCalledWith(ID_FACTURA, ID_CLIENTE);
+      expect(compra).toMatchObject({ idFactura: ID_FACTURA, titulo: 'F1: La Película', sede: 'Cine Aurora Alba' });
+      expect(compra.boletos).toEqual([expect.objectContaining({ asiento: 'B5', tipo: 'Adulto' })]);
+    });
+
+    it('devuelve null si la factura no existe o es de otro cliente', async () => {
+      listarBoletosDeFactura.mockResolvedValue([]);
+
+      await expect(obtenerCompraParaDevolucion(ID_FACTURA, ID_CLIENTE)).resolves.toBeNull();
+    });
+  });
+
+  describe('SCRUM-51 enviarConfirmacionDevolucion', () => {
+    async function enviar(cambios = {}) {
+      const compra = await obtenerCompraParaDevolucion(ID_FACTURA, ID_CLIENTE);
+      await enviarConfirmacionDevolucion({
+        compra,
+        cliente: { nombre: 'Ana', correo: 'ana@correo.com' },
+        monto: 9200,
+        metodo: 'Tarjeta',
+        ...cambios,
+      });
+      return enviarCorreo.mock.calls[0][0];
+    }
+
+    it('manda el correo al cliente, sin adjuntos, con la película en el asunto', async () => {
+      const correo = await enviar();
+
+      expect(correo.para).toBe('ana@correo.com');
+      expect(correo.asunto).toBe('Cancelaste tu compra para F1: La Película - Cine Aurora');
+      expect(correo.adjuntos).toBeUndefined();
+    });
+
+    it('dice cuánto se devolvió, los asientos y que los boletos ya no son válidos', async () => {
+      const { html } = await enviar();
+
+      expect(html).toContain('Hola Ana,');
+      expect(html).toMatch(/Te devolvimos <strong>₡9\s200<\/strong> a la tarjeta con la que pagaste/);
+      expect(html).toContain('Asientos: B5, B6, B7');
+      expect(html).toContain('Los boletos y los códigos QR de esta compra ya no son válidos.');
+      expect(html).toContain(`Factura N.º ${ID_FACTURA} · Fecha de compra:`);
+      expect(html).toContain('Según tu banco, puede tardar unos días hábiles en verse reflejado.');
+      expect(html).not.toContain('PayPal');
+    });
+
+    it('con PayPal dice que el dinero vuelve a la cuenta de PayPal', async () => {
+      const { html } = await enviar({ metodo: 'PayPal' });
+
+      expect(html).toContain('a tu cuenta de PayPal. Puede tardar unos días hábiles en verse reflejado.');
+      expect(html).not.toContain('tu banco');
+    });
+
+    it('con monto 0 no habla de un reembolso', async () => {
+      const { html } = await enviar({ monto: 0 });
+
+      expect(html).toContain('Esta compra no tenía un monto por devolver.');
+      expect(html).not.toContain('Te devolvimos');
+    });
+
+    it('escapa el HTML de los datos', async () => {
+      const { html } = await enviar({ cliente: { nombre: '<b>Ana</b>', correo: 'ana@correo.com' } });
+
+      expect(html).toContain('Hola &lt;b&gt;Ana&lt;/b&gt;,');
     });
   });
 });
