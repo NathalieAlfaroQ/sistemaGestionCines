@@ -30,24 +30,27 @@ function FormularioProducto({ valorInicial, textoGuardar = 'Crear', alEnviar, al
   return (
     <form onSubmit={manejarEnvio} className="flex max-w-sm flex-col gap-6">
       <div>
-        <label className="block mb-2 text-sm font-medium text-white">Nombre del producto *</label>
+        <label htmlFor="nombre" className="block mb-2 text-sm font-medium text-white">Nombre del producto *</label>
         <input
+          id="nombre"
           name="nombre" value={form.nombre} onChange={handleChange} onBlur={handleBlur}
           className="bg-gray-800 border border-gray-600 text-white text-sm rounded-md block w-full p-2.5"
         />
         {tocado.nombre && errores.nombre && <p className="text-red-500 text-xs mt-1">{errores.nombre}</p>}
       </div>
       <div>
-        <label className="block mb-2 text-sm font-medium text-white">Precio *</label>
+        <label htmlFor="precio" className="block mb-2 text-sm font-medium text-white">Precio *</label>
         <input
+          id="precio"
           type="number" step="0.01" name="precio" value={form.precio} onChange={handleChange} onBlur={handleBlur}
           className="bg-gray-800 border border-gray-600 text-white text-sm rounded-md block w-full p-2.5"
         />
         {tocado.precio && errores.precio && <p className="text-red-500 text-xs mt-1">{errores.precio}</p>}
       </div>
       <div>
-        <label className="block mb-2 text-sm font-medium text-white">Cantidad *</label>
+        <label htmlFor="cantidad" className="block mb-2 text-sm font-medium text-white">Cantidad *</label>
         <input
+          id="cantidad"
           type="number" name="cantidad" value={form.cantidad} onChange={handleChange} onBlur={handleBlur}
           className="bg-gray-800 border border-gray-600 text-white text-sm rounded-md block w-full p-2.5"
         />

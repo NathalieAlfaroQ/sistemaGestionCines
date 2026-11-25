@@ -19,7 +19,8 @@ async function verificarPermisoDulceria(connection, idCredencial) {
   )
   
   if (result.rows.length === 0) return null
-  const [tipoUsuario, idAdministrador, sedeEmpleado, sedeAdmin] = result.rows[0]
+  
+  const [tipoUsuario, , sedeEmpleado, sedeAdmin] = result.rows[0]
   
   if (tipoUsuario !== 'ADMINISTRADOR' && tipoUsuario !== 'EMPLEADO') return null
   
@@ -82,7 +83,7 @@ router.post('/crear', async (req, res) => {
       return res.status(400).json({ error: 'Nombre inválido (máx 20 caracteres)' })
     }
     const precioNum = Number(precio)
-    if (isNaN(precioNum) || precioNum <= 0) {
+    if (Number.isNaN(precioNum) || precioNum <= 0) {
       return res.status(400).json({ error: 'Precio inválido' })
     }
     const cantidadNum = Number(cantidad)
@@ -153,14 +154,12 @@ router.put('/editar/:idCantidadProducto', async (req, res) => {
     }
     const { ID_PRODUCTO: idProducto, PRECIO: precioAnterior } = pertenece.rows[0]
 
-    // Validaciones
     if (!nombre || nombre.length > 20) return res.status(400).json({ error: 'Nombre inválido' })
     const precioNum = Number(precio)
-    if (isNaN(precioNum) || precioNum <= 0) return res.status(400).json({ error: 'Precio inválido' })
+    if (Number.isNaN(precioNum) || precioNum <= 0) return res.status(400).json({ error: 'Precio inválido' })
     const cantidadNum = Number(cantidad)
     if (!Number.isInteger(cantidadNum) || cantidadNum < 0) return res.status(400).json({ error: 'Cantidad inválida' })
 
-    // ¿Otro producto con el mismo nombre?
     const duplicado = await connection.execute(
       `SELECT 1 FROM PRODUCTOS WHERE UPPER(NOMBRE_PRODUCTO) = UPPER(:nombre) AND ID_PRODUCTO != :idProducto`,
       { nombre: nombre.trim(), idProducto }
@@ -181,7 +180,6 @@ router.put('/editar/:idCantidadProducto', async (req, res) => {
       { autoCommit: false }
     )
 
-    // Bitácora de precio (solo si es admin y el precio cambió)
     if (precioAnterior !== precioNum && permiso.tipoUsuario === 'ADMINISTRADOR') {
       await connection.execute(
         `INSERT INTO BITACORAS_PRECIO_DULCERIA
@@ -204,7 +202,6 @@ router.put('/editar/:idCantidadProducto', async (req, res) => {
   }
 })
 
-// DELETE /api/dulceria/eliminar/:idCantidadProducto
 router.delete('/eliminar/:idCantidadProducto', async (req, res) => {
   const { idCantidadProducto } = req.params
   const { idCredencial } = req.body

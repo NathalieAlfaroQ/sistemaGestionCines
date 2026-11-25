@@ -55,7 +55,7 @@ router.post('/interno', async (req, res) => {
 
     } else {
       const rAdm = await connection.execute(
-        `INSERT INTO ADMINISTRADORES (NOMBRE, APELLIDO, ESTADO)
+        `INSERT INTO ADMINISTRADORES (NOMBRE, APELLIDO, ESTADO_ADMINISTRADOR)
          VALUES (:nombre, :apellido, 1)
          RETURNING ID_ADMINISTRADOR INTO :idAdministrador`,
         {
@@ -108,7 +108,7 @@ router.get('/listar', async (req, res) => {
       JOIN CREDENCIALES C ON C.ID_EMPLEADO = E.ID_EMPLEADO
       LEFT JOIN SEDES S ON S.ID_SEDE = E.ID_SEDE
       WHERE C.TIPO_USUARIO = 'EMPLEADO'
-        AND E.ESTADO_EMPLEADO = '1'
+        AND E.ESTADO_EMPLEADO = 1
     `);
 
     const empleados = empleadosRes.rows.map(row => ({
@@ -124,7 +124,7 @@ router.get('/listar', async (req, res) => {
 
     return res.json(empleados);
   } catch (error) {
-    console.error('Error al listar empleados:', error); // <-- ESTO ES CLAVE
+    console.error('Error al listar empleados:', error);
     return res.status(500).json({ error: 'Error interno del servidor', detalle: error.message });
   } finally {
     if (connection) await connection.close();
@@ -133,7 +133,7 @@ router.get('/listar', async (req, res) => {
 
 router.put('/editar/:id', async (req, res) => {
   const { id } = req.params;
-  const { nombre, apellido, correo, tipoUsuario, idSede, idCreador } = req.body;
+  const { nombre, apellido, correo, idSede } = req.body;
 
   let connection;
   try {
@@ -169,7 +169,6 @@ router.put('/editar/:id', async (req, res) => {
   }
 });
 
-
 router.delete('/eliminar/:id', async (req, res) => {
   const { id } = req.params;
   const { idCreador } = req.body;
@@ -188,7 +187,6 @@ router.delete('/eliminar/:id', async (req, res) => {
     }
     const idAdministrador = adminRes.rows[0][0];
 
-    // Verificar que el id es un empleado (no un admin) y traer su estado
     const empRes = await connection.execute(
       `SELECT ESTADO_EMPLEADO FROM EMPLEADOS WHERE ID_EMPLEADO = :id`,
       { id }
@@ -198,12 +196,12 @@ router.delete('/eliminar/:id', async (req, res) => {
     }
     const estadoAnterior = empRes.rows[0][0];
 
-    if (estadoAnterior === '0') {
+    if (estadoAnterior === 0) {
       return res.status(409).json({ error: 'El empleado ya está desactivado' });
     }
 
     await connection.execute(
-      `UPDATE EMPLEADOS SET ESTADO_EMPLEADO = '0' WHERE ID_EMPLEADO = :id`,
+      `UPDATE EMPLEADOS SET ESTADO_EMPLEADO = 0 WHERE ID_EMPLEADO = :id`,
       { id }
     );
 
@@ -224,6 +222,5 @@ router.delete('/eliminar/:id', async (req, res) => {
     if (connection) await connection.close();
   }
 });
-
 
 export default router

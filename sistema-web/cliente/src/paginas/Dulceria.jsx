@@ -28,7 +28,9 @@ function Dulceria() {
     }
   }
 
-  useEffect(() => { cargar() }, [])
+  useEffect(() => { 
+    void cargar() 
+  }, [])
 
   const columnas = [
     { titulo: 'Producto', posicion: 'nombre' },
@@ -45,7 +47,7 @@ function Dulceria() {
     } catch (e) {
       notificaciones.error(e.message)
     }
-    cargar()
+    void cargar()
   }
 
   return (
@@ -71,11 +73,25 @@ function Dulceria() {
         )}
       </div>
 
-      {creando && <CrearProducto alCancelar={() => setCreando(false)} alCrear={() => { setCreando(false); notificaciones.exito('Producto creado'); cargar() }} />}
-      {productoAEditar && <EditarProducto producto={productoAEditar} alCancelar={() => setProductoAEditar(null)} alEditar={() => { setProductoAEditar(null); notificaciones.exito('Producto actualizado'); cargar() }} />}
+      {creando && (
+        <CrearProducto 
+          alCancelar={() => setCreando(false)} 
+          alCrear={() => { setCreando(false); notificaciones.exito('Producto creado'); void cargar() }} 
+        />
+      )}
+      
+      {productoAEditar && (
+        <EditarProducto 
+          producto={productoAEditar} 
+          alCancelar={() => setProductoAEditar(null)} 
+          alEditar={() => { setProductoAEditar(null); notificaciones.exito('Producto actualizado'); void cargar() }} 
+        />
+      )}
+      
       {productoAEliminar && (
         <ModalConfirmacion
-          peligrosa titulo="Eliminar producto"
+          peligrosa 
+          titulo="Eliminar producto"
           mensaje={`¿Eliminar "${productoAEliminar.nombre}" de esta sucursal?`}
           textoConfirmar="Eliminar"
           alConfirmar={confirmarEliminacion}

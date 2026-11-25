@@ -1,6 +1,5 @@
 import 'dotenv/config'
 import oracledb from 'oracledb'
-import path from 'path'
 
 const WALLET_DIR = process.env.DB_WALLET_RUTA
 

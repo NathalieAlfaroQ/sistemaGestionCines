@@ -45,7 +45,7 @@ export function validarNombreProducto(valor) {
 
 export function validarPrecio(valor) {
   const numero = Number(valor);
-  if (isNaN(numero) || numero <= 0) return 'X El precio debe ser mayor a 0';
+  if (Number.isNaN(numero) || numero <= 0) return 'X El precio debe ser mayor a 0';
   if (numero > 99999999.99) return 'X Precio demasiado alto';
   return '';
 }
