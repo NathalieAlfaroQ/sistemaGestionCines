@@ -122,6 +122,7 @@ function Tabla({
   onEliminar,
   onVer,
   accionesDeshabilitadas,
+  eliminarDeshabilitado = accionesDeshabilitadas,
   filtros = {},
   alCambiarFiltros,
   opcionesPorPagina = [8, 16, 24, 40],
@@ -247,7 +248,7 @@ function Tabla({
                           title="Eliminar"
                           aria-label="Eliminar"
                           onClick={() => onEliminar(fila)}
-                          disabled={accionesDeshabilitadas?.(fila)}
+                          disabled={eliminarDeshabilitado?.(fila)}
                           className="disabled:hover:bg-transparent disabled:hover:text-danger"
                         >
                           <IconoEliminar />

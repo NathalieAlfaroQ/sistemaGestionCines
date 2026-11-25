@@ -1,7 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { POS_CATALOGO } from '../constantes/posicionesCatalogo.js';
 
-function SeleccionMultiple({ etiqueta, opciones, seleccionados, alCambiar, textoVacio, obligatorio = true }) {
+// opcionTodas (opcional): texto de una opción que reemplaza a todas las demás, como "Todas".
+// Con ella, todas indica si está elegida y alCambiarTodas recibe true/false al elegirla o quitarla.
+function SeleccionMultiple({
+  etiqueta,
+  opciones,
+  seleccionados,
+  alCambiar,
+  textoVacio,
+  obligatorio = true,
+  opcionTodas = null,
+  todas = false,
+  alCambiarTodas = () => {},
+}) {
   const [abierto, setAbierto] = useState(false);
   const contenedor = useRef(null);
 
@@ -30,23 +42,37 @@ function SeleccionMultiple({ etiqueta, opciones, seleccionados, alCambiar, texto
 
   return (
     <div className="relative" ref={contenedor}>
-      <label className="mb-2 block text-sm text-white">
-        {etiqueta} {obligatorio && <span className="text-linea">*</span>}
+      <label className="mb-2 block text-sm text-text-color">
+        {etiqueta} {obligatorio && <span className="text-danger">*</span>}
       </label>
 
-      <div className="w-full min-h-11 px-3 py-2 flex flex-wrap items-center gap-2 rounded-lg bg-boton">
-        {elegidas.length === 0 && <span className="text-sm text-white/60">{textoVacio}</span>}
+      <div className="w-full min-h-11 px-3 py-2 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface">
+        {elegidas.length === 0 && !todas && <span className="text-sm text-text-muted">{textoVacio}</span>}
+
+        {todas && (
+          <span className="px-2 py-1 flex items-center gap-2 rounded bg-brand text-sm text-text-color">
+            {opcionTodas}
+            <button
+              type="button"
+              onClick={() => alCambiarTodas(false)}
+              className="leading-none text-text-color/70 hover:text-text-color"
+              aria-label={`Quitar ${opcionTodas}`}
+            >
+              ×
+            </button>
+          </span>
+        )}
 
         {elegidas.map((opcion) => (
           <span
             key={opcion[POS_CATALOGO.id]}
-            className="px-2 py-1 flex items-center gap-2 rounded bg-black/40 text-sm text-white"
+            className="px-2 py-1 flex items-center gap-2 rounded bg-brand text-sm text-text-color"
           >
             {opcion[POS_CATALOGO.nombre]}
             <button
               type="button"
               onClick={() => quitar(opcion[POS_CATALOGO.id])}
-              className="leading-none text-white/70 hover:text-white"
+              className="leading-none text-text-color/70 hover:text-text-color"
               aria-label={`Quitar ${opcion[POS_CATALOGO.nombre]}`}
             >
               ×
@@ -57,7 +83,7 @@ function SeleccionMultiple({ etiqueta, opciones, seleccionados, alCambiar, texto
         <button
           type="button"
           onClick={() => setAbierto(!abierto)}
-          className="ml-auto text-white"
+          className="ml-auto text-text-color"
           aria-label={`Abrir opciones de ${etiqueta}`}
           aria-expanded={abierto}
         >
@@ -72,17 +98,36 @@ function SeleccionMultiple({ etiqueta, opciones, seleccionados, alCambiar, texto
       </div>
 
       {abierto && (
-        <ul className="w-full max-h-48 absolute z-10 mt-1 overflow-y-auto rounded-lg bg-black">
-          {disponibles.length === 0 && (
-            <li className="px-3 py-2 text-sm text-white/60">No quedan opciones</li>
+        <ul className="w-full max-h-48 absolute z-10 mt-1 overflow-y-auto rounded-lg border border-border bg-surface">
+          {todas && (
+            <li className="px-3 py-2 text-sm text-text-muted">Quite «{opcionTodas}» para elegir una por una</li>
           )}
 
-          {disponibles.map((opcion) => (
+          {!todas && opcionTodas && (
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  alCambiarTodas(true);
+                  setAbierto(false);
+                }}
+                className="w-full px-3 py-2 text-left text-sm font-semibold text-text-color hover:bg-brand"
+              >
+                {opcionTodas}
+              </button>
+            </li>
+          )}
+
+          {!todas && disponibles.length === 0 && (
+            <li className="px-3 py-2 text-sm text-text-muted">No quedan opciones</li>
+          )}
+
+          {!todas && disponibles.map((opcion) => (
             <li key={opcion[POS_CATALOGO.id]}>
               <button
                 type="button"
                 onClick={() => agregar(opcion[POS_CATALOGO.id])}
-                className="w-full px-3 py-2 text-left text-sm text-white hover:bg-boton"
+                className="w-full px-3 py-2 text-left text-sm text-text-color hover:bg-brand"
               >
                 {opcion[POS_CATALOGO.nombre]}
               </button>

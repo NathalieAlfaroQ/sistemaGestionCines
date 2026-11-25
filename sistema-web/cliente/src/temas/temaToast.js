@@ -1,23 +1,23 @@
 import { createTheme } from 'flowbite-react';
 
 const base =
-  'flex w-full max-w-sm items-center rounded-lg border bg-surface p-4 text-sm font-medium shadow-lg dark:bg-surface';
+  'flex w-full max-w-md items-center gap-3 rounded-lg border-2 px-5 py-4 text-base font-semibold text-white shadow-2xl ring-4 ring-black/20 dark:text-white';
 
 const toggle =
-  '-m-1.5 ml-auto inline-flex h-8 w-8 rounded-lg bg-transparent p-1.5 text-current hover:bg-text-color/10 hover:text-current ' +
-  'focus:ring-2 focus:ring-current dark:bg-transparent dark:text-current dark:hover:bg-text-color/10 dark:hover:text-current';
+  '-m-1.5 ml-auto inline-flex h-8 w-8 rounded-lg bg-transparent p-1.5 text-white hover:bg-white/20 hover:text-white ' +
+  'focus:ring-2 focus:ring-white dark:bg-transparent dark:text-white dark:hover:bg-white/20 dark:hover:text-white';
 
 export const temasToast = {
   exito: createTheme({
-    root: { base: `${base} border-success text-success dark:text-success` },
+    root: { base: `${base} border-white/40 bg-success dark:bg-success` },
     toggle: { base: toggle },
   }),
   aviso: createTheme({
-    root: { base: `${base} border-warning text-warning dark:text-warning` },
+    root: { base: `${base} border-white/40 bg-warning dark:bg-warning` },
     toggle: { base: toggle },
   }),
   error: createTheme({
-    root: { base: `${base} border-danger text-danger dark:text-danger` },
+    root: { base: `${base} border-white/40 bg-danger dark:bg-danger` },
     toggle: { base: toggle },
   }),
 };

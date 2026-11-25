@@ -2,10 +2,12 @@ import BarraNavegacion from './BarraNavegacion.jsx';
 import logo from '../assets/logo.jpg';
 
 const enlaces = [
+  { texto: 'Dashboard', ruta: '/dashboard' },
   { texto: 'Dulcería', ruta: '/dulceria' },
   { texto: 'Películas', ruta: '/peliculas' },
   { texto: 'Salas', ruta: '/salas' },
   { texto: 'Proyecciones', ruta: '/proyecciones' },
+  { texto: 'Descuentos', ruta: '/descuentos' },
   { texto: 'Sedes', ruta: '/sedes' },
   { texto: 'Empleados', ruta: '/empleados' },
   { texto: 'Comprar', ruta: '/' },
@@ -18,6 +20,7 @@ function BarraEmpleado({ rutaIniciarSesion, opcionesExtra = [] }) {
     <BarraNavegacion
       logo={logo}
       enlaces={enlaces}
+      rutaInicio="/dashboard"
       rutaIniciarSesion={rutaIniciarSesion}
       opcionesPerfil={opcionesPerfil}
     />

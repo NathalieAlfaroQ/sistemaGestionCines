@@ -3,6 +3,7 @@ import { Checkbox, Label, Radio, TextInput } from 'flowbite-react';
 import { IconoVer } from '../common/iconos.jsx';
 import { LARGOS_TARJETA } from '../validaciones/validacionesTarjeta.js';
 import Campo from './Campo.jsx';
+import CampoSoloLectura from './CampoSoloLectura.jsx';
 
 // Ancho de los campos de la tarjeta: el largo máximo (ver LARGOS_TARJETA) + 4 caracteres de relleno
 // interno; el CVV solo + 2. max-w-full los encoge en pantallas angostas.
@@ -13,24 +14,6 @@ const ANCHOS = {
   vencimiento: 'w-[9ch] max-w-full', // 5 (MM/AA)
   cvv: 'w-[6ch] max-w-full', // 4
 };
-
-// Los datos personales no se editan: cada campo mide lo que muestra + 4 de relleno.
-// Va como estilo en línea porque el ancho depende del valor (Tailwind no genera clases dinámicas).
-const RELLENO_CARACTERES = 4;
-const MINIMO_CARACTERES = 6;
-
-function anchoSegunContenido(texto) {
-  const caracteres = Math.max(texto.length, MINIMO_CARACTERES) + RELLENO_CARACTERES;
-  return { width: `${caracteres}ch`, maxWidth: '100%' };
-}
-
-function CampoSoloLectura({ id, etiqueta, valor, type = 'text' }) {
-  return (
-    <Campo id={id} etiqueta={etiqueta}>
-      <TextInput id={id} type={type} value={valor} readOnly style={anchoSegunContenido(valor)} />
-    </Campo>
-  );
-}
 
 export const METODOS = {
   tarjetaGuardada: 'tarjetaGuardada',
@@ -95,16 +78,17 @@ function OpcionMetodo({ valor, metodo, setMetodo, deshabilitado = false, childre
   );
 }
 
-// Columna derecha de la pantalla de pago: datos del cliente (solo lectura) y método de pago.
+// Segunda parte de la pantalla de pago: datos del cliente (solo lectura) y método de pago.
 // Los datos personales son solo para mostrar: el servidor toma el correo del token, no de aquí.
 function FormularioPago({ id, usuario, metodoGuardado, metodo, setMetodo, tarjeta, deshabilitado, alEnviar }) {
   return (
     <form id={id} noValidate onSubmit={alEnviar} className="flex min-w-0 flex-col gap-8 text-text-color">
-      <fieldset disabled={deshabilitado} className="flex min-w-0 flex-col gap-4">
+      {/* Se muestran como texto (no como campos): no se pueden editar. Mismo estilo que en el perfil. */}
+      <fieldset className="flex min-w-0 flex-col gap-4">
         <legend className="mb-4 text-sm">Datos personales</legend>
-        <CampoSoloLectura id="nombre" etiqueta="Nombre" valor={usuario?.nombre ?? ''} />
-        <CampoSoloLectura id="apellido" etiqueta="Apellido" valor={usuario?.apellido ?? ''} />
-        <CampoSoloLectura id="correo" etiqueta="Correo" type="email" valor={usuario?.correo ?? ''} />
+        <CampoSoloLectura id="nombre" etiqueta="Nombre" valor={usuario?.nombre} />
+        <CampoSoloLectura id="apellido" etiqueta="Apellido" valor={usuario?.apellido} />
+        <CampoSoloLectura id="correo" etiqueta="Correo" valor={usuario?.correo} />
       </fieldset>
 
       <fieldset disabled={deshabilitado} className="flex min-w-0 flex-col gap-3">

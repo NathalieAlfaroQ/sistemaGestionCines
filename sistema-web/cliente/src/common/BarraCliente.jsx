@@ -10,7 +10,7 @@ const enlaces = [
 
 function BarraCliente({ rutaIniciarSesion, opcionesExtra = [] }) {
   const esPersonal = ROLES_PERSONAL.has(obtenerUsuario()?.tipoUsuario);
-  const enlacesVisibles = esPersonal ? [...enlaces, { texto: 'Trabajo', ruta: '/peliculas' }] : enlaces;
+const enlacesVisibles = esPersonal ? [...enlaces, { texto: 'Trabajo', ruta: '/dashboard' }] : enlaces;
   const opcionesPerfil = [{ texto: 'Mi perfil', ruta: '/perfil' }, ...opcionesExtra];
 
   return (

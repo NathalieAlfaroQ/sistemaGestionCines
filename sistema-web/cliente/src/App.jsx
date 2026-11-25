@@ -7,11 +7,13 @@ import Salas from './paginas/Salas.jsx'
 import CrearSala from './paginas/CrearSala.jsx'
 import VerSala from './paginas/VerSala.jsx'
 import Proyecciones from './paginas/Proyecciones.jsx'
+import Descuentos from './paginas/Descuentos.jsx'
 import Peliculas from './paginas/Peliculas.jsx'
 import FormularioPelicula from './paginas/FormularioPelicula.jsx'
 import VerPelicula from './paginas/VerPelicula.jsx'
 import EditarPelicula from './paginas/EditarPelicula.jsx'
 import Empleados from './paginas/Empleados.jsx' 
+import Estadisticas from './paginas/Estadisticas.jsx'
 import RutaProtegida from './rutas/RutaProtegida.jsx'
 import TerminosCondiciones from './paginas/TerminosCondiciones.jsx'
 import Dulceria from './paginas/Dulceria.jsx';
@@ -43,7 +45,7 @@ const rutasPublicas = [
 ]
 
 // Prefijos de rutas de trabajo (usan DisenoGestion, que ya incluye BarraEmpleado y PiePagina)
-const prefijosTrabajo = ['/peliculas', '/sedes', '/salas', '/proyecciones', '/empleados', '/dulceria']
+const prefijosTrabajo = ['/dashboard', '/peliculas', '/sedes', '/salas', '/proyecciones', '/descuentos', '/empleados', '/dulceria']
 
 function App() {
   const { pathname } = useLocation()
@@ -76,6 +78,7 @@ function App() {
         {/* Rutas de trabajo: solo personal */}
         <Route element={<RutaProtegida rolesPermitidos={['EMPLEADO', 'ADMINISTRADOR']} />}>
           <Route element={<DisenoGestion />}>
+            <Route path="/dashboard" element={<Estadisticas />} />
             <Route path="/peliculas" element={<Peliculas />} />
             <Route path="/peliculas/nueva" element={<FormularioPelicula />} />
             <Route path="/peliculas/:id" element={<VerPelicula />} />
@@ -91,6 +94,7 @@ function App() {
             <Route path="/salas/nueva" element={<CrearSala />} />
             <Route path="/salas/:id" element={<VerSala />} />
             <Route path="/proyecciones" element={<Proyecciones />} />
+            <Route path="/descuentos" element={<Descuentos />} />
           </Route>
         </Route>
 

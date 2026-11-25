@@ -18,7 +18,7 @@ export async function comprar(req, res, next) {
 // PayPal, paso 1: crea la orden que el cliente aprobará en la ventana de PayPal
 export async function crearOrdenPayPal(req, res, next) {
   try {
-    res.status(201).json(await iniciarPagoPayPal(req.usuario, Number(req.body?.idProyeccion), req.body));
+    res.status(201).json(await iniciarPagoPayPal(req.usuario, Number(req.body?.idProyeccion)));
   } catch (error) {
     next(error);
   }
@@ -29,7 +29,7 @@ export async function capturarOrdenPayPal(req, res, next) {
   try {
     res
       .status(201)
-      .json(await completarPagoPayPal(req.usuario, Number(req.body?.idProyeccion), req.params.idOrden, req.body));
+      .json(await completarPagoPayPal(req.usuario, Number(req.body?.idProyeccion), req.params.idOrden));
   } catch (error) {
     next(error);
   }

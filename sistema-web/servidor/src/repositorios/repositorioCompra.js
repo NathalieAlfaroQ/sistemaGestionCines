@@ -7,8 +7,9 @@ const FORMATO_FECHA = 'YYYY-MM-DD HH24:MI:SS';
 // Cada asiento vendido es una línea de DETALLES_FACTURA de tipo boleto con cantidad 1
 const TIPO_DETALLE_BOLETO = 'BOLETO';
 
-// Restricción que impide vender dos veces el mismo asiento de una función
-export const RESTRICCION_ASIENTO_VENDIDO = 'UQ_DETALLES_FACTURA_PROYECCION_ASIENTO';
+// Índice único que impide vender dos veces el mismo asiento de una función (solo cuenta los boletos ACTIVOS:
+// un asiento devuelto se puede volver a vender). Viene en el mensaje del ORA-00001.
+export const RESTRICCION_ASIENTO_VENDIDO = 'UQ_DETALLES_FACTURA_ASIENTO_ACTIVO';
 
 // Nombre, apellido y correo del cliente. El correo está en CREDENCIALES (cuenta con contraseña)
 // o en CREDENCIALES_GOOGLE (cuenta de Google).
@@ -59,22 +60,23 @@ export async function insertarFactura(conexion, { idCliente, idMetodo, monto, fe
 
 const sqlInsertarDetalleBoleto = `
   INSERT INTO DETALLES_FACTURA
-    (ID_FACTURA, ID_ASIENTO, ID_PROYECCION, TIPO_FACTURA, CANTIDAD, MONTO, DESCUENTO, ID_TIPO_BOLETO)
+    (ID_FACTURA, ID_ASIENTO, ID_PROYECCION, TIPO_FACTURA, CANTIDAD, MONTO, DESCUENTO, ID_TIPO_BOLETO, ID_DESCUENTO)
   VALUES
-    (:idFactura, :idAsiento, :idProyeccion, '${TIPO_DETALLE_BOLETO}', 1, :monto, :descuento, :idTipoBoleto)
+    (:idFactura, :idAsiento, :idProyeccion, '${TIPO_DETALLE_BOLETO}', 1, :monto, :descuento, :idTipoBoleto, :idDescuento)
 `;
 
-// detalles: [{ idAsiento, idTipoBoleto, monto, descuento }]
+// detalles: [{ idAsiento, idTipoBoleto, monto, descuento, idDescuento? }]; idDescuento es la oferta aplicada, si hubo
 // Mientras la transacción no termine, estas filas sin confirmar bloquean los asientos:
 // otra compra de los mismos asientos espera en el UNIQUE y, si esta se confirma, recibe ORA-00001.
 export async function insertarDetallesBoletos(conexion, idFactura, idProyeccion, detalles) {
-  const filas = detalles.map(({ idAsiento, idTipoBoleto, monto, descuento }) => ({
+  const filas = detalles.map(({ idAsiento, idTipoBoleto, monto, descuento, idDescuento = null }) => ({
     idFactura,
     idAsiento,
     idProyeccion,
     monto,
     descuento,
     idTipoBoleto,
+    idDescuento,
   }));
   await conexion.executeMany(sqlInsertarDetalleBoleto, filas);
 }
@@ -82,11 +84,13 @@ export async function insertarDetallesBoletos(conexion, idFactura, idProyeccion,
 //  0: ID_FACTURA  1: MONTO_TOTAL  2: FECHA_COMPRA  3: ID_INTENCION_PAGO  4: TITULO  5: CLASIFICACION
 //  6: FECHA_FUNCION  7: NOMBRE_SEDE  8: NOMBRE_SALA  9: NOMBRE_FORMATO  10: ID_PROYECCION
 //  11: ID_ASIENTO  12: FILA  13: NUMERO  14: NOMBRE_TIPO_BOLETO  15: MONTO_BOLETO
+//  16: ESTADO_DETALLE ('ACTIVO' o 'DEVUELTO')  17: ID_DETALLE_FACTURA
 const sqlComprobante = `
   SELECT f.ID_FACTURA, f.MONTO, TO_CHAR(f.FECHA, 'YYYY-MM-DD HH24:MI'), f.ID_INTENCION_PAGO,
     pe.TITULO, pe.CLASIFICACION, TO_CHAR(p.FECHA, 'YYYY-MM-DD HH24:MI'),
     se.NOMBRE_SEDE, s.NOMBRE_SALA, fo.NOMBRE_FORMATO,
-    df.ID_PROYECCION, df.ID_ASIENTO, a.FILA, a.NUMERO, tb.NOMBRE_TIPO_BOLETO, df.MONTO
+    df.ID_PROYECCION, df.ID_ASIENTO, a.FILA, a.NUMERO, tb.NOMBRE_TIPO_BOLETO, df.MONTO,
+    df.ESTADO_DETALLE, df.ID_DETALLE_FACTURA
   FROM FACTURAS_FINALES f
   JOIN DETALLES_FACTURA df ON df.ID_FACTURA = f.ID_FACTURA AND df.TIPO_FACTURA = '${TIPO_DETALLE_BOLETO}'
   JOIN ASIENTOS a          ON a.ID_ASIENTO = df.ID_ASIENTO

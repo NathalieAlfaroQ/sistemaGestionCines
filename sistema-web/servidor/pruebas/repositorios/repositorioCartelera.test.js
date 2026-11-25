@@ -3,7 +3,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('../../src/configuracion/baseDatos.js', () => ({ ejecutar: vi.fn() }))
 
 import { ejecutar } from '../../src/configuracion/baseDatos.js'
-import { existeSedeActiva, listarCartelera, listarSedesActivas } from '../../src/repositorios/repositorioCartelera.js'
+import {
+  DIAS_CARTELERA,
+  existeSedeActiva,
+  listarCartelera,
+  listarSedesActivas,
+} from '../../src/repositorios/repositorioCartelera.js'
 
 beforeEach(() => {
   vi.resetAllMocks()
@@ -54,5 +59,16 @@ describe('listarCartelera', () => {
     expect(sql).toContain('s.ESTADO_SALA = 1')
     expect(sql).toContain('p.FECHA > TO_DATE(:ahora')
     expect(sql).toContain('s.ID_SEDE = :idSede')
+  })
+
+  it('solo muestra películas con alguna función dentro de los 10 días que el cliente puede elegir', async () => {
+    ejecutar.mockResolvedValue({ rows: [] })
+
+    await listarCartelera(2, '2026-11-02 14:00:00')
+
+    const sql = ejecutar.mock.calls[0][0]
+    expect(DIAS_CARTELERA).toBe(10)
+    // Desde hoy a las 00:00 + 10 días: hoy y los 9 siguientes, igual que el selector de fechas
+    expect(sql).toContain(`p.FECHA < TRUNC(TO_DATE(:ahora, 'YYYY-MM-DD HH24:MI:SS')) + 10`)
   })
 })
