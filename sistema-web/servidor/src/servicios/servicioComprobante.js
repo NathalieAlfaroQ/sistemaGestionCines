@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
+import { ErrorConflicto } from '../errores/ErrorConflicto.js';
 import { ErrorNoAutenticado } from '../errores/ErrorNoAutenticado.js';
 import { ErrorNoEncontrado } from '../errores/ErrorNoEncontrado.js';
 import { ErrorValidacion } from '../errores/ErrorValidacion.js';
@@ -27,9 +28,15 @@ export function formatearMonto(monto) {
   return formateadorColones.format(monto);
 }
 
-// Texto del QR de cada boleto: identifica la función y el asiento (el par es único en DETALLES_FACTURA)
-export function textoQr(idProyeccion, idAsiento) {
-  return `CINEAURORA-P${idProyeccion}-A${idAsiento}`;
+export const MENSAJE_COMPRA_CANCELADA = 'Esta compra fue cancelada y sus boletos ya no son válidos';
+
+const ESTADO_BOLETO_ACTIVO = 'ACTIVO';
+
+// Texto del QR de cada boleto: identifica la venta (ID_DETALLE_FACTURA), la función y el asiento.
+// La función y el asiento solos no bastan: si un boleto se devuelve, ese asiento se puede volver a vender
+// y los dos boletos tendrían el mismo QR. El id del detalle es único para cada venta.
+export function textoQr(idDetalle, idProyeccion, idAsiento) {
+  return `CINEAURORA-B${idDetalle}-P${idProyeccion}-A${idAsiento}`;
 }
 
 const ENTIDADES_HTML = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -53,6 +60,10 @@ async function obtenerComprobante(idFactura, idCliente) {
   if (filas.length === 0) {
     throw new ErrorNoEncontrado('La compra no existe');
   }
+  // Se devuelve la compra completa: si no le queda ningún boleto activo, fue cancelada
+  if (!filas.some((fila) => fila[16] === ESTADO_BOLETO_ACTIVO)) {
+    throw new ErrorConflicto(MENSAJE_COMPRA_CANCELADA);
+  }
 
   const [, total, fechaCompra, codigoPago, titulo, clasificacion, fechaFuncion, sede, sala, formato] = filas[0];
 
@@ -71,7 +82,7 @@ async function obtenerComprobante(idFactura, idCliente) {
       asiento: `${fila[12]}${fila[13]}`,
       tipo: fila[14],
       monto: fila[15],
-      textoQr: textoQr(fila[10], fila[11]),
+      textoQr: textoQr(fila[17], fila[10], fila[11]),
     })),
   };
 }
